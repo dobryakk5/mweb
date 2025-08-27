@@ -1,0 +1,11 @@
+packages:
+  - apps/*
+  - packages/*
+  - services/*
+  - tools/*
+
+onlyBuiltDependencies:
+  - '@biomejs/biome'
+  - bcrypt
+  - bun
+  - esbuild

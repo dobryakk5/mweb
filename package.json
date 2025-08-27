@@ -1,0 +1,36 @@
+{
+  "$schema": "https://json.schemastore.org/package.json",
+  "name": "acme",
+  "private": true,
+  "scripts": {
+    "compose:up": "docker compose up -d",
+    "compose:status": "docker compose ps",
+    "compose:down": "docker compose down",
+    "db:generate": "turbo db:generate",
+    "db:migrate": "turbo db:migrate",
+    "db:seed": "turbo db:seed",
+    "db:studio": "turbo db:studio",
+    "clean": "turbo clean",
+    "typecheck": "turbo typecheck",
+    "lint": "trunk check",
+    "format": "trunk fmt",
+    "dev": "turbo dev",
+    "build": "turbo build",
+    "start": "turbo start"
+  },
+  "dependencies": {
+    "turbo": "~2.5.1"
+  },
+  "devDependencies": {
+    "@acme/typescript-config": "workspace:~",
+    "@biomejs/biome": "~1.9.4",
+    "@trunkio/launcher": "~1.3.4"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "packageManager": "pnpm@10.9.0",
+  "volta": {
+    "node": "20.12.1"
+  }
+}
