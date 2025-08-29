@@ -10,7 +10,7 @@ import Providers from './providers'
 
 export const metadata: Metadata = {
   title: 'ACME',
-  description: 'Basic Boilerplate for Next.js.',
+  description: 'Базовый шаблон для Next.js.',
 }
 
 interface RootLayoutProps {

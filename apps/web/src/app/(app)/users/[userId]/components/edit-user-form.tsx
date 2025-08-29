@@ -105,20 +105,20 @@ export default function EditUserForm({
               >
                 <ArrowLeftIcon className='size-5' />
 
-                <span className='sr-only'>Go back</span>
+                <span className='sr-only'>Вернуться назад</span>
               </Link>
 
-              <Page.Title>Edit user</Page.Title>
+              <Page.Title>Редактировать пользователя</Page.Title>
 
               {formState.isDirty ? (
                 <div className='ml-auto flex items-center gap-x-4'>
                   <span className='text-muted-foreground text-xs'>
-                    Unsaved changes
+                    Несохраненные изменения
                   </span>
 
                   <div className='flex gap-x-2'>
                     <Button onClick={cancel} variant='outline'>
-                      Cancel
+                      Отмена
                     </Button>
 
                     <Button
@@ -126,7 +126,7 @@ export default function EditUserForm({
                       disabled={!formState.isValid}
                       type='submit'
                     >
-                      <span>Save</span>
+                      <span>Сохранить</span>
 
                       {formState.isSubmitting ? (
                         <Loader2Icon className='size-4 animate-spin' />
@@ -138,7 +138,7 @@ export default function EditUserForm({
             </Page.Header>
 
             <Page.Content className='divide-y *:py-5 first:*:pt-0 last:*:pb-0'>
-              <Fieldset className='xl:grid-cols-9' title='Details'>
+              <Fieldset className='xl:grid-cols-9' title='Детали'>
                 <Card className='divide-y xl:col-span-6'>
                   <Card.Content>
                     <div className='grid gap-3 xl:grid-cols-2'>
@@ -147,7 +147,7 @@ export default function EditUserForm({
                         name='firstName'
                         render={({ field }) => (
                           <Form.Item>
-                            <Form.Label>First name</Form.Label>
+                            <Form.Label>Имя</Form.Label>
 
                             <Form.Control>
                               {isLoading ? (
@@ -167,7 +167,7 @@ export default function EditUserForm({
                         name='lastName'
                         render={({ field }) => (
                           <Form.Item>
-                            <Form.Label>Last name</Form.Label>
+                            <Form.Label>Фамилия</Form.Label>
 
                             <Form.Control>
                               {isLoading ? (
@@ -187,7 +187,7 @@ export default function EditUserForm({
                         name='username'
                         render={({ field }) => (
                           <Form.Item>
-                            <Form.Label>Usename</Form.Label>
+                            <Form.Label>Имя пользователя</Form.Label>
 
                             <Form.Control>
                               {isLoading ? (

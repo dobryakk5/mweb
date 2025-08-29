@@ -4,6 +4,7 @@ import cn from '../utils/cn'
 import { LogoMark } from './logo'
 import ThemeToggle from './theme-toggle'
 
+
 type LayoutProps = HTMLAttributes<HTMLDivElement>
 
 const Layout = ({ className, ...props }: LayoutProps) => {
@@ -41,6 +42,7 @@ const LayoutHeader = ({
         <nav className='flex h-full flex-col items-center gap-y-1 *:p-2.5'>
           {children}
         </nav>
+
 
         <ThemeToggle className='self-center' />
       </header>

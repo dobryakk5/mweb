@@ -37,7 +37,7 @@ export default function ViewUsers(): JSX.Element {
   return (
     <>
       <div className='flex gap-4 p-4 lg:px-5'>
-        <Search className='max-w-sm' placeholder='Search for users...' />
+        <Search className='max-w-sm' placeholder='Поиск пользователей...' />
 
         <Sort />
       </div>
@@ -45,8 +45,8 @@ export default function ViewUsers(): JSX.Element {
       <Table>
         <TableHeader>
           <TableRow>
-            <TableHead className='w-80'>Name</TableHead>
-            <TableHead className='text-right'>Created at</TableHead>
+            <TableHead className='w-80'>Имя</TableHead>
+            <TableHead className='text-right'>Дата создания</TableHead>
           </TableRow>
         </TableHeader>
 
@@ -76,8 +76,8 @@ export default function ViewUsers(): JSX.Element {
                 <TableCell colSpan={3}>
                   <EmptyState
                     emoji='🧘🏻'
-                    title='No users found'
-                    description="Looks like you still don't have any users using these criteria."
+                    title='Пользователи не найдены'
+                    description="Похоже, что у вас пока нет пользователей по этим критериям."
                   />
                 </TableCell>
               </TableRow>

@@ -15,11 +15,11 @@ import useRouterStuff from '@/hooks/use-router-stuff'
 
 const sortByOptions = [
   {
-    display: 'Date added',
+    display: 'По дате добавления',
     slug: 'created_at',
   },
   {
-    display: 'First name',
+    display: 'По имени',
     slug: 'first_name',
   },
 ]
@@ -73,7 +73,7 @@ export default function Sort(): JSX.Element {
         type='button'
       >
         <MenuIcon
-          text={sortBy && selectedSort ? selectedSort.display : 'Sort by'}
+          text={sortBy && selectedSort ? selectedSort.display : 'Сортировать по'}
           icon={
             sortBy ? (
               <SortDescIcon className='size-4' />

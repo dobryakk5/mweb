@@ -1,0 +1,68 @@
+{
+  "version": "7",
+  "dialect": "postgresql",
+  "id": "0003_create_ads_table",
+  "prevId": "0002_recreate_user_flats",
+  "tables": {
+    "users.ads": {
+      "name": "ads",
+      "schema": "users",
+      "columns": {
+        "id": {
+          "name": "id",
+          "type": "serial",
+          "primaryKey": true,
+          "notNull": true
+        },
+        "url": {
+          "name": "url",
+          "type": "varchar",
+          "notNull": true
+        },
+        "address": {
+          "name": "address",
+          "type": "varchar",
+          "notNull": true
+        },
+        "price": {
+          "name": "price",
+          "type": "integer",
+          "notNull": true
+        },
+        "rooms": {
+          "name": "rooms",
+          "type": "integer",
+          "notNull": true
+        },
+        "views": {
+          "name": "views",
+          "type": "integer",
+          "notNull": true,
+          "default": 0
+        },
+        "created_at": {
+          "name": "created_at",
+          "type": "timestamp",
+          "notNull": true,
+          "default": "now()"
+        },
+        "updated_at": {
+          "name": "updated_at",
+          "type": "timestamp",
+          "notNull": true,
+          "default": "now()"
+        }
+      },
+      "indexes": {
+        "ads_address_idx": {
+          "name": "ads_address_idx",
+          "columns": ["address"]
+        },
+        "ads_price_idx": {
+          "name": "ads_price_idx",
+          "columns": ["price"]
+        }
+      }
+    }
+  }
+}

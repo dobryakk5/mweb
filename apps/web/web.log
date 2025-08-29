@@ -1,0 +1,699 @@
+
+> @acme/web@0.0.0 dev /Users/pavellebedev/Desktop/mweb/apps/web
+> next dev -p 13000
+
+   ▲ Next.js 15.5.2
+   - Local:        http://localhost:13000
+   - Network:      http://192.168.1.67:13000
+   - Environments: .env.local, .env
+
+ ✓ Starting...
+ ✓ Ready in 2.8s
+ ○ Compiling /my-flats ...
+ ✓ Compiled /my-flats in 4.3s (4166 modules)
+ GET /my-flats 200 in 4827ms
+(node:63433) [DEP0060] DeprecationWarning: The `util._extend` API is deprecated. Please use Object.assign() instead.
+(Use `node --trace-deprecation ...` to show where the warning was created)
+ GET /my-flats 200 in 637ms
+Failed to proxy http://localhost:13001/user-flats/7852511755?search=&page=1 [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+Failed to proxy http://localhost:13001/user-flats/7852511755/count?search= [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+ ○ Compiling /_error ...
+ ✓ Compiled /_error in 1927ms (4511 modules)
+ GET /my-flats 200 in 1868ms
+ GET /my-flats 200 in 28ms
+ ○ Compiling /my-flats/add ...
+ ✓ Compiled /my-flats/add in 4s (4982 modules)
+ GET /my-flats/add 200 in 4367ms
+Failed to proxy http://localhost:13001/user-flats [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+ GET /my-flats 200 in 100ms
+ GET /my-flats 200 in 23ms
+ GET /my-flats 200 in 624ms
+Failed to proxy http://localhost:13001/user-flats/7852511755?search=&page=1 [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+Failed to proxy http://localhost:13001/user-flats/7852511755/count?search= [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+ GET /my-flats?sortBy=address&sortOrder=asc 200 in 44ms
+ GET /my-flats?sortBy=address&sortOrder=desc 200 in 30ms
+ GET /my-flats/add 200 in 56ms
+Failed to proxy http://localhost:13001/user-flats/7852511755?search=&sortBy=address&page=1 [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+Failed to proxy http://localhost:13001/user-flats [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+ GET /my-flats 200 in 158ms
+ GET /my-flats 200 in 213ms
+Failed to proxy http://localhost:13001/user-flats/7852511755?search=&page=1 [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+Failed to proxy http://localhost:13001/user-flats/7852511755/count?search= [Error: socket hang up] { code: 'ECONNRESET' }
+[Error: socket hang up] { code: 'ECONNRESET' }
+ GET /my-flats 200 in 944ms
+Browserslist: browsers data (caniuse-lite) is 6 months old. Please run:
+  npx update-browserslist-db@latest
+  Why you should do it regularly: https://github.com/browserslist/update-db#readme
+ ✓ Compiled in 3.5s (4904 modules)
+ GET /my-flats 200 in 339ms
+ ✓ Compiled in 1298ms (4904 modules)
+ GET /my-flats 200 in 132ms
+ GET /my-flats/add 200 in 123ms
+ GET /my-flats 200 in 35ms
+ ○ Compiling /_not-found ...
+ ✓ Compiled /_not-found in 1886ms (4894 modules)
+ GET /my-flats/1?returnTo=%2Fmy-flats%3F 404 in 2008ms
+ GET /my-flats/1?returnTo=%2Fmy-flats%3F 404 in 256ms
+ ○ Compiling /my-flats/[flatId] ...
+ ⨯ ./src/app/(app)/my-flats/[flatId]/page.tsx:3:1
+Module not found: Can't resolve './components/edit-flat'
+  1 | import type { JSX } from 'react'
+  2 |
+> 3 | import EditFlat from './components/edit-flat'
+    | ^
+  4 |
+  5 | type FlatPageProps = {
+  6 |   params: {
+
+https://nextjs.org/docs/messages/module-not-found
+ ⨯ ./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx:10:1
+Module not found: Can't resolve './edit-flat-form'
+   8 | import { useFlat } from '@/domains/flats/hooks/queries'
+   9 |
+> 10 | import EditFlatForm from './edit-flat-form'
+     | ^
+  11 |
+  12 | type EditFlatProps = Pick<UserFlat, 'id'>
+  13 |
+
+https://nextjs.org/docs/messages/module-not-found
+ GET /my-flats/add 500 in 48984ms
+ GET /my-flats/1?returnTo=%2Fmy-flats%3F 500 in 65209ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ ⚠ ./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+Attempted import error: 'useUpdateFlat' is not exported from '@/domains/flats/hooks/mutations' (imported as 'useUpdateFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+Attempted import error: 'useUpdateFlat' is not exported from '@/domains/flats/hooks/mutations' (imported as 'useUpdateFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+Attempted import error: 'useFlat' is not exported from '@/domains/flats/hooks/queries' (imported as 'useFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+Attempted import error: 'useFlat' is not exported from '@/domains/flats/hooks/queries' (imported as 'useFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+Attempted import error: 'useUpdateFlat' is not exported from '@/domains/flats/hooks/mutations' (imported as 'useUpdateFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+Attempted import error: 'useFlat' is not exported from '@/domains/flats/hooks/queries' (imported as 'useFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+ GET /my-flats/add 200 in 916ms
+ GET /my-flats/add 200 in 1095ms
+<w> [webpack.cache.PackFileCacheStrategy] Caching failed for pack: Error: ENOENT: no such file or directory, rename '/Users/pavellebedev/Desktop/mweb/apps/web/.next/cache/webpack/client-development-fallback/0.pack.gz_' -> '/Users/pavellebedev/Desktop/mweb/apps/web/.next/cache/webpack/client-development-fallback/0.pack.gz'
+ ⚠ ./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+Attempted import error: 'useUpdateFlat' is not exported from '@/domains/flats/hooks/mutations' (imported as 'useUpdateFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+Attempted import error: 'useUpdateFlat' is not exported from '@/domains/flats/hooks/mutations' (imported as 'useUpdateFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/domains/flats/hooks/queries.ts
+Attempted import error: 'fetchFlat' is not exported from '../fetchers' (imported as 'fetchFlat').
+
+Import trace for requested module:
+./src/domains/flats/hooks/queries.ts
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+Attempted import error: 'useUpdateFlat' is not exported from '@/domains/flats/hooks/mutations' (imported as 'useUpdateFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/domains/flats/hooks/queries.ts
+Attempted import error: 'fetchFlat' is not exported from '../fetchers' (imported as 'fetchFlat').
+
+Import trace for requested module:
+./src/domains/flats/hooks/queries.ts
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+ ⚠ ./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+Attempted import error: 'useUpdateFlat' is not exported from '@/domains/flats/hooks/mutations' (imported as 'useUpdateFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+Attempted import error: 'useUpdateFlat' is not exported from '@/domains/flats/hooks/mutations' (imported as 'useUpdateFlat').
+
+Import trace for requested module:
+./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx
+./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx
+ ✓ Compiled /_error in 1788ms (4985 modules)
+ ✓ Compiled in 5.7s (5000 modules)
+ GET /my-flats/add 200 in 183ms
+ GET /my-flats 200 in 149ms
+Failed to proxy http://localhost:13001/user-flats/7852511755/count?search= [AggregateError: ] { code: 'ECONNREFUSED' }
+[AggregateError: ] { code: 'ECONNREFUSED' }
+Failed to proxy http://localhost:13001/user-flats/7852511755?search=&page=1 [AggregateError: ] { code: 'ECONNREFUSED' }
+[AggregateError: ] { code: 'ECONNREFUSED' }
+ ✓ Compiled in 2.6s (5000 modules)
+Failed to proxy http://localhost:13001/user-flats/user/7852511755/count?search= [AggregateError: ] { code: 'ECONNREFUSED' }
+[AggregateError: ] { code: 'ECONNREFUSED' }
+Failed to proxy http://localhost:13001/user-flats/user/7852511755?search=&page=1 [AggregateError: ] { code: 'ECONNREFUSED' }
+[AggregateError: ] { code: 'ECONNREFUSED' }
+ GET /my-flats 200 in 166ms
+ ✓ Compiled in 1444ms (4985 modules)
+ GET /my-flats 200 in 1115ms
+ GET /my-flats/add 200 in 100ms
+ GET /my-flats 200 in 45ms
+ ✓ Compiled in 2.6s (4985 modules)
+ ○ Compiling /my-flats/[flatId] ...
+ ✓ Compiled /my-flats/[flatId] in 3.1s (2610 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3F 200 in 4084ms
+ ✓ Compiled in 3.8s (4992 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3F 200 in 916ms
+ ✓ Compiled in 1463ms (4992 modules)
+ GET /my-flats 200 in 586ms
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3F 200 in 147ms
+ GET /my-flats 200 in 108ms
+ GET /my-flats?search=3 200 in 52ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=asc 200 in 111ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=asc 200 in 41ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=asc 200 in 36ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=asc 200 in 104ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc 200 in 40ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=asc 200 in 38ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc 200 in 34ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=asc 200 in 32ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc 200 in 36ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=asc 200 in 30ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=asc 200 in 30ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 42ms
+ ✓ Compiled in 5.9s (5005 modules)
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 314ms
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 2484ms
+ ✓ Compiled in 2.1s (5005 modules)
+ ✓ Compiled in 1757ms (5005 modules)
+ ⚠ Fast Refresh had to perform a full reload due to a runtime error.
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 628ms
+ ✓ Compiled in 2.2s (5005 modules)
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 1388ms
+ ✓ Compiled in 1899ms (5005 modules)
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 140ms
+ ✓ Compiled in 3.2s (5005 modules)
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 148ms
+ ✓ Compiled in 2.8s (5005 modules)
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 143ms
+ ✓ Compiled in 3s (2396 modules)
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 75ms
+ ✓ Compiled in 1563ms (5005 modules)
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc 200 in 95ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 43ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 71ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 23ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 31ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 32ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 29ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 33ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 29ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc&page=1 200 in 27ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 41ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 33ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc&page=1 200 in 23ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 26ms
+ ✓ Compiled in 3.7s (5005 modules)
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 280ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 116ms
+ ✓ Compiled in 2.1s (5005 modules)
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc&page=1 200 in 553ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 2273ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 47ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 80ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 27ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 60ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 68ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 25ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 111ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 122ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 30ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 34ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 34ms
+ ✓ Compiled in 3s (5005 modules)
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 121ms
+ ✓ Compiled in 3.1s (5005 modules)
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 279ms
+ ✓ Compiled in 2.3s (5005 modules)
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 95ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 125ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 162ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 45ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 76ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 30ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 31ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 29ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 27ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 23ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 86ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 15ms
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 27ms
+ ✓ Compiled in 11.5s (5005 modules)
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 149ms
+ ✓ Compiled in 1463ms (5005 modules)
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 136ms
+ ✓ Compiled in 1234ms (5005 modules)
+ GET /my-flats?search=3&sortBy=&sortOrder=desc&page=1 200 in 123ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 54ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 110ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 27ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 35ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 32ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 25ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 27ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 25ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 24ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 46ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 27ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 31ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 732ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 70ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 41ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 37ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 69ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 1253ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 79ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 92ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 29ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 44ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 72ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc&page=1 200 in 165ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 81ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 67ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 92ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 50ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 31ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 58ms
+ ✓ Compiled in 8.2s (5005 modules)
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 276ms
+ ✓ Compiled in 2.4s (5005 modules)
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 103ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 61ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 45ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc&page=1 200 in 22ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 73ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 112ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 39ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 38ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 39ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 35ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 32ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 34ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 28ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 61ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 101ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 41ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 137ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 39ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 37ms
+ ✓ Compiled in 4.6s (5005 modules)
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 216ms
+ ✓ Compiled in 1356ms (5005 modules)
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 116ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 155ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 128ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 45ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 53ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 34ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 43ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 41ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 74ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 40ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 43ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 42ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 42ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 26ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 34ms
+ GET /my-flats?search=3&sortBy=rooms&sortOrder=desc&page=1 200 in 27ms
+ GET /my-flats?search=3&sortBy=rooms_desc&sortOrder=desc&page=1 200 in 27ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 110ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 37ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 38ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 35ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 34ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc&page=1 200 in 145ms
+ GET /my-flats?search=3&sortBy=floor_desc&sortOrder=desc&page=1 200 in 39ms
+ GET /my-flats?search=3&sortBy=floor&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=3&sortBy=floor_desc&sortOrder=desc&page=1 200 in 37ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 136ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 42ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 39ms
+ GET /my-flats?search=3&sortBy=address_desc&sortOrder=desc&page=1 200 in 45ms
+ GET /my-flats?search=3&sortBy=address&sortOrder=desc&page=1 200 in 40ms
+ GET /my-flats?search=&sortBy=address&sortOrder=desc&page=1 200 in 64ms
+ GET /my-flats?search=%D0%B1&sortBy=address&sortOrder=desc&page=1 200 in 36ms
+ GET /my-flats?search=&sortBy=address&sortOrder=desc&page=1 200 in 31ms
+ GET /my-flats?search=%2C&sortBy=address&sortOrder=desc&page=1 200 in 123ms
+ GET /my-flats?search=&sortBy=address&sortOrder=desc&page=1 200 in 44ms
+ GET /my-flats/add 200 in 84ms
+ GET /my-flats 200 in 91ms
+ GET /my-flats?search=%D0%BC%D0%B0 200 in 39ms
+ GET /my-flats?search= 200 in 35ms
+ GET /my-flats?search=%D1%82 200 in 103ms
+ GET /my-flats?search=1 200 in 39ms
+ ✓ Compiled in 4.3s (5005 modules)
+ GET /my-flats?search=1 200 in 774ms
+ GET /my-flats?search= 200 in 70ms
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 109ms
+ ✓ Compiled in 12.3s (5005 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 362ms
+ ✓ Compiled in 3.3s (5005 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 166ms
+ ✓ Compiled in 7.4s (5005 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 214ms
+ ✓ Compiled in 1525ms (5005 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 102ms
+ ✓ Compiled in 6.1s (5005 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 335ms
+ ✓ Compiled in 1657ms (5005 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 107ms
+ ✓ Compiled in 4.3s (5005 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 135ms
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 2681ms
+ ✓ Compiled in 2.8s (5005 modules)
+ GET /my-flats?search= 200 in 1114ms
+ ✓ Compiled in 5.9s (5005 modules)
+ GET /my-flats?search= 200 in 776ms
+ ✓ Compiled in 2.3s (5005 modules)
+ GET /my-flats?search= 200 in 125ms
+ GET /my-flats?search= 200 in 984ms
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 109ms
+ ✓ Compiled in 27.8s (5005 modules)
+ GET /my-flats?search= 200 in 370ms
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 4553ms
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 200 in 2837ms
+ ✓ Compiled in 29.6s (4990 modules)
+ ⚠ Fast Refresh had to perform a full reload. Read more: https://nextjs.org/docs/messages/fast-refresh-reload
+ ✓ Compiled in 119.7s (4990 modules)
+Error: Route "/my-flats/[flatId]" used `params.flatId`. `params` should be awaited before using its properties. Learn more: https://nextjs.org/docs/messages/sync-dynamic-apis
+    at FlatPage (src/app/(app)/my-flats/[flatId]/page.tsx:12:31)
+  10 |
+  11 | export default function FlatPage({ params }: FlatPageProps): JSX.Element {
+> 12 |   return <EditFlat id={params.flatId} />
+     |                               ^
+  13 | }
+  14 |
+ ⨯ ReferenceError: ads is not defined
+    at eval (../../packages/db/src/schemas.ts:31:50)
+    at (ssr)/../../packages/db/src/schemas.ts (.next/server/app/(app)/my-flats/[flatId]/page.js:300:1)
+    at eval (webpack-internal:///(ssr)/./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx:12:74)
+    at (ssr)/./src/app/(app)/my-flats/[flatId]/components/edit-flat-form.tsx (.next/server/app/(app)/my-flats/[flatId]/page.js:553:1)
+    at eval (webpack-internal:///(ssr)/./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx:9:73)
+    at (ssr)/./src/app/(app)/my-flats/[flatId]/components/edit-flat.tsx (.next/server/app/(app)/my-flats/[flatId]/page.js:564:1)
+  29 | export const insertUserFlatSchema = createInsertSchema(userFlats)
+  30 |
+> 31 | export const selectAdSchema = createSelectSchema(ads)
+     |                                                  ^
+  32 | export const insertAdSchema = createInsertSchema(ads)
+  33 |
+  34 | {
+  digest: '770980416'
+}
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 500 in 26397ms
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'ads' is not defined (28:9)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'ads' is not defined (28:9)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'ads' is not defined (28:9)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'ads' is not defined (28:9)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'ads' is not defined (28:9)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'ads' is not defined (28:9)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'ads' is not defined (28:9)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'ads' is not defined (28:9)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 500 in 708ms
+ GET /my-flats/2?returnTo=%2Fmy-flats%3Fsearch%3D 500 in 127ms
+ ⨯ ../../packages/db/src/schemas.ts
+Module parse failed: Export 'telegramUsers' is not defined (28:32)
+| export const insertAdSchema = createInsertSchema(ads);
+| // Экспортируем таблицы для использования в API
+> export { ads, userFlats, users, telegramUsers, sessions };
+| 
+| 
+
+Import trace for requested module:
+../../packages/db/src/schemas.ts
+./src/app/(app)/my-flats/add/components/add-flat-form.tsx
+./src/app/(app)/my-flats/add/page.tsx
+ ELIFECYCLE  Command failed.

@@ -5,8 +5,31 @@
     {
       "idx": 0,
       "version": "7",
-      "when": 1721406797802,
-      "tag": "0000_strange_black_widow",
+      "when": 1756415116297,
+      "tag": "0000_gifted_mole_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "7",
+      "when": 1756416000000,
+      "tag": "0002_recreate_user_flats",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "7",
+      "dialect": "postgresql",
+      "when": 1756467442356,
+      "tag": "0003_create_ads_table",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "7",
+      "dialect": "postgresql",
+      "when": 1756479000000,
+      "tag": "0004_add_flat_id_to_ads",
       "breakpoints": true
     }
   ]

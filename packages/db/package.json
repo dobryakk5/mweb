@@ -7,6 +7,7 @@
   "exports": {
     ".": "./src/index.ts",
     "./constants": "./src/constants.ts",
+    "./db": "./src/db.ts",
     "./mutations": "./src/mutations.ts",
     "./orm": "./src/orm.ts",
     "./queries": "./src/queries.ts",
@@ -19,10 +20,14 @@
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit push",
     "db:seed": "bun ./src/seed.ts",
-    "db:studio": "drizzle-kit studio"
+    "db:add-users": "tsx ./src/add-real-users.ts",
+    "db:create-telegram": "tsx ./src/create-telegram-tables.ts",
+    "db:studio": "drizzle-kit studio",
+    "db:setup": "tsx ./src/setup-db.ts"
   },
   "dependencies": {
     "@types/node": "~22.15.2",
+    "dotenv": "~16.5.0",
     "drizzle-orm": "~0.43.1",
     "drizzle-zod": "~0.7.1",
     "pg": "~8.15.5",
@@ -35,6 +40,7 @@
     "@faker-js/faker": "~9.7.0",
     "bun": "~1.2.10",
     "drizzle-kit": "~0.31.0",
+    "tsx": "~4.19.3",
     "typescript": "~5.8.3"
   }
 }

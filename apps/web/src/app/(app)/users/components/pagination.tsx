@@ -124,12 +124,11 @@ export default function _Pagination({
       <div className='mt-6' />
 
       <p className='text-center text-muted-foreground text-xs'>
-        Showing {(currentPage - 1) * PAGINATION_LIMIT + 1} -{' '}
-        {Math.min(currentPage * PAGINATION_LIMIT, total)} of{' '}
-        <NumberTooltip value={total} unit='users'>
+        Показано {(currentPage - 1) * PAGINATION_LIMIT + 1} -{' '}
+        {Math.min(currentPage * PAGINATION_LIMIT, total)} из{' '}
+        <NumberTooltip value={total} unit='пользователей'>
           <span>{nFormatter(total)}</span>
-        </NumberTooltip>{' '}
-        users
+        </NumberTooltip>
       </p>
     </>
   )

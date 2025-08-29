@@ -22,5 +22,8 @@ export { default as ScreenSizeIndicator } from './screen-size-indicator'
 export { default as Skeleton } from './skeleton'
 export { default as ThemeToggle } from './theme-toggle'
 export { default as Tooltip } from './tooltip'
+export { default as Fieldset } from './fieldset'
+export { default as Card } from './card'
+export { default as Form } from './form'
 
 export * from './logo'

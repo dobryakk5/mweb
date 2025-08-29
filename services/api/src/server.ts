@@ -3,7 +3,7 @@ import Fastify from 'fastify'
 import autoLoad from '@fastify/autoload'
 import { join } from 'node:path'
 
-config({ path: '.env.local', override: true })
+config({ path: '.env', override: true })
 
 export default async function startServer() {
   const fastify = Fastify({ logger: true })

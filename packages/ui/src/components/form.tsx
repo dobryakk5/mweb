@@ -142,3 +142,6 @@ Form.Message = FormMessage
 Form.Field = FormField
 
 export default Form
+
+// Именованные экспорты для удобства
+export { FormField, FormItem, FormLabel, FormControl, FormDescription, FormMessage }

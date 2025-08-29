@@ -1,3 +1,7 @@
+'use client'
+
+import { useEffect, useState } from 'react'
+import { useRouter } from 'next/navigation'
 import type { JSX } from 'react'
 import Link from 'next/link'
 
@@ -6,24 +10,100 @@ import { buttonVariants } from '@acme/ui/components/button'
 
 import ViewUsers from './components/view-users'
 
-export default function HomePage(): JSX.Element {
+interface TelegramUser {
+  id: string
+  tgUserId: number
+  firstName?: string
+  lastName?: string
+  username?: string
+  photoUrl?: string
+  createdAt: Date
+  updatedAt: Date
+}
+
+export default function UsersPage(): JSX.Element {
+  const [user, setUser] = useState<TelegramUser | null>(null)
+  const [isLoading, setIsLoading] = useState(true)
+  const router = useRouter()
+
+  useEffect(() => {
+    // Проверяем существующую сессию
+    const userData = localStorage.getItem('telegram_user')
+    if (userData) {
+      try {
+        const user = JSON.parse(userData)
+        setUser(user)
+        // Проверяем, админ ли это
+        if (user.tgUserId !== 7852511755) {
+          // Не админ - перенаправляем на страницу квартир
+          router.push('/my-flats')
+          return
+        }
+        setIsLoading(false)
+      } catch (error) {
+        console.error('Error parsing user data:', error)
+        router.push('/auth-simple')
+      }
+    } else {
+      // Нет сессии - перенаправляем на авторизацию
+      router.push('/auth-simple')
+    }
+  }, [router])
+
+  const handleLogout = () => {
+    localStorage.removeItem('telegram_user')
+    localStorage.removeItem('telegram_session_token')
+    router.push('/auth-simple')
+  }
+
+  if (isLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Загрузка...</div>
+      </div>
+    )
+  }
+
+  if (!user) {
+    return null
+  }
+
   return (
     <Page>
       <Page.Header>
-        <Page.Title>Users</Page.Title>
+        <Page.Title>Пользователи</Page.Title>
 
-        <Link
-          className={buttonVariants({
-            className: 'ml-auto',
-            variant: 'secondary',
-          })}
-          href='/users/add'
-        >
-          Add user
-        </Link>
+        <div className="flex items-center gap-4 ml-auto">
+          <div className="flex items-center gap-2">
+            <span className="text-sm text-gray-600">
+              {user.firstName} {user.lastName}
+            </span>
+          </div>
+
+          <Link
+            className={buttonVariants({
+              className: 'ml-auto',
+              variant: 'secondary',
+            })}
+            href='/users/add'
+          >
+            Добавить пользователя
+          </Link>
+
+          <button
+            onClick={handleLogout}
+            className={buttonVariants({
+              variant: 'outline',
+            })}
+          >
+            Выйти
+          </button>
+        </div>
       </Page.Header>
 
-      <ViewUsers />
+      <Page.Content>
+        <ViewUsers />
+      </Page.Content>
     </Page>
   )
 }

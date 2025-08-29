@@ -4,7 +4,7 @@ import type { ReactNode, JSX } from 'react'
 import Layout from '@acme/ui/components/layout'
 
 export const metadata: Metadata = {
-  title: 'Dashboard',
+  title: 'Панель управления',
 }
 
 interface AppLayoutProps {

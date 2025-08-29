@@ -6,7 +6,21 @@ const nextConfig = {
     return [
       {
         source: '/api/:path*',
-        destination: `${process.env.API_URL}/:path*`,
+        destination: 'http://localhost:13001/:path*',
+      },
+    ]
+  },
+
+  async headers() {
+    return [
+      {
+        source: '/(.*)',
+        headers: [
+          {
+            key: 'Content-Security-Policy',
+            value: '', // Отключаем CSP
+          },
+        ],
       },
     ]
   },
