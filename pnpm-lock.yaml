@@ -241,6 +241,9 @@ importers:
       '@fastify/autoload':
         specifier: ~6.3.0
         version: 6.3.0
+      '@fastify/cors':
+        specifier: ~11.1.0
+        version: 11.1.0
       bcrypt:
         specifier: ~5.1.1
         version: 5.1.1
@@ -253,6 +256,9 @@ importers:
       fastify-plugin:
         specifier: ~5.0.1
         version: 5.0.1
+      zod:
+        specifier: ~3.24.3
+        version: 3.24.3
       zod-to-json-schema:
         specifier: ~3.24.5
         version: 3.24.5(zod@3.24.3)
@@ -741,6 +747,9 @@ packages:
 
   '@fastify/autoload@6.3.0':
     resolution: {integrity: sha512-VBYApgvqX5e+M2BAWKCxrYk9yTo8z127xsSzsSePQZlxt97tbQay74n//NDFK4ovFMgyhKSjoWtHTbdGw/RDvQ==}
+
+  '@fastify/cors@11.1.0':
+    resolution: {integrity: sha512-sUw8ed8wP2SouWZTIbA7V2OQtMNpLj2W6qJOYhNdcmINTu6gsxVYXjQiM9mdi8UUDlcoDDJ/W2syPo1WB2QjYA==}
 
   '@fastify/error@4.0.0':
     resolution: {integrity: sha512-OO/SA8As24JtT1usTUTKgGH7uLvhfwZPwlptRi2Dp5P4KKmJI3gvsZ8MIHnNwDs4sLf/aai5LzTyl66xr7qMxA==}
@@ -3737,6 +3746,11 @@ snapshots:
       fast-uri: 3.0.3
 
   '@fastify/autoload@6.3.0': {}
+
+  '@fastify/cors@11.1.0':
+    dependencies:
+      fastify-plugin: 5.0.1
+      toad-cache: 3.7.0
 
   '@fastify/error@4.0.0': {}
 

@@ -19,7 +19,8 @@ import Skeleton from '@acme/ui/components/skeleton'
 import Input from '@acme/ui/components/input'
 
 import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
-import { useAds } from '@/domains/ads'
+import { useAds, useUpdateAd } from '@/domains/ads'
+import { useParseProperty } from '@/domains/property-parser'
 import HookFormDevtool from '@/components/hookform-devtool'
 import AddAdForm from './add-ad-form'
 
@@ -73,6 +74,8 @@ export default function EditFlatForm({
   }, [flat, defaultValues, reset])
 
   const { mutateAsync: updateFlat } = useUpdateFlat(flat?.id as number)
+  const { mutateAsync: parseProperty, isPending: isParsing } = useParseProperty()
+  const { mutateAsync: updateAd } = useUpdateAd()
 
   const cancel = () => reset(defaultValues)
 
@@ -298,26 +301,53 @@ export default function EditFlatForm({
                               <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
                                 <button
                                   type='button'
-                                  className='p-2 rounded-md hover:bg-muted transition-colors'
+                                  className='p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
                                   title='Загрузить данные объявления'
-                                  onClick={() => {
-                                    // TODO: Реализовать загрузку данных объявления
-                                    console.log('Загрузить данные для:', ad.url)
+                                  disabled={isParsing}
+                                  onClick={async () => {
+                                    try {
+                                      const result = await parseProperty(ad.url)
+                                      if (result.success && result.data.price) {
+                                        // Обновляем цену в базе данных
+                                        await updateAd({
+                                          id: ad.id,
+                                          data: { price: result.data.price }
+                                        })
+                                      }
+                                    } catch (error) {
+                                      console.error('Ошибка загрузки данных:', error)
+                                    }
                                   }}
                                 >
-                                  <svg 
-                                    className='h-4 w-4' 
-                                    fill='none' 
-                                    viewBox='0 0 24 24' 
-                                    stroke='currentColor'
-                                  >
-                                    <path 
-                                      strokeLinecap='round' 
-                                      strokeLinejoin='round' 
-                                      strokeWidth={2} 
-                                      d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
-                                    />
-                                  </svg>
+                                  {isParsing ? (
+                                    <svg 
+                                      className='h-4 w-4 animate-spin' 
+                                      fill='none' 
+                                      viewBox='0 0 24 24' 
+                                      stroke='currentColor'
+                                    >
+                                      <path 
+                                        strokeLinecap='round' 
+                                        strokeLinejoin='round' 
+                                        strokeWidth={2} 
+                                        d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
+                                      />
+                                    </svg>
+                                  ) : (
+                                    <svg 
+                                      className='h-4 w-4' 
+                                      fill='none' 
+                                      viewBox='0 0 24 24' 
+                                      stroke='currentColor'
+                                    >
+                                      <path 
+                                        strokeLinecap='round' 
+                                        strokeLinejoin='round' 
+                                        strokeWidth={2} 
+                                        d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
+                                      />
+                                    </svg>
+                                  )}
                                 </button>
                               </td>
                             </tr>

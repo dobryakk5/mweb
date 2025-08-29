@@ -34,7 +34,10 @@ export default function ViewFlats({ tgUserId }: ViewFlatsProps): JSX.Element {
 
   const returnTo = encodeURIComponent(`${pathname}?${searchParams.toString()}`)
 
-  const { data: flats, isLoading } = useUserFlats(tgUserId, { search, sortBy, page })
+  const { data: flats, isLoading, error } = useUserFlats(tgUserId, { search, sortBy, page })
+  
+  // Добавляем логирование для отладки
+  console.log('ViewFlats debug:', { tgUserId, flats, isLoading, error })
 
   const handleSort = (field: string) => {
     let newSortBy: string
@@ -119,7 +122,15 @@ export default function ViewFlats({ tgUserId }: ViewFlatsProps): JSX.Element {
         </TableHeader>
 
         <TableBody>
-          {flats && !isLoading ? (
+          {error ? (
+            <TableRow>
+              <TableCell colSpan={3}>
+                <div className='text-red-600 text-center py-4'>
+                  Ошибка загрузки данных: {error.message}
+                </div>
+              </TableCell>
+            </TableRow>
+          ) : flats && !isLoading ? (
             flats.length > 0 ? (
               flats.map(({ id, address, rooms, floor }) => (
                 <Suspense key={id}>
@@ -152,7 +163,7 @@ export default function ViewFlats({ tgUserId }: ViewFlatsProps): JSX.Element {
                 </TableCell>
               </TableRow>
             )
-          ) : (
+          ) : isLoading ? (
             Array.from({ length: 15 }).map((_, i) => (
               // biome-ignore lint/suspicious/noArrayIndexKey: This is a skeleton loader
               <TableRow key={i}>
@@ -167,6 +178,14 @@ export default function ViewFlats({ tgUserId }: ViewFlatsProps): JSX.Element {
                 </TableCell>
               </TableRow>
             ))
+          ) : (
+            <TableRow>
+              <TableCell colSpan={3}>
+                <div className='text-gray-500 text-center py-4'>
+                  Нет данных для отображения
+                </div>
+              </TableCell>
+            </TableRow>
           )}
         </TableBody>
       </Table>

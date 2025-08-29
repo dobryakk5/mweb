@@ -1,12 +1,20 @@
 import { config } from 'dotenv'
 import Fastify from 'fastify'
 import autoLoad from '@fastify/autoload'
+import cors from '@fastify/cors'
 import { join } from 'node:path'
 
 config({ path: '.env', override: true })
 
 export default async function startServer() {
   const fastify = Fastify({ logger: true })
+
+  // Регистрируем CORS middleware
+  await fastify.register(cors, {
+    origin: ['http://localhost:13000', 'http://127.0.0.1:13000'],
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
+  })
 
   fastify.register(autoLoad, {
     dir: join(__dirname, 'plugins'),

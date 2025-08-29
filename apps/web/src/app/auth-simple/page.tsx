@@ -61,12 +61,8 @@ export default function AuthSimplePage() {
       localStorage.setItem('telegram_user', JSON.stringify(mockUser))
       localStorage.setItem('telegram_session_token', `session_${tgUserId}_${Date.now()}`)
       
-      // Перенаправляем на соответствующую страницу
-      if (tgUserId === 7852511755) {
-        router.push('/users')
-      } else {
-        router.push('/my-flats')
-      }
+      // Перенаправляем на страницу квартир пользователя
+      router.push('/my-flats')
       
     } catch (error) {
       console.error('Error creating user:', error)
@@ -99,7 +95,7 @@ export default function AuthSimplePage() {
               </div>
               
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
-                <strong>Для админа:</strong><br/>
+                <strong>Для просмотра квартир:</strong><br/>
                 <code className="text-sm">http://localhost:13000/auth-simple?tg_user_id=7852511755</code>
               </div>
             </div>
