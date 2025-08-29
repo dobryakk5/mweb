@@ -157,13 +157,17 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
         fastify.log.info(`Response.data type: ${typeof response.data}`)
         fastify.log.info(`Response.data keys: ${response.data ? Object.keys(response.data) : 'null'}`)
         
-        // Возвращаем реальные данные от Python API с форматированием цены
+        // Возвращаем реальные данные от Python API без форматирования цены
         let formattedData = { ...result.data }
         
-        // Форматируем цену: из копеек в миллионы рублей
-        if (formattedData.price && typeof formattedData.price === 'number') {
-          formattedData.price = Math.round(formattedData.price / 1000000)
-        }
+        // Логируем все поля для отладки
+        fastify.log.info(`All data fields from Python API:`)
+        Object.keys(formattedData).forEach(key => {
+          fastify.log.info(`  ${key}: ${formattedData[key]} (type: ${typeof formattedData[key]})`)
+        })
+        
+        // Цена остается как пришла из API (без деления на миллионы)
+        fastify.log.info(`Price from API: ${formattedData.price}`)
         
         const finalResponse = {
           success: result.success,

@@ -19,8 +19,9 @@ import Skeleton from '@acme/ui/components/skeleton'
 import Input from '@acme/ui/components/input'
 
 import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
-import { useAds, useUpdateAd } from '@/domains/ads'
+import { useAds, useUpdateAd, forceUpdateAd } from '@/domains/ads'
 import { useParseProperty } from '@/domains/property-parser'
+import { toast } from 'sonner'
 import HookFormDevtool from '@/components/hookform-devtool'
 import AddAdForm from './add-ad-form'
 
@@ -295,7 +296,7 @@ export default function EditFlatForm({
                               </td>
                               <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
                                 <div className='text-sm text-muted-foreground'>
-                                  {ad.price > 0 ? `Цена: ${ad.price} ₽` : 'Цена не указана'}
+                                  {ad.price > 0 ? `${ad.price}` : 'Цена не указана'}
                                 </div>
                               </td>
                               <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
@@ -306,16 +307,81 @@ export default function EditFlatForm({
                                   disabled={isParsing}
                                   onClick={async () => {
                                     try {
+                                      console.log('Начинаем парсинг объявления:', ad.url)
                                       const result = await parseProperty(ad.url)
-                                      if (result.success && result.data.price) {
-                                        // Обновляем цену в базе данных
-                                        await updateAd({
-                                          id: ad.id,
-                                          data: { price: result.data.price }
+                                      console.log('Результат парсинга:', result)
+                                      
+                                      if (result.success && result.data) {
+                                        console.log('Данные для обновления:', result.data)
+                                        
+                                        // Обновляем все данные от API парсинга в базе данных
+                                        const updateData = {
+                                          // Основные поля (всегда обновляем)
+                                          price: result.data.price,
+                                          rooms: result.data.rooms,
+                                          
+                                          // Площади (числа с плавающей точкой)
+                                          totalArea: result.data.total_area ? parseFloat(result.data.total_area) : undefined,
+                                          livingArea: result.data.living_area ? parseFloat(result.data.living_area) : undefined,
+                                          kitchenArea: result.data.kitchen_area ? parseFloat(result.data.kitchen_area) : undefined,
+                                          
+                                          // Этаж и планировка
+                                          totalFloors: result.data.total_floors,
+                                          bathroom: result.data.bathroom,
+                                          balcony: result.data.balcony,
+                                          
+                                          // Ремонт и отделка
+                                          renovation: result.data.renovation,
+                                          furniture: result.data.furniture,
+                                          
+                                          // Характеристики здания
+                                          constructionYear: result.data.construction_year,
+                                          houseType: result.data.house_type,
+                                          ceilingHeight: result.data.ceiling_height ? parseFloat(result.data.ceiling_height) : undefined,
+                                          
+                                          // Локация
+                                          metroStation: result.data.metro_station,
+                                          metroTime: result.data.metro_time,
+                                          
+                                          // Дополнительная информация
+                                          tags: result.data.tags,
+                                          description: result.data.description,
+                                          photoUrls: result.data.photo_urls,
+                                          
+                                          // Источник и статус
+                                          source: result.data.source ? parseInt(result.data.source) : undefined,
+                                          status: result.data.status,
+                                          viewsToday: result.data.views_today,
+                                          totalViews: result.data.total_views,
+                                        }
+                                        
+                                        // Логируем каждое поле отдельно для отладки
+                                        console.log('Детальный разбор данных для БД:')
+                                        Object.entries(updateData).forEach(([key, value]) => {
+                                          console.log(`  ${key}: ${value} (type: ${typeof value})`)
                                         })
+                                        
+                                        // Фильтруем undefined значения
+                                        const filteredUpdateData = Object.fromEntries(
+                                          Object.entries(updateData).filter(([_, value]) => value !== undefined)
+                                        )
+                                        
+                                        console.log('Фильтрованные данные для БД:', filteredUpdateData)
+                                        
+                                        console.log('Данные для отправки в БД:', updateData)
+                                        
+                                        // Используем принудительное обновление для гарантии перезаписи всех полей
+                                        await forceUpdateAd(ad.id, filteredUpdateData)
+                                        
+                                        toast.success('Данные объявления обновлены успешно!')
+                                        console.log('Объявление успешно обновлено в БД')
+                                      } else {
+                                        console.error('API вернул ошибку:', result.message)
+                                        toast.error(`Ошибка парсинга: ${result.message}`)
                                       }
                                     } catch (error) {
                                       console.error('Ошибка загрузки данных:', error)
+                                      toast.error('Ошибка при загрузке данных объявления')
                                     }
                                   }}
                                 >

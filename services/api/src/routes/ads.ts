@@ -14,6 +14,38 @@ const createAdSchema = z.object({
   rooms: z.number().positive(),
 })
 
+// Схема для обновления объявления с данными от API парсинга
+const updateAdSchema = z.object({
+  flatId: z.number().positive().optional(),
+  url: z.string().url().optional(),
+  address: z.string().min(1).optional(),
+  price: z.number().min(0).optional(),
+  rooms: z.number().positive().optional(),
+  
+  // Новые поля от API парсинга
+  totalArea: z.string().optional(),
+  livingArea: z.string().optional(),
+  kitchenArea: z.string().optional(),
+  floor: z.string().optional(),
+  totalFloors: z.number().optional(),
+  bathroom: z.string().optional(),
+  balcony: z.string().optional(),
+  renovation: z.string().optional(),
+  furniture: z.string().optional(),
+  constructionYear: z.number().optional(),
+  houseType: z.string().optional(),
+  ceilingHeight: z.string().optional(),
+  metroStation: z.string().optional(),
+  metroTime: z.string().optional(),
+  tags: z.string().optional(),
+  description: z.string().optional(),
+  photoUrls: z.array(z.string()).optional(),
+  source: z.string().optional(),
+  status: z.string().optional(),
+  viewsToday: z.number().optional(),
+  totalViews: z.number().optional(),
+})
+
 export default async function adsRoutes(fastify: FastifyInstance) {
   // GET /ads - получить все объявления
   fastify.get('/ads', async (request, reply) => {
@@ -72,7 +104,20 @@ export default async function adsRoutes(fastify: FastifyInstance) {
   fastify.patch('/ads/:id', async (request, reply) => {
     try {
       const { id } = z.object({ id: z.string() }).parse(request.params)
-      const body = createAdSchema.partial().parse(request.body)
+      const body = updateAdSchema.parse(request.body)
+      
+      fastify.log.info(`Updating ad ${id} with data:`, body)
+      
+      // Логируем каждое поле отдельно
+      Object.entries(body).forEach(([key, value]) => {
+        fastify.log.info(`Field ${key}: ${value} (type: ${typeof value})`)
+      })
+      
+      // Получаем текущие данные объявления для сравнения
+      const currentAd = await db.select().from(ads).where(eq(ads.id, parseInt(id))).limit(1)
+      if (currentAd.length > 0) {
+        fastify.log.info(`Current ad data before update:`, currentAd[0])
+      }
       
       const result = await db.update(ads)
         .set({
@@ -82,13 +127,70 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         .where(eq(ads.id, parseInt(id)))
         .returning()
       
+      fastify.log.info(`Update result:`, result)
+      
+      // Получаем обновленные данные для сравнения
+      const updatedAd = await db.select().from(ads).where(eq(ads.id, parseInt(id))).limit(1)
+      if (updatedAd.length > 0) {
+        fastify.log.info(`Updated ad data after update:`, updatedAd[0])
+      }
+      
       if (result.length === 0) {
         return reply.status(404).send({ error: 'Ad not found' })
       }
       
       return reply.send(result[0])
     } catch (error) {
-      fastify.log.error(error)
+      fastify.log.error(`Error updating ad ${id}:`, error)
+      return reply.status(500).send({ error: 'Internal server error' })
+    }
+  })
+
+  // PUT /ads/:id - полностью заменить объявление (принудительное обновление)
+  fastify.put('/ads/:id', async (request, reply) => {
+    let adId: string
+    try {
+      const params = z.object({ id: z.string() }).parse(request.params)
+      adId = params.id
+      const body = updateAdSchema.parse(request.body)
+      
+      fastify.log.info(`Force updating ad ${adId} with data:`, body)
+      
+      // Логируем каждое поле отдельно
+      Object.entries(body).forEach(([key, value]) => {
+        fastify.log.info(`Field ${key}: ${value} (type: ${typeof value})`)
+      })
+      
+      // Получаем текущие данные объявления для сравнения
+      const currentAd = await db.select().from(ads).where(eq(ads.id, parseInt(adId))).limit(1)
+      if (currentAd.length > 0) {
+        fastify.log.info(`Current ad data before force update:`, currentAd[0])
+      }
+      
+      // Принудительно обновляем все поля
+      const result = await db.update(ads)
+        .set({
+          ...body,
+          updatedAt: new Date(),
+        })
+        .where(eq(ads.id, parseInt(adId)))
+        .returning()
+      
+      fastify.log.info(`Force update result:`, result)
+      
+      // Получаем обновленные данные для сравнения
+      const updatedAd = await db.select().from(ads).where(eq(ads.id, parseInt(adId))).limit(1)
+      if (updatedAd.length > 0) {
+        fastify.log.info(`Updated ad data after force update:`, updatedAd[0])
+      }
+      
+      if (result.length === 0) {
+        return reply.status(404).send({ error: 'Ad not found' })
+      }
+      
+      return reply.send(result[0])
+    } catch (error) {
+      fastify.log.error(`Error force updating ad ${adId || 'unknown'}:`, error)
       return reply.status(500).send({ error: 'Internal server error' })
     }
   })

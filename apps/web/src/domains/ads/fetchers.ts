@@ -8,6 +8,30 @@ export interface CreateAdData {
   rooms: number
 }
 
+export interface UpdateAdData extends Partial<CreateAdData> {
+  // Новые поля от API парсинга
+  totalArea?: number
+  livingArea?: number
+  kitchenArea?: number
+  totalFloors?: number
+  bathroom?: string
+  balcony?: string
+  renovation?: string
+  furniture?: string
+  constructionYear?: number
+  houseType?: string
+  ceilingHeight?: number
+  metroStation?: string
+  metroTime?: string
+  tags?: string
+  description?: string
+  photoUrls?: string[]
+  source?: number
+  status?: string
+  viewsToday?: number
+  totalViews?: number
+}
+
 export interface Ad {
   id: number
   flatId: number // ID квартиры
@@ -18,6 +42,28 @@ export interface Ad {
   views: number
   createdAt: string
   updatedAt: string
+  
+  // Новые поля от API парсинга
+  totalArea?: number
+  livingArea?: number
+  kitchenArea?: number
+  totalFloors?: number
+  bathroom?: string
+  balcony?: string
+  renovation?: string
+  furniture?: string
+  constructionYear?: number
+  houseType?: string
+  ceilingHeight?: number
+  metroStation?: string
+  metroTime?: string
+  tags?: string
+  description?: string
+  photoUrls?: string[]
+  source?: number
+  status?: string
+  viewsToday?: number
+  totalViews?: number
 }
 
 export async function fetchAds(filters: { search?: string; sortBy?: string; page?: number; flatId?: number } = {}) {
@@ -41,8 +87,17 @@ export async function createAd(data: CreateAdData) {
   return response.data
 }
 
-export async function updateAd(id: number, data: Partial<CreateAdData>) {
+export async function updateAd(id: number, data: UpdateAdData) {
+  console.log(`Sending PATCH request to /ads/${id} with data:`, data)
   const response = await api.patch<Ad>(`/ads/${id}`, data)
+  console.log(`PATCH response:`, response.data)
+  return response.data
+}
+
+export async function forceUpdateAd(id: number, data: UpdateAdData) {
+  console.log(`Sending PUT request to /ads/${id} with data:`, data)
+  const response = await api.put<Ad>(`/ads/${id}`, data)
+  console.log(`PUT response:`, response.data)
   return response.data
 }
 

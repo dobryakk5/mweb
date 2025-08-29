@@ -1,4 +1,4 @@
-import { pgTable, varchar, index, bigint, integer, pgSchema } from 'drizzle-orm/pg-core'
+import { pgTable, varchar, index, bigint, integer, pgSchema, decimal, smallint, text } from 'drizzle-orm/pg-core'
 
 import { id, timestamps } from './utils'
 
@@ -77,6 +77,29 @@ export const ads = usersSchema.table(
     price: integer('price').notNull(),
     rooms: integer('rooms').notNull(),
     views: integer('views').default(0).notNull(),
+    
+    // Новые колонки для данных от API парсинга
+    totalArea: decimal('total_area', { precision: 5, scale: 2 }),
+    livingArea: decimal('living_area', { precision: 5, scale: 2 }),
+    kitchenArea: decimal('kitchen_area', { precision: 5, scale: 2 }),
+    totalFloors: smallint('total_floors'),
+    bathroom: varchar('bathroom'),
+    balcony: varchar('balcony'),
+    renovation: varchar('renovation'),
+    furniture: varchar('furniture'),
+    constructionYear: smallint('construction_year'),
+    houseType: varchar('house_type'),
+    ceilingHeight: decimal('ceiling_height', { precision: 3, scale: 2 }),
+    metroStation: varchar('metro_station'),
+    metroTime: varchar('metro_time'),
+    tags: text('tags'),
+    description: text('description'),
+    photoUrls: text('photo_urls').array(),
+    source: smallint('source'),
+    status: varchar('status'),
+    viewsToday: smallint('views_today'),
+    totalViews: integer('total_views'),
+    
     ...timestamps,
   },
   (t) => [
