@@ -1,7 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { db } from '@acme/db'
-import { userFlats } from '@acme/db'
+import { db, userFlats } from '@acme/db'
 import { eq, desc, and, ilike } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 

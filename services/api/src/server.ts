@@ -4,7 +4,7 @@ import autoLoad from '@fastify/autoload'
 import cors from '@fastify/cors'
 import { join } from 'node:path'
 
-config({ path: '.env', override: true })
+config({ path: join(__dirname, '../.env'), override: true })
 
 export default async function startServer() {
   const fastify = Fastify({ logger: true })

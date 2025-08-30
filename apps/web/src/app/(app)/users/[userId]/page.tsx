@@ -3,11 +3,12 @@ import type { JSX } from 'react'
 import EditUser from './components/edit-user'
 
 type UserPageProps = {
-  params: {
+  params: Promise<{
     userId: string
-  }
+  }>
 }
 
-export default function UserPage({ params }: UserPageProps): JSX.Element {
-  return <EditUser id={params.userId} />
+export default async function UserPage({ params }: UserPageProps): Promise<JSX.Element> {
+  const { userId } = await params
+  return <EditUser id={userId} />
 }

@@ -42,7 +42,7 @@ export default function UsersPage(): JSX.Element {
         setIsLoading(false)
       } catch (error) {
         console.error('Error parsing user data:', error)
-        router.push('/auth-simple')
+        router.push('/link')
       }
     } else {
       // Нет сессии - перенаправляем на авторизацию
@@ -65,7 +65,11 @@ export default function UsersPage(): JSX.Element {
   }
 
   if (!user) {
-    return null
+    return (
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Пользователь не найден</div>
+      </div>
+    )
   }
 
   return (

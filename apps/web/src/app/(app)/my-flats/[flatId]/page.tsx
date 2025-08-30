@@ -10,5 +10,5 @@ type FlatPageProps = {
 
 export default async function FlatPage({ params }: FlatPageProps): Promise<JSX.Element> {
   const { flatId } = await params
-  return <EditFlat id={flatId} />
+  return <EditFlat id={parseInt(flatId)} />
 }

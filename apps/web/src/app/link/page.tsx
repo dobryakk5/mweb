@@ -1,6 +1,6 @@
 'use client'
 
-import { useEffect, useState } from 'react'
+import { Suspense, useEffect, useState } from 'react'
 import { useRouter, useSearchParams } from 'next/navigation'
 
 interface TelegramUser {
@@ -14,7 +14,7 @@ interface TelegramUser {
   updatedAt: Date
 }
 
-export default function AuthSimplePage() {
+function AuthSimpleComponent() {
   const [user, setUser] = useState<TelegramUser | null>(null)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
@@ -22,23 +22,23 @@ export default function AuthSimplePage() {
   const searchParams = useSearchParams()
 
   useEffect(() => {
-    const tgUserId = searchParams.get('tg_user_id')
+    const userId = searchParams.get('i')
     
-    if (!tgUserId) {
-      setError('Не указан tg_user_id в URL')
+    if (!userId) {
+      setError('Не указан параметр i в URL')
       setIsLoading(false)
       return
     }
 
-    const userId = parseInt(tgUserId)
-    if (isNaN(userId)) {
-      setError('Неверный формат tg_user_id')
+    const userIdNumber = parseInt(userId)
+    if (isNaN(userIdNumber)) {
+      setError('Неверный формат параметра i')
       setIsLoading(false)
       return
     }
 
     // Создаем или получаем пользователя
-    createOrGetUser(userId)
+    createOrGetUser(userIdNumber)
   }, [searchParams])
 
   const createOrGetUser = async (tgUserId: number) => {
@@ -91,12 +91,12 @@ export default function AuthSimplePage() {
             <div className="space-y-4">
               <div className="bg-blue-50 border border-blue-200 text-blue-700 px-4 py-3 rounded">
                 <strong>Пример правильного URL:</strong><br/>
-                <code className="text-sm">http://localhost:13000/auth-simple?tg_user_id=123</code>
+                <code className="text-sm">http://localhost:13000/link?i=123</code>
               </div>
               
               <div className="bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded">
                 <strong>Для просмотра квартир:</strong><br/>
-                <code className="text-sm">http://localhost:13000/auth-simple?tg_user_id=7852511755</code>
+                <code className="text-sm">http://localhost:13000/link?i=1</code>
               </div>
             </div>
           </div>
@@ -109,5 +109,17 @@ export default function AuthSimplePage() {
     <div className="min-h-screen flex items-center justify-center">
       <div className="text-lg">Перенаправление...</div>
     </div>
+  )
+}
+
+export default function AuthSimplePage() {
+  return (
+    <Suspense fallback={
+      <div className="min-h-screen flex items-center justify-center">
+        <div className="text-lg">Загрузка...</div>
+      </div>
+    }>
+      <AuthSimpleComponent />
+    </Suspense>
   )
 }

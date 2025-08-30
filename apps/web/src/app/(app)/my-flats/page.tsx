@@ -36,18 +36,18 @@ export default function MyFlatsPage(): JSX.Element {
         setIsLoading(false)
       } catch (error) {
         console.error('Error parsing user data:', error)
-        router.push('/auth-simple')
+        router.push('/link')
       }
     } else {
       // Нет сессии - перенаправляем на авторизацию
-      router.push('/auth-simple')
+      router.push('/link')
     }
   }, [router])
 
   const handleLogout = () => {
     localStorage.removeItem('telegram_user')
     localStorage.removeItem('telegram_session_token')
-    router.push('/auth-simple')
+    router.push('/link')
   }
 
   if (isLoading) {

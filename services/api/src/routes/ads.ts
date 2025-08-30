@@ -1,9 +1,7 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { db } from '@acme/db'
-import { insertAdSchema, selectAdSchema } from '@acme/db/schemas'
-import { ads } from '@acme/db/schema'
+import { db, ads } from '@acme/db'
 import { eq } from 'drizzle-orm'
 
 const createAdSchema = z.object({

@@ -32,7 +32,7 @@ export default function AddFlatPage(): JSX.Element {
         setIsLoading(false)
       } catch (error) {
         console.error('Error parsing user data:', error)
-        router.push('/auth-simple')
+        router.push('/link')
       }
     } else {
       // Нет сессии - перенаправляем на авторизацию

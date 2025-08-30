@@ -2,6 +2,7 @@ import api from '@/lib/api'
 
 export interface ParsePropertyResponse {
   success: boolean
+  message?: string
   data: {
     price?: number
     address?: string

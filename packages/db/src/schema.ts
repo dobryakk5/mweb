@@ -1,4 +1,5 @@
 import { pgTable, varchar, index, bigint, integer, pgSchema, decimal, smallint, text } from 'drizzle-orm/pg-core'
+import { relations } from 'drizzle-orm'
 
 import { id, timestamps } from './utils'
 
@@ -108,3 +109,15 @@ export const ads = usersSchema.table(
     index('ads_price_idx').on(t.price),
   ],
 )
+
+// Определяем связи между таблицами
+export const userFlatsRelations = relations(userFlats, ({ many }) => ({
+  ads: many(ads),
+}))
+
+export const adsRelations = relations(ads, ({ one }) => ({
+  flat: one(userFlats, {
+    fields: [ads.flatId],
+    references: [userFlats.id],
+  }),
+}))
