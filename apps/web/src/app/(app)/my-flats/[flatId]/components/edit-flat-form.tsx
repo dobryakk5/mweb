@@ -48,9 +48,24 @@ export default function EditFlatForm({
   const searchParams = useSearchParams()
   const returnTo = searchParams.get('returnTo') || '/my-flats'
   const [showAddAdForm, setShowAddAdForm] = useState(false)
+  const [expandedView, setExpandedView] = useState(false)
   
   // Получаем объявления для этой квартиры
   const { data: ads = [] } = useAds({ flatId: flat?.id })
+
+  // Функция для форматирования значений в таблице
+  const formatValue = (value: any, defaultText = '-') => {
+    if (value === null || value === undefined || value === '') return defaultText
+    if (typeof value === 'number') return value.toString()
+    return value.toString()
+  }
+
+  // Функция для получения названия источника
+  const getSourceName = (source: number) => {
+    if (source === 1) return 'Cian'
+    if (source === 2) return 'Avito'
+    return 'Unknown'
+  }
 
   const defaultValues = useMemo(
     () => ({
@@ -216,18 +231,30 @@ export default function EditFlatForm({
               <div className='py-4'>
                 <div className='flex items-center justify-between mb-4'>
                   <h3 className='text-lg font-medium'>Объявления о продаже</h3>
-                  <button
-                    type='button'
-                    className={buttonVariants({
-                      variant: 'secondary',
-                      size: 'sm',
-                    })}
-                    onClick={() => {
-                      setShowAddAdForm(!showAddAdForm)
-                    }}
-                  >
-                    {showAddAdForm ? 'Скрыть форму' : 'Добавить объявление'}
-                  </button>
+                  <div className='flex items-center gap-2'>
+                    <button
+                      type='button'
+                      className={buttonVariants({
+                        variant: expandedView ? 'default' : 'outline',
+                        size: 'sm',
+                      })}
+                      onClick={() => setExpandedView(!expandedView)}
+                    >
+                      {expandedView ? 'Компактный вид' : 'Расширенный вид'}
+                    </button>
+                    <button
+                      type='button'
+                      className={buttonVariants({
+                        variant: 'secondary',
+                        size: 'sm',
+                      })}
+                      onClick={() => {
+                        setShowAddAdForm(!showAddAdForm)
+                      }}
+                    >
+                      {showAddAdForm ? 'Скрыть форму' : 'Добавить объявление'}
+                    </button>
+                  </div>
                 </div>
 
                 {/* Форма добавления объявления */}
@@ -249,175 +276,344 @@ export default function EditFlatForm({
                     <table className='w-full caption-bottom text-sm'>
                       <thead className='[&_tr]:border-b'>
                         <tr className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
-                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-80'>
-                            <div className='flex items-center gap-2'>
-                              URL объявления
-                            </div>
-                          </th>
-                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                            <div className='flex items-center gap-2'>
-                              Цена
-                            </div>
-                          </th>
-                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                            <div className='flex items-center gap-2'>
-                              Загрузить
-                            </div>
-                          </th>
+                          {expandedView ? (
+                            <>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-40'>
+                                URL
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Цена
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Комнаты
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Общая пл.
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Жилая пл.
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Кухня пл.
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Этаж
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Санузел
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Балкон
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Ремонт
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Мебель
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Год постр.
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Тип дома
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Потолки
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Метро
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Источник
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Статус
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Просмотры
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Загрузить
+                              </th>
+                            </>
+                          ) : (
+                            <>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-80'>
+                                <div className='flex items-center gap-2'>
+                                  URL объявления
+                                </div>
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                <div className='flex items-center gap-2'>
+                                  Цена
+                                </div>
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                <div className='flex items-center gap-2'>
+                                  Загрузить
+                                </div>
+                              </th>
+                            </>
+                          )}
                         </tr>
                       </thead>
                       <tbody className='[&_tr:last-child]:border-0'>
                         {ads.length === 0 ? (
                           <tr className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
-                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
-                              <div className='text-sm'>Пока нет объявлений</div>
-                            </td>
-                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
-                              <div className='text-sm text-muted-foreground'>-</div>
-                            </td>
-                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
-                              <div className='text-sm text-muted-foreground'>-</div>
+                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0' colSpan={expandedView ? 16 : 3}>
+                              <div className='text-sm text-center'>Пока нет объявлений</div>
                             </td>
                           </tr>
                         ) : (
-                          ads.map((ad) => (
-                            <tr key={ad.id} className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
-                              <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
-                                <div className='text-sm'>
-                                  <a 
-                                    href={ad.url} 
-                                    target='_blank' 
-                                    rel='noopener noreferrer'
-                                    className='cursor-pointer hover:underline'
-                                  >
-                                    {ad.url}
-                                  </a>
-                                </div>
-                              </td>
-                              <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
-                                <div className='text-sm text-muted-foreground'>
-                                  {ad.price > 0 ? `${ad.price}` : 'Цена не указана'}
-                                </div>
-                              </td>
-                              <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
-                                <button
-                                  type='button'
-                                  className='p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
-                                  title='Загрузить данные объявления'
-                                  disabled={isParsing}
-                                  onClick={async () => {
-                                    try {
-                                      console.log('Начинаем парсинг объявления:', ad.url)
-                                      const result = await parseProperty(ad.url)
-                                      console.log('Результат парсинга:', result)
+                          ads.map((ad) => {
+                            const loadButton = (
+                              <button
+                                type='button'
+                                className={expandedView ? 
+                                  'p-1 rounded text-xs hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed' :
+                                  'p-2 rounded-md hover:bg-muted transition-colors disabled:opacity-50 disabled:cursor-not-allowed'
+                                }
+                                title='Загрузить данные объявления'
+                                disabled={isParsing}
+                                onClick={async () => {
+                                  try {
+                                    console.log('Начинаем парсинг объявления:', ad.url)
+                                    const result = await parseProperty(ad.url)
+                                    console.log('Результат парсинга:', result)
+                                    
+                                    if (result.success && result.data) {
+                                      console.log('Данные для обновления:', result.data)
                                       
-                                      if (result.success && result.data) {
-                                        console.log('Данные для обновления:', result.data)
+                                      // Обновляем все данные от API парсинга в базе данных
+                                      const updateData = {
+                                        // Основные поля (всегда обновляем)
+                                        price: result.data.price,
+                                        rooms: result.data.rooms,
                                         
-                                        // Обновляем все данные от API парсинга в базе данных
-                                        const updateData = {
-                                          // Основные поля (всегда обновляем)
-                                          price: result.data.price,
-                                          rooms: result.data.rooms,
-                                          
-                                          // Площади (числа с плавающей точкой)
-                                          totalArea: result.data.total_area ? parseFloat(result.data.total_area) : undefined,
-                                          livingArea: result.data.living_area ? parseFloat(result.data.living_area) : undefined,
-                                          kitchenArea: result.data.kitchen_area ? parseFloat(result.data.kitchen_area) : undefined,
-                                          
-                                          // Этаж и планировка
-                                          totalFloors: result.data.total_floors,
-                                          bathroom: result.data.bathroom,
-                                          balcony: result.data.balcony,
-                                          
-                                          // Ремонт и отделка
-                                          renovation: result.data.renovation,
-                                          furniture: result.data.furniture,
-                                          
-                                          // Характеристики здания
-                                          constructionYear: result.data.construction_year,
-                                          houseType: result.data.house_type,
-                                          ceilingHeight: result.data.ceiling_height ? parseFloat(result.data.ceiling_height) : undefined,
-                                          
-                                          // Локация
-                                          metroStation: result.data.metro_station,
-                                          metroTime: result.data.metro_time,
-                                          
-                                          // Дополнительная информация
-                                          tags: result.data.tags,
-                                          description: result.data.description,
-                                          photoUrls: result.data.photo_urls,
-                                          
-                                          // Источник и статус
-                                          source: result.data.source ? parseInt(result.data.source) : undefined,
-                                          status: result.data.status,
-                                          viewsToday: result.data.views_today,
-                                          totalViews: result.data.total_views,
-                                        }
+                                        // Площади (числа с плавающей точкой)
+                                        totalArea: result.data.total_area ? parseFloat(result.data.total_area) : undefined,
+                                        livingArea: result.data.living_area ? parseFloat(result.data.living_area) : undefined,
+                                        kitchenArea: result.data.kitchen_area ? parseFloat(result.data.kitchen_area) : undefined,
                                         
-                                        // Логируем каждое поле отдельно для отладки
-                                        console.log('Детальный разбор данных для БД:')
-                                        Object.entries(updateData).forEach(([key, value]) => {
-                                          console.log(`  ${key}: ${value} (type: ${typeof value})`)
-                                        })
+                                        // Этаж и планировка
+                                        totalFloors: result.data.total_floors,
+                                        bathroom: result.data.bathroom,
+                                        balcony: result.data.balcony,
                                         
-                                        // Фильтруем undefined значения
-                                        const filteredUpdateData = Object.fromEntries(
-                                          Object.entries(updateData).filter(([_, value]) => value !== undefined)
-                                        )
+                                        // Ремонт и отделка
+                                        renovation: result.data.renovation,
+                                        furniture: result.data.furniture,
                                         
-                                        console.log('Фильтрованные данные для БД:', filteredUpdateData)
+                                        // Характеристики здания
+                                        constructionYear: result.data.construction_year,
+                                        houseType: result.data.house_type,
+                                        ceilingHeight: result.data.ceiling_height ? parseFloat(result.data.ceiling_height) : undefined,
                                         
-                                        console.log('Данные для отправки в БД:', updateData)
+                                        // Локация
+                                        metroStation: result.data.metro_station,
+                                        metroTime: result.data.metro_time,
                                         
-                                        // Используем принудительное обновление для гарантии перезаписи всех полей
-                                        await forceUpdateAd(ad.id, filteredUpdateData)
+                                        // Дополнительная информация
+                                        tags: result.data.tags,
+                                        description: result.data.description,
+                                        photoUrls: result.data.photo_urls,
                                         
-                                        toast.success('Данные объявления обновлены успешно!')
-                                        console.log('Объявление успешно обновлено в БД')
-                                      } else {
-                                        console.error('API вернул ошибку:', result.message)
-                                        toast.error(`Ошибка парсинга: ${result.message}`)
+                                        // Источник и статус  
+                                        source: result.data.source === 'cian' ? 1 : result.data.source === 'avito' ? 2 : undefined,
+                                        status: result.data.status,
+                                        viewsToday: result.data.views_today,
+                                        totalViews: result.data.total_views,
                                       }
-                                    } catch (error) {
-                                      console.error('Ошибка загрузки данных:', error)
-                                      toast.error('Ошибка при загрузке данных объявления')
+                                      
+                                      // Логируем каждое поле отдельно для отладки
+                                      console.log('Детальный разбор данных для БД:')
+                                      Object.entries(updateData).forEach(([key, value]) => {
+                                        console.log(`  ${key}: ${value} (type: ${typeof value})`)
+                                      })
+                                      
+                                      // Фильтруем undefined значения
+                                      const filteredUpdateData = Object.fromEntries(
+                                        Object.entries(updateData).filter(([_, value]) => value !== undefined)
+                                      )
+                                      
+                                      console.log('Фильтрованные данные для БД:', filteredUpdateData)
+                                      
+                                      console.log('Данные для отправки в БД:', updateData)
+                                      
+                                      // Используем принудительное обновление для гарантии перезаписи всех полей
+                                      await forceUpdateAd(ad.id, filteredUpdateData)
+                                      
+                                      toast.success('Данные объявления обновлены успешно!')
+                                      console.log('Объявление успешно обновлено в БД')
+                                    } else {
+                                      console.error('API вернул ошибку:', result.message)
+                                      toast.error(`Ошибка парсинга: ${result.message}`)
                                     }
-                                  }}
-                                >
-                                  {isParsing ? (
-                                    <svg 
-                                      className='h-4 w-4 animate-spin' 
-                                      fill='none' 
-                                      viewBox='0 0 24 24' 
-                                      stroke='currentColor'
-                                    >
-                                      <path 
-                                        strokeLinecap='round' 
-                                        strokeLinejoin='round' 
-                                        strokeWidth={2} 
-                                        d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
-                                      />
-                                    </svg>
-                                  ) : (
-                                    <svg 
-                                      className='h-4 w-4' 
-                                      fill='none' 
-                                      viewBox='0 0 24 24' 
-                                      stroke='currentColor'
-                                    >
-                                      <path 
-                                        strokeLinecap='round' 
-                                        strokeLinejoin='round' 
-                                        strokeWidth={2} 
-                                        d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
-                                      />
-                                    </svg>
-                                  )}
-                                </button>
-                              </td>
-                            </tr>
-                          ))
+                                  } catch (error) {
+                                    console.error('Ошибка загрузки данных:', error)
+                                    toast.error('Ошибка при загрузке данных объявления')
+                                  }
+                                }}
+                              >
+                                {isParsing ? (
+                                  <svg 
+                                    className='h-4 w-4 animate-spin' 
+                                    fill='none' 
+                                    viewBox='0 0 24 24' 
+                                    stroke='currentColor'
+                                  >
+                                    <path 
+                                      strokeLinecap='round' 
+                                      strokeLinejoin='round' 
+                                      strokeWidth={2} 
+                                      d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
+                                    />
+                                  </svg>
+                                ) : (
+                                  <svg 
+                                    className='h-4 w-4' 
+                                    fill='none' 
+                                    viewBox='0 0 24 24' 
+                                    stroke='currentColor'
+                                  >
+                                    <path 
+                                      strokeLinecap='round' 
+                                      strokeLinejoin='round' 
+                                      strokeWidth={2} 
+                                      d='M4 4v5h.582m15.356 2A8.001 8.001 0 004.582 9m0 0H9m11 11v-5h-.581m0 0a8.003 8.003 0 01-15.357-2m15.357 2H15' 
+                                    />
+                                  </svg>
+                                )}
+                              </button>
+                            )
+
+                            return (
+                              <tr key={ad.id} className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
+                                {expandedView ? (
+                                  <>
+                                    {/* URL - короткая версия */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      <a 
+                                        href={ad.url} 
+                                        target='_blank' 
+                                        rel='noopener noreferrer'
+                                        className='hover:underline text-blue-600'
+                                        title={ad.url}
+                                      >
+                                        {ad.url.length > 20 ? ad.url.substring(0, 20) + '...' : ad.url}
+                                      </a>
+                                    </td>
+                                    {/* Цена */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {ad.price > 0 ? `${(ad.price / 1000000).toFixed(1)}М` : '-'}
+                                    </td>
+                                    {/* Комнаты */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.rooms)}
+                                    </td>
+                                    {/* Общая площадь */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.totalArea)}
+                                    </td>
+                                    {/* Жилая площадь */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.livingArea)}
+                                    </td>
+                                    {/* Площадь кухни */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.kitchenArea)}
+                                    </td>
+                                    {/* Этаж */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {ad.floor && ad.totalFloors ? `${ad.floor}/${ad.totalFloors}` : formatValue(ad.floor)}
+                                    </td>
+                                    {/* Санузел */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.bathroom)}
+                                    </td>
+                                    {/* Балкон */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.balcony)}
+                                    </td>
+                                    {/* Ремонт */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.renovation)}
+                                    </td>
+                                    {/* Мебель */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.furniture)}
+                                    </td>
+                                    {/* Год постройки */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.constructionYear)}
+                                    </td>
+                                    {/* Тип дома */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.houseType)}
+                                    </td>
+                                    {/* Высота потолков */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.ceilingHeight)}
+                                    </td>
+                                    {/* Метро */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {formatValue(ad.metroStation || ad.metroTime)}
+                                    </td>
+                                    {/* Источник */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      {ad.source ? getSourceName(ad.source) : '-'}
+                                    </td>
+                                    {/* Статус */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      <span className={`px-2 py-1 rounded text-xs ${
+                                        ad.status === 'Активно' || ad.status === 'active' ? 'bg-green-100 text-green-800' :
+                                        ad.status === 'Неактивно' ? 'bg-red-100 text-red-800' :
+                                        'bg-gray-100 text-gray-800'
+                                      }`}>
+                                        {formatValue(ad.status, 'Неизв.')}
+                                      </span>
+                                    </td>
+                                    {/* Просмотры */}
+                                    <td className='p-2 align-middle text-xs'>
+                                      <div className='flex flex-col'>
+                                        <span className='text-xs'>{formatValue(ad.totalViews, '0')}</span>
+                                        {ad.viewsToday > 0 && (
+                                          <span className='text-xs text-muted-foreground'>+{ad.viewsToday}</span>
+                                        )}
+                                      </div>
+                                    </td>
+                                    {/* Кнопка загрузки */}
+                                    <td className='p-2 align-middle'>
+                                      {loadButton}
+                                    </td>
+                                  </>
+                                ) : (
+                                  <>
+                                    <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
+                                      <div className='text-sm'>
+                                        <a 
+                                          href={ad.url} 
+                                          target='_blank' 
+                                          rel='noopener noreferrer'
+                                          className='cursor-pointer hover:underline'
+                                        >
+                                          {ad.url}
+                                        </a>
+                                      </div>
+                                    </td>
+                                    <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
+                                      <div className='text-sm text-muted-foreground'>
+                                        {ad.price > 0 ? `${ad.price}` : 'Цена не указана'}
+                                      </div>
+                                    </td>
+                                    <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
+                                      {loadButton}
+                                    </td>
+                                  </>
+                                )}
+                              </tr>
+                            )
+                          })
                         )}
                       </tbody>
                     </table>
