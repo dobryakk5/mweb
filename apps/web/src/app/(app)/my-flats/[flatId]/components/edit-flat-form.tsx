@@ -12,14 +12,15 @@ import Form from '@acme/ui/components/form'
 import cn from '@acme/ui/utils/cn'
 import Page from '@acme/ui/components/page'
 import Button, { buttonVariants } from '@acme/ui/components/button'
-import { ArrowLeftIcon, Loader2Icon } from '@acme/ui/components/icon'
+import { ArrowLeftIcon, Loader2Icon, TrashIcon } from '@acme/ui/components/icon'
 import Fieldset from '@acme/ui/components/fieldset'
 import Card from '@acme/ui/components/card'
 import Skeleton from '@acme/ui/components/skeleton'
 import Input from '@acme/ui/components/input'
 
 import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
-import { useAds, useUpdateAd, forceUpdateAd } from '@/domains/ads'
+import { useAds, useUpdateAd, forceUpdateAd, findSimilarAds, findSimilarAdsByFlat, createAdFromSimilar, type SimilarAd } from '@/domains/ads'
+import { useDeleteAd } from '@/domains/ads/hooks/mutations'
 import { useParseProperty } from '@/domains/property-parser'
 import { toast } from 'sonner'
 import HookFormDevtool from '@/components/hookform-devtool'
@@ -49,9 +50,54 @@ export default function EditFlatForm({
   const returnTo = searchParams.get('returnTo') || '/my-flats'
   const [showAddAdForm, setShowAddAdForm] = useState(false)
   const [expandedView, setExpandedView] = useState(false)
+  const [mounted, setMounted] = useState(false)
+  const [similarAds, setSimilarAds] = useState<SimilarAd[]>([])
+  const [isLoadingSimilar, setIsLoadingSimilar] = useState(false)
+  
+  // Функция для автоматического поиска похожих объявлений
+  const autoFindSimilarAds = async () => {
+    if (!flat) return
+    
+    setIsLoadingSimilar(true)
+    try {
+      // Если есть объявления, используем поиск по объявлению
+      // Иначе используем поиск по параметрам квартиры
+      const similar = ads.length > 0 
+        ? await findSimilarAds(ads[0].id)
+        : await findSimilarAdsByFlat(flat.id)
+      
+      setSimilarAds(similar)
+      
+      // Добавляем найденные объявления в таблицу ads
+      let addedCount = 0
+      for (const similarAd of similar) {
+        try {
+          await createAdFromSimilar(similarAd, flat.id)
+          addedCount++
+        } catch (error) {
+          console.error('Ошибка при добавлении объявления:', error)
+        }
+      }
+      
+      toast.success(`Найдено ${similar.length} похожих объявлений, добавлено ${addedCount} в таблицу`)
+      
+      // Обновляем список объявлений
+      mutateAds()
+    } catch (error) {
+      console.error('Ошибка автопоиска похожих объявлений:', error)
+      toast.error('Ошибка при поиске похожих объявлений')
+    } finally {
+      setIsLoadingSimilar(false)
+    }
+  }
   
   // Получаем объявления для этой квартиры
   const { data: ads = [] } = useAds({ flatId: flat?.id })
+  const { mutateAsync: deleteAd } = useDeleteAd()
+
+  useEffect(() => {
+    setMounted(true)
+  }, [])
 
   // Функция для форматирования значений в таблице
   const formatValue = (value: any, defaultText = '-') => {
@@ -133,13 +179,13 @@ export default function EditFlatForm({
                 <span className='sr-only'>Вернуться назад</span>
               </Link>
 
-              <div className='flex items-center gap-6'>
+              <div className='flex items-end gap-6 w-full'>
                 <Form.Field
                   control={control}
                   name='address'
                   render={({ field }) => (
-                    <Form.Item className='space-y-0'>
-                      <Form.Label className='sr-only'>Адрес</Form.Label>
+                    <Form.Item className='space-y-1 flex-1'>
+                      <Form.Label className='text-sm text-muted-foreground'>Адрес</Form.Label>
                       <Form.Control>
                         <Input
                           type='text'
@@ -152,50 +198,65 @@ export default function EditFlatForm({
                     </Form.Item>
                   )}
                 />
-                <Form.Field
-                  control={control}
-                  name='rooms'
-                  render={({ field }) => (
-                    <Form.Item className='space-y-0'>
-                      <Form.Label className='sr-only'>Комнат</Form.Label>
-                      <Form.Control>
-                        <Input
-                          type='number'
-                          min={1}
-                          placeholder='Комнат'
-                          className='h-8 w-20 text-lg font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0'
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseInt(e.target.value) || 1)
-                          }
-                        />
-                      </Form.Control>
-                      <Form.Message />
-                    </Form.Item>
-                  )}
-                />
-                <Form.Field
-                  control={control}
-                  name='floor'
-                  render={({ field }) => (
-                    <Form.Item className='space-y-0'>
-                      <Form.Label className='sr-only'>Этаж</Form.Label>
-                      <Form.Control>
-                        <Input
-                          type='number'
-                          min={1}
-                          placeholder='Этаж'
-                          className='h-8 w-20 text-lg font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0'
-                          {...field}
-                          onChange={(e) =>
-                            field.onChange(parseInt(e.target.value) || 1)
-                          }
-                        />
-                      </Form.Control>
-                      <Form.Message />
-                    </Form.Item>
-                  )}
-                />
+                <div className='flex items-end gap-4'>
+                  <Form.Field
+                    control={control}
+                    name='rooms'
+                    render={({ field }) => (
+                      <Form.Item className='space-y-1'>
+                        <Form.Label className='text-sm text-muted-foreground'>Комнат</Form.Label>
+                        <Form.Control>
+                          <Input
+                            type='number'
+                            min={1}
+                            placeholder='Комнат'
+                            className='h-8 w-20 text-lg font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0'
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseInt(e.target.value) || 1)
+                            }
+                          />
+                        </Form.Control>
+                        <Form.Message />
+                      </Form.Item>
+                    )}
+                  />
+                  <Form.Field
+                    control={control}
+                    name='floor'
+                    render={({ field }) => (
+                      <Form.Item className='space-y-1'>
+                        <Form.Label className='text-sm text-muted-foreground'>Этаж</Form.Label>
+                        <Form.Control>
+                          <Input
+                            type='number'
+                            min={1}
+                            placeholder='Этаж'
+                            className='h-8 w-20 text-lg font-semibold border-none focus-visible:ring-0 focus-visible:ring-offset-0'
+                            {...field}
+                            onChange={(e) =>
+                              field.onChange(parseInt(e.target.value) || 1)
+                            }
+                          />
+                        </Form.Control>
+                        <Form.Message />
+                      </Form.Item>
+                    )}
+                  />
+                  
+                  {/* Кнопка "Искать похожие" */}
+                  <button
+                    type='button'
+                    className={buttonVariants({
+                      variant: 'default',
+                      size: 'sm',
+                    })}
+                    disabled={isLoadingSimilar}
+                    onClick={autoFindSimilarAds}
+                  >
+                    {isLoadingSimilar ? 'Поиск...' : 'Объявления'}
+                  </button>
+                </div>
               </div>
 
               {formState.isDirty ? (
@@ -265,7 +326,13 @@ export default function EditFlatForm({
                       flatId={flat.id}
                       flatAddress={flat.address}
                       flatRooms={flat.rooms}
-                      onSuccess={() => setShowAddAdForm(false)}
+                      onSuccess={() => {
+                        setShowAddAdForm(false)
+                        // Автоматически ищем похожие объявления после добавления
+                        setTimeout(() => {
+                          autoFindSimilarAds()
+                        }, 1000) // Небольшая задержка для обновления списка объявлений
+                      }}
                     />
                   </div>
                 )}
@@ -276,7 +343,7 @@ export default function EditFlatForm({
                     <table className='w-full caption-bottom text-sm'>
                       <thead className='[&_tr]:border-b'>
                         <tr className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
-                          {expandedView ? (
+                          {mounted && expandedView ? (
                             <>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-40'>
                                 URL
@@ -335,22 +402,30 @@ export default function EditFlatForm({
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
                                 Загрузить
                               </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Удалить
+                              </th>
                             </>
                           ) : (
                             <>
-                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-80'>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-96'>
                                 <div className='flex items-center gap-2'>
                                   URL объявления
                                 </div>
                               </th>
-                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-32'>
                                 <div className='flex items-center gap-2'>
                                   Цена
                                 </div>
                               </th>
-                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-24'>
                                 <div className='flex items-center gap-2'>
                                   Загрузить
+                                </div>
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-24'>
+                                <div className='flex items-center gap-2'>
+                                  Удалить
                                 </div>
                               </th>
                             </>
@@ -360,7 +435,7 @@ export default function EditFlatForm({
                       <tbody className='[&_tr:last-child]:border-0'>
                         {ads.length === 0 ? (
                           <tr className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
-                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0' colSpan={expandedView ? 16 : 3}>
+                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0' colSpan={mounted && expandedView ? 21 : 4}>
                               <div className='text-sm text-center'>Пока нет объявлений</div>
                             </td>
                           </tr>
@@ -386,43 +461,44 @@ export default function EditFlatForm({
                                       
                                       // Обновляем все данные от API парсинга в базе данных
                                       const updateData = {
-                                        // Основные поля (всегда обновляем)
-                                        price: result.data.price,
-                                        rooms: result.data.rooms,
+                                        // Основные поля (всегда обновляем) - приводим к правильным типам
+                                        price: typeof result.data.price === 'number' ? result.data.price : parseInt(result.data.price),
+                                        rooms: typeof result.data.rooms === 'number' ? result.data.rooms : parseInt(result.data.rooms),
                                         
                                         // Площади (числа с плавающей точкой)
-                                        totalArea: result.data.total_area ? parseFloat(result.data.total_area) : undefined,
-                                        livingArea: result.data.living_area ? parseFloat(result.data.living_area) : undefined,
-                                        kitchenArea: result.data.kitchen_area ? parseFloat(result.data.kitchen_area) : undefined,
+                                        totalArea: result.data.total_area ? parseFloat(String(result.data.total_area)) : undefined,
+                                        livingArea: result.data.living_area ? parseFloat(String(result.data.living_area)) : undefined,
+                                        kitchenArea: result.data.kitchen_area ? parseFloat(String(result.data.kitchen_area)) : undefined,
                                         
-                                        // Этаж и планировка
-                                        totalFloors: result.data.total_floors,
-                                        bathroom: result.data.bathroom,
-                                        balcony: result.data.balcony,
+                                        // Этаж и планировка - приводим к правильным типам
+                                        floor: typeof result.data.floor === 'number' ? result.data.floor : (result.data.floor ? parseInt(String(result.data.floor)) : undefined),
+                                        totalFloors: typeof result.data.total_floors === 'number' ? result.data.total_floors : (result.data.total_floors ? parseInt(String(result.data.total_floors)) : undefined),
+                                        bathroom: result.data.bathroom || undefined,
+                                        balcony: result.data.balcony || undefined,
                                         
                                         // Ремонт и отделка
-                                        renovation: result.data.renovation,
-                                        furniture: result.data.furniture,
+                                        renovation: result.data.renovation || undefined,
+                                        furniture: result.data.furniture || undefined,
                                         
-                                        // Характеристики здания
-                                        constructionYear: result.data.construction_year,
-                                        houseType: result.data.house_type,
-                                        ceilingHeight: result.data.ceiling_height ? parseFloat(result.data.ceiling_height) : undefined,
+                                        // Характеристики здания - приводим к правильным типам
+                                        constructionYear: typeof result.data.construction_year === 'number' ? result.data.construction_year : (result.data.construction_year ? parseInt(String(result.data.construction_year)) : undefined),
+                                        houseType: result.data.house_type || undefined,
+                                        ceilingHeight: result.data.ceiling_height ? parseFloat(String(result.data.ceiling_height)) : undefined,
                                         
                                         // Локация
-                                        metroStation: result.data.metro_station,
-                                        metroTime: result.data.metro_time,
+                                        metroStation: result.data.metro_station || undefined,
+                                        metroTime: result.data.metro_time || undefined,
                                         
                                         // Дополнительная информация
-                                        tags: result.data.tags,
-                                        description: result.data.description,
+                                        tags: result.data.tags || undefined,
+                                        description: result.data.description || undefined,
                                         photoUrls: result.data.photo_urls,
                                         
-                                        // Источник и статус  
+                                        // Источник и статус - приводим к правильным типам
                                         source: result.data.source === 'cian' ? 1 : result.data.source === 'avito' ? 2 : undefined,
-                                        status: result.data.status,
-                                        viewsToday: result.data.views_today,
-                                        totalViews: result.data.total_views,
+                                        status: result.data.status || undefined,
+                                        viewsToday: typeof result.data.views_today === 'number' ? result.data.views_today : (result.data.views_today ? parseInt(String(result.data.views_today)) : undefined),
+                                        totalViews: typeof result.data.total_views === 'number' ? result.data.total_views : (result.data.total_views ? parseInt(String(result.data.total_views)) : undefined),
                                       }
                                       
                                       // Логируем каждое поле отдельно для отладки
@@ -439,6 +515,11 @@ export default function EditFlatForm({
                                       console.log('Фильтрованные данные для БД:', filteredUpdateData)
                                       
                                       console.log('Данные для отправки в БД:', updateData)
+                                      
+                                      console.log('=== ОТЛАДКА ПЕРЕД ОТПРАВКОЙ ===')
+                                      console.log('ad.id:', ad.id)
+                                      console.log('filteredUpdateData:', JSON.stringify(filteredUpdateData, null, 2))
+                                      console.log('=== КОНЕЦ ОТЛАДКИ ===')
                                       
                                       // Используем принудительное обновление для гарантии перезаписи всех полей
                                       await forceUpdateAd(ad.id, filteredUpdateData)
@@ -487,9 +568,32 @@ export default function EditFlatForm({
                               </button>
                             )
 
+                            const deleteButton = (
+                              <button
+                                type='button'
+                                className={expandedView ? 
+                                  'p-1 rounded text-xs text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors' :
+                                  'p-2 rounded-md text-red-600 hover:bg-red-50 hover:text-red-700 transition-colors'
+                                }
+                                title='Удалить объявление'
+                                onClick={async () => {
+                                  if (window.confirm('Вы уверены, что хотите удалить это объявление?')) {
+                                    try {
+                                      await deleteAd(ad.id)
+                                    } catch (error) {
+                                      console.error('Ошибка удаления объявления:', error)
+                                      toast.error('Ошибка при удалении объявления')
+                                    }
+                                  }
+                                }}
+                              >
+                                <TrashIcon className='h-4 w-4' />
+                              </button>
+                            )
+
                             return (
                               <tr key={ad.id} className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
-                                {expandedView ? (
+                                {mounted && expandedView ? (
                                   <>
                                     {/* URL - короткая версия */}
                                     <td className='p-2 align-middle text-xs'>
@@ -586,6 +690,10 @@ export default function EditFlatForm({
                                     <td className='p-2 align-middle'>
                                       {loadButton}
                                     </td>
+                                    {/* Кнопка удаления */}
+                                    <td className='p-2 align-middle'>
+                                      {deleteButton}
+                                    </td>
                                   </>
                                 ) : (
                                   <>
@@ -609,6 +717,9 @@ export default function EditFlatForm({
                                     <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
                                       {loadButton}
                                     </td>
+                                    <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0'>
+                                      {deleteButton}
+                                    </td>
                                   </>
                                 )}
                               </tr>
@@ -619,6 +730,72 @@ export default function EditFlatForm({
                     </table>
                   </div>
                 </div>
+
+                {/* Таблица похожих объявлений */}
+                {similarAds.length > 0 && (
+                  <div className='mt-8 pt-6 border-t'>
+                    <h4 className='text-lg font-medium mb-4'>Похожие объявления</h4>
+                    <div className='overflow-x-auto'>
+                      <table className='w-full border-collapse'>
+                        <thead>
+                          <tr className='border-b'>
+                            <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Цена</th>
+                            <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Комнаты</th>
+                            <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Тип лица</th>
+                            <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Создано</th>
+                            <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Обновлено</th>
+                            <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Ссылка</th>
+                            <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground'>Активно</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {similarAds.map((similar, index) => (
+                            <tr key={index} className='border-b'>
+                              <td className='p-2 align-middle text-sm'>
+                                {similar.price.toLocaleString()} ₽
+                              </td>
+                              <td className='p-2 align-middle text-sm'>
+                                {similar.rooms}
+                              </td>
+                              <td className='p-2 align-middle text-sm'>
+                                {similar.person_type}
+                              </td>
+                              <td className='p-2 align-middle text-sm'>
+                                {new Date(similar.created).toLocaleDateString()}
+                              </td>
+                              <td className='p-2 align-middle text-sm'>
+                                {new Date(similar.updated).toLocaleDateString()}
+                              </td>
+                              <td className='p-2 align-middle text-sm'>
+                                <a 
+                                  href={similar.url} 
+                                  target='_blank' 
+                                  rel='noopener noreferrer'
+                                  className='text-blue-600 hover:underline'
+                                >
+                                  {(() => {
+                                    try {
+                                      const domain = new URL(similar.url).hostname
+                                      if (domain.includes('cian.ru')) return 'cian'
+                                      if (domain.includes('avito.ru')) return 'avito'
+                                      if (domain.includes('realty.ya.ru')) return 'yandex'
+                                      return domain.replace('www.', '').split('.')[0]
+                                    } catch {
+                                      return 'ссылка'
+                                    }
+                                  })()}
+                                </a>
+                              </td>
+                              <td className='p-2 align-middle text-sm text-center'>
+                                {similar.is_active ? '✓' : ''}
+                              </td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
               </div>
             </Page.Content>
           </Page>

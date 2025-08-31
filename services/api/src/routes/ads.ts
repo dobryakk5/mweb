@@ -1,8 +1,8 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { db, ads } from '@acme/db'
-import { eq } from 'drizzle-orm'
+import { db, ads, userFlats } from '@acme/db'
+import { eq, sql } from 'drizzle-orm'
 
 const createAdSchema = z.object({
   flatId: z.number().positive(), // ID квартиры
@@ -10,6 +10,7 @@ const createAdSchema = z.object({
   address: z.string().min(1),
   price: z.number().min(0), // Изменено с .positive() на .min(0)
   rooms: z.number().positive(),
+  from: z.number().int().min(1).max(2).default(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
 })
 
 // Схема для обновления объявления с данными от API парсинга
@@ -24,6 +25,7 @@ const updateAdSchema = z.object({
   totalArea: z.number().optional(),
   livingArea: z.number().optional(),
   kitchenArea: z.number().optional(),
+  floor: z.number().optional(),
   totalFloors: z.number().optional(),
   bathroom: z.string().optional(),
   balcony: z.string().optional(),
@@ -41,6 +43,7 @@ const updateAdSchema = z.object({
   status: z.string().optional(),
   viewsToday: z.number().optional(),
   totalViews: z.number().optional(),
+  from: z.number().int().min(1).max(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
 })
 
 export default async function adsRoutes(fastify: FastifyInstance) {
@@ -85,9 +88,21 @@ export default async function adsRoutes(fastify: FastifyInstance) {
     try {
       const body = createAdSchema.parse(request.body)
       
+      // Если адрес не указан, получаем его из квартиры
+      let address = body.address
+      if (!address || address.trim() === '') {
+        const flat = await db.select().from(userFlats).where(eq(userFlats.id, body.flatId)).limit(1)
+        if (flat.length === 0) {
+          return reply.status(400).send({ error: 'Flat not found' })
+        }
+        address = flat[0].address
+      }
+      
       const result = await db.insert(ads).values({
         ...body,
+        address,
         views: 0, // Добавляем views по умолчанию
+        from: body.from || 2, // По умолчанию - добавлено вручную
       }).returning()
       
       return reply.status(201).send(result[0])
@@ -187,8 +202,95 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       
       return reply.send(result[0])
     } catch (error) {
-      fastify.log.error(`Error force updating ad ${adId || 'unknown'}:`, error)
-      return reply.status(500).send({ error: 'Internal server error' })
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      const errorStack = error instanceof Error ? error.stack : 'No stack trace available'
+      
+      fastify.log.error(`Error force updating ad ${adId || 'unknown'}: ${errorMessage}`)
+      fastify.log.error('Full error object:', JSON.stringify(error, null, 2))
+      fastify.log.error('Error stack trace:', errorStack)
+      
+      return reply.status(500).send({ 
+        error: 'Internal server error', 
+        details: errorMessage,
+        adId: adId || 'unknown'
+      })
+    }
+  })
+
+  // GET /ads/similar-by-flat/:flatId - найти похожие объявления по параметрам квартиры
+  fastify.get('/ads/similar-by-flat/:flatId', async (request, reply) => {
+    let flatId: string | undefined
+    try {
+      const params = z.object({ flatId: z.string() }).parse(request.params)
+      flatId = params.flatId
+      
+      // Получаем данные квартиры для поиска похожих
+      const flats = await db.select().from(userFlats).where(eq(userFlats.id, parseInt(flatId))).limit(1)
+      
+      if (flats.length === 0) {
+        return reply.status(404).send({ error: 'Flat not found' })
+      }
+      
+      const currentFlat = flats[0]
+      
+      // Используем хранимую процедуру find_ads для поиска
+      // Using transaction to ensure search path persists
+      const result = await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users,public`)
+        return await tx.execute(
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active 
+              FROM public.find_ads(${currentFlat.address}, ${currentFlat.floor}, ${currentFlat.rooms})`
+        )
+      })
+      
+      // Transaction returns results directly as an array, not wrapped in .rows
+      const similarAds = Array.isArray(result) ? result : (result.rows || [])
+      
+      fastify.log.info(`Found ${similarAds.length} similar ads for flat ${flatId}`)
+      
+      return reply.send(similarAds)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error finding similar ads for flat ${flatId || 'unknown'}: ${errorMessage}`)
+      return reply.status(500).send({ error: 'Internal server error', details: errorMessage })
+    }
+  })
+
+  // GET /ads/similar/:id - найти похожие объявления
+  fastify.get('/ads/similar/:id', async (request, reply) => {
+    let id: string | undefined
+    try {
+      const params = z.object({ id: z.string() }).parse(request.params)
+      id = params.id
+      
+      // Получаем данные объявления для поиска похожих
+      const ad = await db.select().from(ads).where(eq(ads.id, parseInt(id))).limit(1)
+      
+      if (ad.length === 0) {
+        return reply.status(404).send({ error: 'Ad not found' })
+      }
+      
+      const currentAd = ad[0]
+      
+      // Вызываем хранимую процедуру поиска похожих объявлений
+      const result = await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users,public`)
+        return await tx.execute(
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active 
+              FROM public.find_ads(${currentAd.address}, ${currentAd.floor}, ${currentAd.rooms})`
+        )
+      })
+      
+      // Transaction returns results directly as an array, not wrapped in .rows
+      const similarAds = Array.isArray(result) ? result : (result.rows || [])
+      
+      fastify.log.info(`Found ${similarAds.length} similar ads for ad ${id}`)
+      
+      return reply.send(similarAds)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error finding similar ads for ${id || 'unknown'}: ${errorMessage}`)
+      return reply.status(500).send({ error: 'Internal server error', details: errorMessage })
     }
   })
 

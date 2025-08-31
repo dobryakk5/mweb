@@ -159,20 +159,20 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
       if (propertyData.rooms !== undefined && propertyData.rooms !== null) {
         updateData.rooms = Number(propertyData.rooms)
       }
-      if (propertyData.totalArea !== undefined && propertyData.totalArea !== null) {
-        updateData.totalArea = String(propertyData.totalArea)
+      if (propertyData.total_area !== undefined && propertyData.total_area !== null) {
+        updateData.totalArea = String(propertyData.total_area)
       }
-      if (propertyData.livingArea !== undefined && propertyData.livingArea !== null) {
-        updateData.livingArea = String(propertyData.livingArea)
+      if (propertyData.living_area !== undefined && propertyData.living_area !== null) {
+        updateData.livingArea = String(propertyData.living_area)
       }
-      if (propertyData.kitchenArea !== undefined && propertyData.kitchenArea !== null) {
-        updateData.kitchenArea = String(propertyData.kitchenArea)
+      if (propertyData.kitchen_area !== undefined && propertyData.kitchen_area !== null) {
+        updateData.kitchenArea = String(propertyData.kitchen_area)
       }
       if (propertyData.floor !== undefined && propertyData.floor !== null) {
         updateData.floor = Number(propertyData.floor)
       }
-      if (propertyData.totalFloors !== undefined && propertyData.totalFloors !== null) {
-        updateData.totalFloors = Number(propertyData.totalFloors)
+      if (propertyData.total_floors !== undefined && propertyData.total_floors !== null) {
+        updateData.totalFloors = Number(propertyData.total_floors)
       }
       if (propertyData.bathroom !== undefined && propertyData.bathroom !== null) {
         updateData.bathroom = String(propertyData.bathroom)
@@ -186,20 +186,20 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
       if (propertyData.furniture !== undefined && propertyData.furniture !== null) {
         updateData.furniture = String(propertyData.furniture)
       }
-      if (propertyData.constructionYear !== undefined && propertyData.constructionYear !== null) {
-        updateData.constructionYear = Number(propertyData.constructionYear)
+      if (propertyData.construction_year !== undefined && propertyData.construction_year !== null) {
+        updateData.constructionYear = Number(propertyData.construction_year)
       }
-      if (propertyData.houseType !== undefined && propertyData.houseType !== null) {
-        updateData.houseType = String(propertyData.houseType)
+      if (propertyData.house_type !== undefined && propertyData.house_type !== null) {
+        updateData.houseType = String(propertyData.house_type)
       }
-      if (propertyData.ceilingHeight !== undefined && propertyData.ceilingHeight !== null) {
-        updateData.ceilingHeight = String(propertyData.ceilingHeight)
+      if (propertyData.ceiling_height !== undefined && propertyData.ceiling_height !== null) {
+        updateData.ceilingHeight = String(propertyData.ceiling_height)
       }
-      if (propertyData.metroStation !== undefined && propertyData.metroStation !== null) {
-        updateData.metroStation = String(propertyData.metroStation)
+      if (propertyData.metro_station !== undefined && propertyData.metro_station !== null) {
+        updateData.metroStation = String(propertyData.metro_station)
       }
-      if (propertyData.metroTime !== undefined && propertyData.metroTime !== null) {
-        updateData.metroTime = String(propertyData.metroTime)
+      if (propertyData.metro_time !== undefined && propertyData.metro_time !== null) {
+        updateData.metroTime = String(propertyData.metro_time)
       }
       if (propertyData.tags !== undefined && propertyData.tags !== null) {
         updateData.tags = String(propertyData.tags)
@@ -207,13 +207,13 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
       if (propertyData.description !== undefined && propertyData.description !== null) {
         updateData.description = String(propertyData.description)
       }
-      if (propertyData.photoUrls !== undefined && propertyData.photoUrls !== null) {
-        if (Array.isArray(propertyData.photoUrls)) {
-          updateData.photoUrls = propertyData.photoUrls.map(String)
-        } else if (typeof propertyData.photoUrls === 'string') {
-          updateData.photoUrls = propertyData.photoUrls.includes(',') 
-            ? propertyData.photoUrls.split(',').map(s => s.trim())
-            : [propertyData.photoUrls]
+      if (propertyData.photo_urls !== undefined && propertyData.photo_urls !== null) {
+        if (Array.isArray(propertyData.photo_urls)) {
+          updateData.photoUrls = propertyData.photo_urls.map(String)
+        } else if (typeof propertyData.photo_urls === 'string') {
+          updateData.photoUrls = propertyData.photo_urls.includes(',') 
+            ? propertyData.photo_urls.split(',').map(s => s.trim())
+            : [propertyData.photo_urls]
         }
       }
       if (propertyData.source !== undefined && propertyData.source !== null) {
@@ -229,11 +229,11 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
       if (propertyData.status !== undefined && propertyData.status !== null) {
         updateData.status = String(propertyData.status)
       }
-      if (propertyData.viewsToday !== undefined && propertyData.viewsToday !== null) {
-        updateData.viewsToday = Number(propertyData.viewsToday)
+      if (propertyData.views_today !== undefined && propertyData.views_today !== null) {
+        updateData.viewsToday = Number(propertyData.views_today)
       }
-      if (propertyData.totalViews !== undefined && propertyData.totalViews !== null) {
-        updateData.totalViews = Number(propertyData.totalViews)
+      if (propertyData.total_views !== undefined && propertyData.total_views !== null) {
+        updateData.totalViews = Number(propertyData.total_views)
       }
 
       // Добавляем updated_at

@@ -83,6 +83,7 @@ export const ads = usersSchema.table(
     totalArea: decimal('total_area', { precision: 5, scale: 2 }),
     livingArea: decimal('living_area', { precision: 5, scale: 2 }),
     kitchenArea: decimal('kitchen_area', { precision: 5, scale: 2 }),
+    floor: smallint('floor'),
     totalFloors: smallint('total_floors'),
     bathroom: varchar('bathroom'),
     balcony: varchar('balcony'),
@@ -100,6 +101,7 @@ export const ads = usersSchema.table(
     status: varchar('status'),
     viewsToday: smallint('views_today'),
     totalViews: integer('total_views'),
+    from: smallint('from').default(2).notNull(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
     
     ...timestamps,
   },
