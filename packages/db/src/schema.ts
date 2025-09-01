@@ -102,6 +102,7 @@ export const ads = usersSchema.table(
     viewsToday: smallint('views_today'),
     totalViews: integer('total_views'),
     from: smallint('from').default(2).notNull(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
+    sma: smallint('sma').default(0).notNull(), // 0 - обычное объявление, 1 - в сравнении квартир
     
     ...timestamps,
   },
@@ -112,14 +113,40 @@ export const ads = usersSchema.table(
   ],
 )
 
+export const adHistory = usersSchema.table(
+  'ad_history',
+  {
+    id: integer('id').primaryKey().notNull(),
+    adId: integer('ad_id').notNull(), // Ссылка на объявление
+    price: integer('price'), // Новая цена (если изменилась)
+    viewsToday: smallint('views_today'), // Новое количество просмотров сегодня
+    totalViews: integer('total_views'), // Новое общее количество просмотров
+    trackingType: varchar('tracking_type').notNull().default('manual_update'), // Тип отслеживания
+    ...timestamps,
+  },
+  (t) => [
+    index('ad_history_ad_id_idx').on(t.adId), // Индекс для быстрого поиска по объявлению
+    index('ad_history_created_at_idx').on(t.createdAt), // Индекс для сортировки по времени
+    index('ad_history_tracking_type_idx').on(t.trackingType), // Индекс для фильтрации по типу
+  ],
+)
+
 // Определяем связи между таблицами
 export const userFlatsRelations = relations(userFlats, ({ many }) => ({
   ads: many(ads),
 }))
 
-export const adsRelations = relations(ads, ({ one }) => ({
+export const adsRelations = relations(ads, ({ one, many }) => ({
   flat: one(userFlats, {
     fields: [ads.flatId],
     references: [userFlats.id],
+  }),
+  history: many(adHistory),
+}))
+
+export const adHistoryRelations = relations(adHistory, ({ one }) => ({
+  ad: one(ads, {
+    fields: [adHistory.adId],
+    references: [ads.id],
   }),
 }))

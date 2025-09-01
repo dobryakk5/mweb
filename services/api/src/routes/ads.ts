@@ -1,8 +1,59 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
-import { db, ads, userFlats } from '@acme/db'
+import { db, ads, userFlats, adHistory } from '@acme/db'
 import { eq, sql } from 'drizzle-orm'
+
+// Функция для записи изменений в историю
+async function recordAdChanges(
+  adId: number, 
+  oldAd: any, 
+  newData: any,
+  trackingType: string = 'manual_update',
+  fastify: FastifyInstance
+) {
+  const changes: any = {}
+  
+  // Проверяем изменение цены - всегда записываем в историю
+  if (newData.price !== undefined && newData.price !== oldAd.price) {
+    changes.price = newData.price
+    fastify.log.info(`Ad ${adId}: price changed from ${oldAd.price} to ${newData.price}`)
+  }
+  
+  // Просмотры записываем в историю ТОЛЬКО для daily_snapshot
+  if (trackingType === 'daily_snapshot') {
+    // Проверяем изменение просмотров сегодня
+    if (newData.viewsToday !== undefined && newData.viewsToday !== oldAd.viewsToday) {
+      changes.viewsToday = newData.viewsToday
+      fastify.log.info(`Ad ${adId}: views today changed from ${oldAd.viewsToday} to ${newData.viewsToday}`)
+    }
+    
+    // Проверяем изменение общих просмотров
+    if (newData.totalViews !== undefined && newData.totalViews !== oldAd.totalViews) {
+      changes.totalViews = newData.totalViews
+      fastify.log.info(`Ad ${adId}: total views changed from ${oldAd.totalViews} to ${newData.totalViews}`)
+    }
+  } else {
+    // Для других типов обновлений логируем но не записываем просмотры в историю
+    if (newData.viewsToday !== undefined && newData.viewsToday !== oldAd.viewsToday) {
+      fastify.log.info(`Ad ${adId}: views today updated from ${oldAd.viewsToday} to ${newData.viewsToday} (not recorded in history - intraday data)`)
+    }
+    
+    if (newData.totalViews !== undefined && newData.totalViews !== oldAd.totalViews) {
+      fastify.log.info(`Ad ${adId}: total views updated from ${oldAd.totalViews} to ${newData.totalViews} (not recorded in history - intraday data)`)
+    }
+  }
+  
+  // Если есть изменения, записываем их в историю
+  if (Object.keys(changes).length > 0) {
+    await db.insert(adHistory).values({
+      adId: adId,
+      trackingType: trackingType,
+      ...changes,
+    })
+    fastify.log.info(`Ad ${adId}: changes recorded to history with type: ${trackingType}`)
+  }
+}
 
 const createAdSchema = z.object({
   flatId: z.number().positive(), // ID квартиры
@@ -11,6 +62,7 @@ const createAdSchema = z.object({
   price: z.number().min(0), // Изменено с .positive() на .min(0)
   rooms: z.number().positive(),
   from: z.number().int().min(1).max(2).default(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
+  sma: z.number().int().min(0).max(1).default(0).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
 })
 
 // Схема для обновления объявления с данными от API парсинга
@@ -35,7 +87,7 @@ const updateAdSchema = z.object({
   houseType: z.string().optional(),
   ceilingHeight: z.number().optional(),
   metroStation: z.string().optional(),
-  metroTime: z.string().optional(),
+  metroTime: z.union([z.string(), z.number()]).optional(),
   tags: z.string().optional(),
   description: z.string().optional(),
   photoUrls: z.array(z.string()).optional(),
@@ -44,6 +96,7 @@ const updateAdSchema = z.object({
   viewsToday: z.number().optional(),
   totalViews: z.number().optional(),
   from: z.number().int().min(1).max(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
+  sma: z.number().int().min(0).max(1).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
 })
 
 export default async function adsRoutes(fastify: FastifyInstance) {
@@ -88,21 +141,11 @@ export default async function adsRoutes(fastify: FastifyInstance) {
     try {
       const body = createAdSchema.parse(request.body)
       
-      // Если адрес не указан, получаем его из квартиры
-      let address = body.address
-      if (!address || address.trim() === '') {
-        const flat = await db.select().from(userFlats).where(eq(userFlats.id, body.flatId)).limit(1)
-        if (flat.length === 0) {
-          return reply.status(400).send({ error: 'Flat not found' })
-        }
-        address = flat[0].address
-      }
-      
       const result = await db.insert(ads).values({
         ...body,
-        address,
         views: 0, // Добавляем views по умолчанию
         from: body.from || 2, // По умолчанию - добавлено вручную
+        sma: body.sma || 0, // По умолчанию - обычное объявление
       }).returning()
       
       return reply.status(201).send(result[0])
@@ -129,6 +172,9 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const currentAd = await db.select().from(ads).where(eq(ads.id, parseInt(id))).limit(1)
       if (currentAd.length > 0) {
         fastify.log.info(`Current ad data before update:`, currentAd[0])
+        
+        // Записываем изменения в историю перед обновлением
+        await recordAdChanges(parseInt(id), currentAd[0], body, 'manual_update', fastify)
       }
       
       const result = await db.update(ads)
@@ -177,6 +223,9 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const currentAd = await db.select().from(ads).where(eq(ads.id, parseInt(adId))).limit(1)
       if (currentAd.length > 0) {
         fastify.log.info(`Current ad data before force update:`, currentAd[0])
+        
+        // Записываем изменения в историю перед принудительным обновлением
+        await recordAdChanges(parseInt(adId), currentAd[0], body, 'parsing_update', fastify)
       }
       
       // Принудительно обновляем все поля
@@ -217,6 +266,44 @@ export default async function adsRoutes(fastify: FastifyInstance) {
     }
   })
 
+  // GET /ads/broader-by-address/:flatId - найти объявления по адресу без точного определения этажа и комнат
+  fastify.get('/ads/broader-by-address/:flatId', async (request, reply) => {
+    let flatId: string | undefined
+    try {
+      const params = z.object({ flatId: z.string() }).parse(request.params)
+      flatId = params.flatId
+      
+      // Получаем данные квартиры для поиска по адресу
+      const flats = await db.select().from(userFlats).where(eq(userFlats.id, parseInt(flatId))).limit(1)
+      
+      if (flats.length === 0) {
+        return reply.status(404).send({ error: 'Flat not found' })
+      }
+      
+      const currentFlat = flats[0]
+      
+      // Используем хранимую процедуру find_ads для поиска по адресу только (этаж и комнаты = null)
+      const result = await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users,public`)
+        return await tx.execute(
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor 
+              FROM public.find_ads(${currentFlat.address}, null, null)`
+        )
+      })
+      
+      // Transaction returns results directly as an array, not wrapped in .rows
+      const broaderAds = Array.isArray(result) ? result : (result.rows || [])
+      
+      fastify.log.info(`Found ${broaderAds.length} broader ads for flat ${flatId} by address only`)
+      
+      return reply.send(broaderAds)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error finding broader ads for flat ${flatId || 'unknown'}: ${errorMessage}`)
+      return reply.status(500).send({ error: 'Internal server error', details: errorMessage })
+    }
+  })
+
   // GET /ads/similar-by-flat/:flatId - найти похожие объявления по параметрам квартиры
   fastify.get('/ads/similar-by-flat/:flatId', async (request, reply) => {
     let flatId: string | undefined
@@ -238,7 +325,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const result = await db.transaction(async (tx) => {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
-          sql`SELECT price, rooms, person_type, created, updated, url, is_active 
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor 
               FROM public.find_ads(${currentFlat.address}, ${currentFlat.floor}, ${currentFlat.rooms})`
         )
       })

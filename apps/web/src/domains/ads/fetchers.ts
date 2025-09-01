@@ -6,6 +6,8 @@ export interface CreateAdData {
   address: string
   price: number
   rooms: number
+  from?: number // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
+  sma?: number // 0 - обычное объявление, 1 - в сравнении квартир
 }
 
 export interface UpdateAdData extends Partial<CreateAdData> {
@@ -32,6 +34,7 @@ export interface UpdateAdData extends Partial<CreateAdData> {
   viewsToday?: number
   totalViews?: number
   from?: number // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
+  sma?: number // 0 - обычное объявление, 1 - в сравнении квартир
 }
 
 export interface Ad {
@@ -68,6 +71,7 @@ export interface Ad {
   viewsToday?: number
   totalViews?: number
   from?: number // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
+  sma?: number // 0 - обычное объявление, 1 - в сравнении квартир
 }
 
 export async function fetchAds(filters: { search?: string; sortBy?: string; page?: number; flatId?: number } = {}) {
@@ -118,6 +122,7 @@ export interface SimilarAd {
   updated: string
   url: string
   is_active: boolean
+  floor: number
 }
 
 export async function findSimilarAds(id: number): Promise<SimilarAd[]> {
@@ -130,19 +135,83 @@ export async function findSimilarAdsByFlat(flatId: number): Promise<SimilarAd[]>
   return response.data
 }
 
-// Функция для создания объявления из данных похожего объявления
-export async function createAdFromSimilar(similarAd: SimilarAd, flatId: number): Promise<Ad> {
+export async function findBroaderAdsByAddress(flatId: number): Promise<SimilarAd[]> {
+  const response = await api.get<SimilarAd[]>(`/ads/broader-by-address/${flatId}`)
+  return response.data
+}
+
+// Функция для переключения статуса сравнения объявления
+export async function toggleAdComparison(adId: number, inComparison: boolean): Promise<Ad> {
+  const response = await api.patch<Ad>(`/ads/${adId}`, {
+    sma: inComparison ? 1 : 0
+  })
+  return response.data
+}
+
+// Функция для создания объявления из данных похожего объявления с настраиваемым from
+export async function createAdFromSimilarWithFrom(similarAd: SimilarAd, flatId: number, fromValue: number, flatAddress?: string): Promise<Ad> {
+  console.log('Creating ad from similar with custom from:', { similarAd, flatId, fromValue, flatAddress })
+  
   const adData: CreateAdData = {
     flatId,
     url: similarAd.url,
-    address: '', // адрес будет из квартиры
+    address: flatAddress || '', // Используем адрес квартиры если передан
     price: parseInt(similarAd.price.toString()),
     rooms: similarAd.rooms
   }
   
-  const response = await api.post<Ad>('/ads', {
+  console.log('Sending ad data to API:', {
     ...adData,
-    from: 1 // Найдено по кнопке "Объявления"
+    from: fromValue
   })
-  return response.data
+  
+  try {
+    const response = await api.post<Ad>('/ads', {
+      ...adData,
+      from: fromValue // Используем переданное значение from
+    })
+    console.log('API response:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Error creating ad from similar with custom from:', error)
+    if (error.response) {
+      console.error('Response status:', error.response.status)
+      console.error('Response data:', error.response.data)
+    }
+    throw error
+  }
+}
+
+// Функция для создания объявления из данных похожего объявления
+export async function createAdFromSimilar(similarAd: SimilarAd, flatId: number, flatAddress?: string): Promise<Ad> {
+  console.log('Creating ad from similar:', { similarAd, flatId, flatAddress })
+  
+  const adData: CreateAdData = {
+    flatId,
+    url: similarAd.url,
+    address: flatAddress || '', // Используем адрес квартиры если передан
+    price: parseInt(similarAd.price.toString()),
+    rooms: similarAd.rooms
+  }
+  
+  console.log('Sending ad data to API:', {
+    ...adData,
+    from: 1
+  })
+  
+  try {
+    const response = await api.post<Ad>('/ads', {
+      ...adData,
+      from: 1 // Найдено по кнопке "Объявления"
+    })
+    console.log('API response:', response.data)
+    return response.data
+  } catch (error) {
+    console.error('Error creating ad from similar:', error)
+    if (error.response) {
+      console.error('Response status:', error.response.status)
+      console.error('Response data:', error.response.data)
+    }
+    throw error
+  }
 }

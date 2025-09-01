@@ -13,6 +13,8 @@
 
 ### Установка и запуск
 
+lsof -ti :13001 | xargs -r kill
+
 1. **Клонирование и установка зависимостей**
 ```bash
 git clone <repository-url>

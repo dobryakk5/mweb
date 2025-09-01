@@ -26,6 +26,7 @@
     "react-hook-form": "~7.56.1",
     "sonner": "~2.0.3",
     "use-debounce": "~10.0.4",
+    "xlsx": "~0.18.5",
     "zod": "~3.24.3"
   },
   "devDependencies": {
