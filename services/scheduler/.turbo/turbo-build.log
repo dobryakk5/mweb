@@ -1,0 +1,57 @@
+
+
+> @mweb/scheduler@1.0.0 build /Users/pavellebedev/Desktop/mweb/services/scheduler
+> tsc
+
+[96m../../packages/db/src/index.ts[0m:[93m1[0m:[93m35[0m - [91merror[0m[90m TS2835: [0mRelative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './client.js'?
+
+[7m1[0m export { default as client } from './client'
+[7m [0m [91m                                  ~~~~~~~~~~[0m
+
+[96m../../packages/db/src/index.ts[0m:[93m2[0m:[93m31[0m - [91merror[0m[90m TS2835: [0mRelative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './db.js'?
+
+[7m2[0m export { default as db } from './db'
+[7m [0m [91m                              ~~~~~~[0m
+
+[96m../../packages/db/src/index.ts[0m:[93m3[0m:[93m39[0m - [91merror[0m[90m TS2835: [0mRelative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './db.js'?
+
+[7m3[0m export { default as dbInstance } from './db'
+[7m [0m [91m                                      ~~~~~~[0m
+
+[96m../../packages/db/src/index.ts[0m:[93m5[0m:[93m15[0m - [91merror[0m[90m TS2835: [0mRelative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './orm.js'?
+
+[7m5[0m export * from './orm'
+[7m [0m [91m              ~~~~~~~[0m
+
+[96m../../packages/db/src/index.ts[0m:[93m6[0m:[93m15[0m - [91merror[0m[90m TS2835: [0mRelative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './schema.js'?
+
+[7m6[0m export * from './schema'
+[7m [0m [91m              ~~~~~~~~~~[0m
+
+[96m../../packages/db/src/index.ts[0m:[93m7[0m:[93m15[0m - [91merror[0m[90m TS2835: [0mRelative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './schemas.js'?
+
+[7m7[0m export * from './schemas'
+[7m [0m [91m              ~~~~~~~~~~~[0m
+
+[96m../../packages/db/src/index.ts[0m:[93m8[0m:[93m15[0m - [91merror[0m[90m TS2835: [0mRelative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './types.js'?
+
+[7m8[0m export * from './types'
+[7m [0m [91m              ~~~~~~~~~[0m
+
+[96msrc/index.ts[0m:[93m2[0m:[93m14[0m - [91merror[0m[90m TS2305: [0mModule '"@acme/db"' has no exported member 'ads'.
+
+[7m2[0m import { db, ads } from '@acme/db'
+[7m [0m [91m             ~~~[0m
+
+[96msrc/index.ts[0m:[93m68[0m:[93m38[0m - [91merror[0m[90m TS7006: [0mParameter 'ad' implicitly has an 'any' type.
+
+[7m68[0m     const adsToTrack = allAds.filter(ad => {
+[7m  [0m [91m                                     ~~[0m
+
+
+Found 9 errors in 2 files.
+
+Errors  Files
+     7  ../../packages/db/src/index.ts[90m:1[0m
+     2  src/index.ts[90m:2[0m
+[41m[30m ELIFECYCLE [39m[49m [31mCommand failed with exit code 2.[39m

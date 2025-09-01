@@ -174,9 +174,9 @@ export async function createAdFromSimilarWithFrom(similarAd: SimilarAd, flatId: 
     return response.data
   } catch (error) {
     console.error('Error creating ad from similar with custom from:', error)
-    if (error.response) {
-      console.error('Response status:', error.response.status)
-      console.error('Response data:', error.response.data)
+    if (error && typeof error === 'object' && 'response' in error) {
+      console.error('Response status:', (error as any).response.status)
+      console.error('Response data:', (error as any).response.data)
     }
     throw error
   }
@@ -208,9 +208,9 @@ export async function createAdFromSimilar(similarAd: SimilarAd, flatId: number, 
     return response.data
   } catch (error) {
     console.error('Error creating ad from similar:', error)
-    if (error.response) {
-      console.error('Response status:', error.response.status)
-      console.error('Response data:', error.response.data)
+    if (error && typeof error === 'object' && 'response' in error) {
+      console.error('Response status:', (error as any).response.status)
+      console.error('Response data:', (error as any).response.data)
     }
     throw error
   }

@@ -118,7 +118,9 @@ export default function EditFlatForm({
           new Date(b.updated || '').getTime() - new Date(a.updated || '').getTime()
         )[0]
         
-        result.push(latestAd)
+        if (latestAd) {
+          result.push(latestAd)
+        }
       }
     })
     
