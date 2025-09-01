@@ -109,7 +109,9 @@ export default function EditFlatForm({
           new Date(b.updated || '').getTime() - new Date(a.updated || '').getTime()
         )[0]
         
-        result.push(latestCianAd)
+        if (latestCianAd) {
+          result.push(latestCianAd)
+        }
       } else {
         // Если нет Циан объявлений в группе, берем последнее обновленное любое
         const latestAd = groupAds.sort((a, b) => 
