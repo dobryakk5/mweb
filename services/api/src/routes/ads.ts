@@ -20,6 +20,12 @@ async function recordAdChanges(
     fastify.log.info(`Ad ${adId}: price changed from ${oldAd.price} to ${newData.price}`)
   }
   
+  // Проверяем изменение статуса - всегда записываем в историю
+  if (newData.status !== undefined && newData.status !== oldAd.status) {
+    changes.status = newData.status
+    fastify.log.info(`Ad ${adId}: status changed from ${oldAd.status} to ${newData.status}`)
+  }
+  
   // Просмотры записываем в историю ТОЛЬКО для daily_snapshot
   if (trackingType === 'daily_snapshot') {
     // Проверяем изменение просмотров сегодня

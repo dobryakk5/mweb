@@ -10,22 +10,24 @@ function getSourceFromUrl(url: string): 'cian' | 'avito' | 'yandex' | 'unknown' 
   return 'unknown'
 }
 
-// Функция для парсинга просмотров (заглушка для будущей реализации)
-async function parseViewsFromUrl(url: string): Promise<{ viewsToday?: number, totalViews?: number }> {
-  console.log(`🔍 Parsing views from: ${url}`)
+// Функция для парсинга просмотров и статуса (заглушка для будущей реализации)
+async function parseViewsFromUrl(url: string): Promise<{ viewsToday?: number, totalViews?: number, status?: string }> {
+  console.log(`🔍 Parsing views and status from: ${url}`)
   
   // Здесь будет реальная логика парсинга
   // Сейчас возвращаем заглушку
+  const statuses = ['active', 'inactive', 'sold', 'archived']
   return {
     viewsToday: Math.floor(Math.random() * 50), // Заглушка
     totalViews: Math.floor(Math.random() * 1000) + 500, // Заглушка
+    status: statuses[Math.floor(Math.random() * statuses.length)], // Заглушка
   }
 }
 
 // Функция для отправки данных через API
 async function sendDailyUpdate(
   adId: number,
-  newViews: { viewsToday?: number, totalViews?: number }
+  newData: { viewsToday?: number, totalViews?: number, status?: string }
 ) {
   try {
     const response = await fetch('http://localhost:13001/scheduler/daily-update', {
@@ -35,8 +37,9 @@ async function sendDailyUpdate(
       },
       body: JSON.stringify({
         adId: adId,
-        viewsToday: newViews.viewsToday,
-        totalViews: newViews.totalViews,
+        viewsToday: newData.viewsToday,
+        totalViews: newData.totalViews,
+        status: newData.status,
       }),
     })
 
@@ -75,11 +78,11 @@ async function performDailyTracking() {
         const source = getSourceFromUrl(ad.url)
         console.log(`🔄 Processing ad ${ad.id} from ${source}...`)
         
-        // Парсим текущие просмотры
-        const currentViews = await parseViewsFromUrl(ad.url)
+        // Парсим текущие просмотры и статус
+        const currentData = await parseViewsFromUrl(ad.url)
         
         // Отправляем данные через API (API сам запишет в историю и обновит таблицу)
-        await sendDailyUpdate(ad.id, currentViews)
+        await sendDailyUpdate(ad.id, currentData)
         
         console.log(`✅ Ad ${ad.id} updated successfully`)
         

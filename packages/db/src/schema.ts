@@ -121,6 +121,7 @@ export const adHistory = usersSchema.table(
     price: integer('price'), // Новая цена (если изменилась)
     viewsToday: smallint('views_today'), // Новое количество просмотров сегодня
     totalViews: integer('total_views'), // Новое общее количество просмотров
+    status: varchar('status'), // Новый статус объявления (если изменился)
     trackingType: varchar('tracking_type').notNull().default('manual_update'), // Тип отслеживания
     ...timestamps,
   },
