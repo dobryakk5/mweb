@@ -80,9 +80,9 @@ const updateAdSchema = z.object({
   rooms: z.number().positive().optional(),
   
   // Новые поля от API парсинга
-  totalArea: z.number().optional(),
-  livingArea: z.number().optional(),
-  kitchenArea: z.number().optional(),
+  totalArea: z.string().optional(),
+  livingArea: z.string().optional(),
+  kitchenArea: z.string().optional(),
   floor: z.number().optional(),
   totalFloors: z.number().optional(),
   bathroom: z.string().optional(),
@@ -91,7 +91,7 @@ const updateAdSchema = z.object({
   furniture: z.string().optional(),
   constructionYear: z.number().optional(),
   houseType: z.string().optional(),
-  ceilingHeight: z.number().optional(),
+  ceilingHeight: z.string().optional(),
   metroStation: z.string().optional(),
   metroTime: z.union([z.string(), z.number()]).optional(),
   tags: z.string().optional(),
@@ -111,11 +111,11 @@ export default async function adsRoutes(fastify: FastifyInstance) {
     try {
       const { flatId } = z.object({ flatId: z.string().optional() }).parse(request.query)
       
-      let query = db.select().from(ads)
+      const baseQuery = db.select().from(ads)
       
-      if (flatId) {
-        query = query.where(eq(ads.flatId, parseInt(flatId)))
-      }
+      const query = flatId 
+        ? baseQuery.where(eq(ads.flatId, parseInt(flatId)))
+        : baseQuery
       
       const result = await query.orderBy(ads.createdAt)
       return reply.send(result)
@@ -148,7 +148,11 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const body = createAdSchema.parse(request.body)
       
       const result = await db.insert(ads).values({
-        ...body,
+        flatId: body.flatId,
+        url: body.url,
+        address: body.address,
+        price: body.price,
+        rooms: body.rooms,
         views: 0, // Добавляем views по умолчанию
         from: body.from || 2, // По умолчанию - добавлено вручную
         sma: body.sma || 0, // По умолчанию - обычное объявление
@@ -163,8 +167,10 @@ export default async function adsRoutes(fastify: FastifyInstance) {
 
   // PATCH /ads/:id - обновить объявление
   fastify.patch('/ads/:id', async (request, reply) => {
+    let id: string
     try {
-      const { id } = z.object({ id: z.string() }).parse(request.params)
+      const params = z.object({ id: z.string() }).parse(request.params)
+      id = params.id
       const body = updateAdSchema.parse(request.body)
       
       fastify.log.info(`Updating ad ${id} with data:`, body)
@@ -183,9 +189,16 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         await recordAdChanges(parseInt(id), currentAd[0], body, 'manual_update', fastify)
       }
       
+      // Используем body напрямую - decimal поля уже в строковом формате
+      const updateData: any = { ...body }
+      // Конвертируем metroTime в строку, если это число
+      if (updateData.metroTime !== undefined && typeof updateData.metroTime === 'number') {
+        updateData.metroTime = updateData.metroTime.toString()
+      }
+
       const result = await db.update(ads)
         .set({
-          ...body,
+          ...updateData,
           updatedAt: new Date(),
         })
         .where(eq(ads.id, parseInt(id)))
@@ -205,7 +218,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       
       return reply.send(result[0])
     } catch (error) {
-      fastify.log.error(`Error updating ad ${id}:`, error)
+      fastify.log.error(`Error updating ad ${id || 'unknown'}:`, error)
       return reply.status(500).send({ error: 'Internal server error' })
     }
   })
@@ -234,10 +247,17 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         await recordAdChanges(parseInt(adId), currentAd[0], body, 'parsing_update', fastify)
       }
       
+      // Используем body напрямую - decimal поля уже в строковом формате
+      const forceUpdateData: any = { ...body }
+      // Конвертируем metroTime в строку, если это число
+      if (forceUpdateData.metroTime !== undefined && typeof forceUpdateData.metroTime === 'number') {
+        forceUpdateData.metroTime = forceUpdateData.metroTime.toString()
+      }
+
       // Принудительно обновляем все поля
       const result = await db.update(ads)
         .set({
-          ...body,
+          ...forceUpdateData,
           updatedAt: new Date(),
         })
         .where(eq(ads.id, parseInt(adId)))
@@ -260,14 +280,14 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const errorMessage = error instanceof Error ? error.message : String(error)
       const errorStack = error instanceof Error ? error.stack : 'No stack trace available'
       
-      fastify.log.error(`Error force updating ad ${adId || 'unknown'}: ${errorMessage}`)
+      fastify.log.error(`Error force updating ad ${typeof adId !== 'undefined' ? adId : 'unknown'}: ${errorMessage}`)
       fastify.log.error('Full error object:', JSON.stringify(error, null, 2))
       fastify.log.error('Error stack trace:', errorStack)
       
       return reply.status(500).send({ 
         error: 'Internal server error', 
         details: errorMessage,
-        adId: adId || 'unknown'
+        adId: typeof adId !== 'undefined' ? adId : 'unknown'
       })
     }
   })
@@ -298,7 +318,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       })
       
       // Transaction returns results directly as an array, not wrapped in .rows
-      const broaderAds = Array.isArray(result) ? result : (result.rows || [])
+      const broaderAds = Array.isArray(result) ? result : (result as any).rows || []
       
       fastify.log.info(`Found ${broaderAds.length} broader ads for flat ${flatId} by address only`)
       
@@ -337,7 +357,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       })
       
       // Transaction returns results directly as an array, not wrapped in .rows
-      const similarAds = Array.isArray(result) ? result : (result.rows || [])
+      const similarAds = Array.isArray(result) ? result : (result as any).rows || []
       
       fastify.log.info(`Found ${similarAds.length} similar ads for flat ${flatId}`)
       
@@ -375,7 +395,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       })
       
       // Transaction returns results directly as an array, not wrapped in .rows
-      const similarAds = Array.isArray(result) ? result : (result.rows || [])
+      const similarAds = Array.isArray(result) ? result : (result as any).rows || []
       
       fastify.log.info(`Found ${similarAds.length} similar ads for ad ${id}`)
       

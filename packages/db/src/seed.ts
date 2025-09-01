@@ -1,11 +1,11 @@
 import { z } from 'zod'
 import { faker } from '@faker-js/faker'
 
-import { insertUserSchema } from './schemas'
+import { upsertUserSchema } from './schemas'
 import db from './db'
 import { users } from './schema'
 
-const extendedUserSchema = insertUserSchema.merge(
+const extendedUserSchema = upsertUserSchema.merge(
   z.object({
     createdAt: z.date().default(() => new Date()),
   }),

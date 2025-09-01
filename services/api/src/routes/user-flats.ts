@@ -28,7 +28,10 @@ export default async function userFlatsRoutes(fastify: FastifyInstance) {
       const newFlat = await db
         .insert(userFlats)
         .values({
-          ...data,
+          tgUserId: data.tgUserId,
+          address: data.address,
+          rooms: data.rooms,
+          floor: data.floor,
         })
         .returning()
 

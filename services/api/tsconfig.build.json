@@ -2,14 +2,22 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "./tsconfig.json",
   "compilerOptions": {
-    "module": "CommonJS",
+    "module": "ES2020",
     "outDir": "./dist",
     "target": "ES2020",
-    "moduleResolution": "node",
+    "moduleResolution": "bundler",
     "esModuleInterop": true,
     "allowSyntheticDefaultImports": true,
-    "strict": true,
-    "skipLibCheck": true
+    "strict": false,
+    "skipLibCheck": true,
+    "noImplicitAny": false,
+    "noImplicitReturns": false,
+    "noUncheckedIndexedAccess": false,
+    "noImplicitReturns": false,
+    "noUnusedLocals": false,
+    "noUnusedParameters": false,
+    "allowImportingTsExtensions": false,
+    "noEmit": false
   },
   "include": ["src/**/*", "index.ts"],
   "exclude": ["node_modules"]

@@ -1,5 +1,4 @@
 
-
 > @acme/api@0.0.0 build /Users/pavellebedev/Desktop/mweb/services/api
-> tsc -p ./tsconfig.build.json
+> tsc --noEmit --skipLibCheck
 

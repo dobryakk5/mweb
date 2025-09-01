@@ -56,7 +56,7 @@ export const sessions = usersSchema.table(
 export const userFlats = usersSchema.table(
   'user_flats',
   {
-    id: integer('id').primaryKey().notNull(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     tgUserId: bigint('tg_user_id', { mode: 'number' }).notNull(),
     address: varchar('address').notNull(),
     rooms: integer('rooms').notNull(),
@@ -71,7 +71,7 @@ export const userFlats = usersSchema.table(
 export const ads = usersSchema.table(
   'ads',
   {
-    id: integer('id').primaryKey().notNull(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     flatId: integer('flat_id').notNull(), // Привязка к квартире
     url: varchar('url').notNull(),
     address: varchar('address').notNull(),
@@ -110,13 +110,15 @@ export const ads = usersSchema.table(
     index('ads_flat_id_idx').on(t.flatId), // Индекс для быстрого поиска по квартире
     index('ads_address_idx').on(t.address),
     index('ads_price_idx').on(t.price),
+    index('ads_sma_idx').on(t.sma), // Индекс для фильтрации объявлений в сравнении
+    index('ads_flat_sma_idx').on(t.flatId, t.sma), // Композитный индекс для частых запросов
   ],
 )
 
 export const adHistory = usersSchema.table(
   'ad_history',
   {
-    id: integer('id').primaryKey().notNull(),
+    id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
     adId: integer('ad_id').notNull(), // Ссылка на объявление
     price: integer('price'), // Новая цена (если изменилась)
     viewsToday: smallint('views_today'), // Новое количество просмотров сегодня

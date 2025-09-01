@@ -67,10 +67,50 @@ The system integrates with a Python API service (port 8008) for property parsing
 
 ## Environment Setup
 
+### Local Development
+Copy `.env.example` files and configure:
+
+```bash
+# Frontend
+cp apps/web/.env.example apps/web/.env.local
+```
+
 Required environment files:
-- `apps/web/.env.local` - Frontend configuration (NEXT_PUBLIC_API_URL)
+- `apps/web/.env.local` - Frontend configuration (NEXT_PUBLIC_API_URL, NEXT_PUBLIC_BASE_URL)
 - `services/api/.env` - Backend configuration (PORT, PYTHON_API_URL, DATABASE_URL)
 - `packages/db/.env` - Database configuration
+
+### Production Deployment
+
+#### Netlify (Frontend only with mock API)
+1. Connect repository to Netlify
+2. Set build command: `turbo run build --filter @acme/web`
+3. Set publish directory: `apps/web/.next`
+4. Environment variables:
+   - `NEXT_PUBLIC_API_URL` = `https://yourdomain.netlify.app/api`
+   - `NEXT_PUBLIC_BASE_URL` = `https://yourdomain.netlify.app`
+
+#### Full Stack Deployment
+1. **Backend API**: Deploy to Railway/Heroku/Render
+   - Set environment variables for database and external APIs
+   - Note the deployed API URL
+
+2. **Frontend**: Deploy to Netlify/Vercel
+   - Set `NEXT_PUBLIC_API_URL` to your backend API URL
+   - Set `NEXT_PUBLIC_BASE_URL` to your frontend domain
+
+3. **Database**: PostgreSQL on Railway/Supabase/Neon
+   - Update `DATABASE_URL` in backend environment
+
+#### Self-hosted Server
+1. Clone repository
+2. Create `.env.local` files with your server URLs
+3. Run with Docker or direct deployment:
+   ```bash
+   pnpm install
+   pnpm build
+   pnpm start
+   ```
 
 ## Code Style
 

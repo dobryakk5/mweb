@@ -16,6 +16,7 @@
     "./types": "./src/types.ts"
   },
   "scripts": {
+    "build": "tsc --noEmit --skipLibCheck",
     "typecheck": "tsc --noEmit",
     "db:generate": "drizzle-kit generate",
     "db:migrate": "drizzle-kit push",

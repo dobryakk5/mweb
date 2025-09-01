@@ -22,7 +22,7 @@ export default fp(
       })
     } catch (error) {
       fastify.log.error(
-        `Failed to establish database connection: ${error.message}`,
+        `Failed to establish database connection: ${error instanceof Error ? error.message : String(error)}`,
       )
 
       throw error

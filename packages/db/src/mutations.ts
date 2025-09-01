@@ -8,7 +8,12 @@ import type { UpsertUser } from './types'
 export async function addUser(
   values: Pick<UpsertUser, 'username' | 'firstName' | 'lastName' | 'email'>,
 ) {
-  return await db.insert(users).values(values).returning({ id: users.id })
+  return await db.insert(users).values({
+    username: values.username!,
+    firstName: values.firstName!,
+    lastName: values.lastName!,
+    email: values.email!,
+  }).returning({ id: users.id })
 }
 
 export async function updateUserById(id: string, values: Partial<UpsertUser>) {
@@ -144,8 +149,13 @@ export async function updateAdByUrl(url: string, values: UpdateAd) {
     throw new Error(`No ad found with URL: ${url}`)
   }
 
+  const adToUpdate = existingAd[0]
+  if (!adToUpdate) {
+    throw new Error(`Ad data is undefined for URL: ${url}`)
+  }
+
   // Обновляем найденную запись
-  return await updateAdById(existingAd[0].id, values)
+  return await updateAdById(adToUpdate.id, values)
 }
 
 // Получить объявление по URL

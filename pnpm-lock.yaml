@@ -265,6 +265,9 @@ importers:
       dotenv:
         specifier: ~16.5.0
         version: 16.5.0
+      drizzle-orm:
+        specifier: ~0.43.1
+        version: 0.43.1(knex@3.1.0(pg@8.15.5))(pg@8.15.5)(postgres@3.4.5)
       fastify:
         specifier: ~5.3.2
         version: 5.3.2
@@ -1741,6 +1744,7 @@ packages:
 
   bun@1.2.10:
     resolution: {integrity: sha512-7KZgjyJQh/nJaU8av0/2Ld9jDPdrVmQb/gAQKuhr796pKLSONJw+mbshme78viR9jbL4q+sgLNW6HOLwYhL0rg==}
+    cpu: [arm64, x64, aarch64]
     os: [darwin, linux, win32]
     hasBin: true
 

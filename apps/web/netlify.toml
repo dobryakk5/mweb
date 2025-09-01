@@ -1,0 +1,9 @@
+[build]
+  command = "turbo run build --filter @acme/web"
+  publish = ".next"
+
+# SPA fallback для Next.js
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200

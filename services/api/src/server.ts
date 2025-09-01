@@ -31,7 +31,7 @@ export default async function startServer() {
 
     console.log(`Server listening at ${address}`)
   } catch (error) {
-    fastify.log.error(`Failed to start server: ${error.message}`)
+    fastify.log.error(`Failed to start server: ${error instanceof Error ? error.message : String(error)}`)
 
     process.exit(1)
   }
