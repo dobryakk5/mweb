@@ -188,7 +188,7 @@ export default function AddAdForm({ flatId, flatAddress, flatRooms, onSuccess }:
       if (isCianUrl && createdAd) {
         try {
           console.log(`🔄 Автоматический парсинг Cian объявления: ${data.url}`)
-          const parseResult = await parseProperty(data.url)
+          const parseResult = await parseProperty.mutateAsync(data.url)
           
           if (parseResult.success && parseResult.data) {
             const updateData = prepareUpdateData(parseResult.data)
