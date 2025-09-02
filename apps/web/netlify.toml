@@ -1,8 +1,11 @@
 [build]
-  command = "turbo run build --filter @acme/web"
+  command = "cd ../.. && pnpm build --filter @acme/web"
   publish = ".next"
 
-# SPA fallback для Next.js
+[build.environment]
+  NODE_VERSION = "18"
+
+# Redirect all to index.html for SPA
 [[redirects]]
   from = "/*"
   to = "/index.html"

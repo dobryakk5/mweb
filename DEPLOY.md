@@ -244,8 +244,8 @@ Frontend уже развернут на Netlify: https://mrealty.netlify.app
 В настройках Netlify необходимо указать:
 
 **Build settings:**
-- Build command: `pnpm build --filter @acme/web`
-- Publish directory: `apps/web/.next`
+- Build command: `cd ../.. && pnpm build --filter @acme/web` 
+- Publish directory: `.next` (так как netlify.toml находится в apps/web/)
 
 **Environment variables:**
 1. Зайдите в Netlify Dashboard → Site Settings → Environment variables
@@ -253,19 +253,20 @@ Frontend уже развернут на Netlify: https://mrealty.netlify.app
    - `NEXT_PUBLIC_API_URL` = `http://your-server-ip:13001` (или `https://your-api-domain.com`)
    - `NODE_VERSION` = `18` (или выше)
 
-**netlify.toml в корне проекта:**
+**netlify.toml в apps/web/ (автоматически):**
 ```toml
 [build]
-  command = "pnpm build --filter @acme/web"
-  publish = "apps/web/.next"
+  command = "cd ../.. && pnpm build --filter @acme/web"
+  publish = ".next"
 
 [build.environment]
   NODE_VERSION = "18"
-  NPM_FLAGS = "--prefix=/dev/null"
 
-# For Next.js on Netlify
-[[plugins]]
-  package = "@netlify/plugin-nextjs"
+# Redirect all to index.html for SPA
+[[redirects]]
+  from = "/*"
+  to = "/index.html"
+  status = 200
 ```
 
 После изменений Netlify автоматически пересоберет и задеплоит приложение.
