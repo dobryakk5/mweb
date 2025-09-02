@@ -3,17 +3,20 @@ import type { FastifyPluginAsync } from 'fastify'
 
 import type {
   UsersQuerySchema,
-  UsersCountQuerySchema,
+  UsersCountQuerySchema,  
   UpsertUser,
-  PostgresError,
-} from '@acme/db/types'
+  PostgresError
+} from '@acme/db'
 import {
   getUsersQuerySchema,
   getUsersCountQuerySchema,
   upsertUserSchema,
-} from '@acme/db/schemas'
-import { getUsers, getUsersCount, getUserById } from '@acme/db/queries'
-import { addUser, updateUserById } from '@acme/db/mutations'
+  getUsers,
+  getUsersCount,
+  getUserById,
+  addUser,
+  updateUserById
+} from '@acme/db'
 
 export default (async (fastify) => {
   fastify
@@ -25,7 +28,7 @@ export default (async (fastify) => {
         },
       },
       async (req, reply) => {
-        const { search, sortBy, page } = req.query
+        const { search, sortBy, page } = req.query as any
 
         try {
           reply.status(200).send(await getUsers({ search, sortBy, page }))
@@ -76,7 +79,7 @@ export default (async (fastify) => {
         },
       },
       async (req, reply) => {
-        const { search } = req.query
+        const { search } = req.query as any
 
         try {
           const total = await getUsersCount({ search })
@@ -136,7 +139,7 @@ export default (async (fastify) => {
 
           const validatedUser = upsertUserSchema.parse({
             ...existingUser,
-            ...req.body,
+            ...(req.body as any),
           })
 
           const [response] = await updateUserById(userId, validatedUser)
