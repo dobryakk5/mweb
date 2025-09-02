@@ -226,7 +226,7 @@ Frontend уже развернут на Netlify: https://mrealty.netlify.app
 
 **Build settings:**
 - Build command: `pnpm build --filter @acme/web`
-- Publish directory: `apps/web/.next`
+- Publish directory: `apps/web/out` (для статической сборки) или `apps/web/.next` (для серверной)
 
 **Environment variables:**
 1. Зайдите в Netlify Dashboard → Site Settings → Environment variables

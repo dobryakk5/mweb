@@ -120,7 +120,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       
       return reply.send(history)
     } catch (error) {
-      fastify.log.error(`Error fetching history for ad ${id}:`, error)
+      fastify.log.error(`Error fetching history for ad:`, error)
       return reply.status(500).send({ error: 'Internal server error' })
     }
   })
