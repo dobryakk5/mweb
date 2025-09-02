@@ -2,9 +2,15 @@
   "$schema": "https://json.schemastore.org/tsconfig",
   "extends": "@acme/typescript-config/base.json",
   "compilerOptions": {
-    "module": "ESNext",
-    "moduleResolution": "Bundler"
+    "outDir": "./dist",
+    "module": "CommonJS",
+    "moduleResolution": "node",
+    "target": "ES2020",
+    "skipLibCheck": true,
+    "declaration": true,
+    "declarationMap": true,
+    "sourceMap": true
   },
   "include": ["src/**/*.ts", "drizzle.config.ts"],
-  "exclude": ["node_modules"]
+  "exclude": ["node_modules", "dist"]
 }

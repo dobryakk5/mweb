@@ -39,15 +39,13 @@ cd mweb
 # Устанавливаем зависимости
 pnpm install
 
-# Собираем проект (только backend компоненты)
-pnpm build --filter @acme/api --filter @acme/db
+# Собираем проект (все компоненты включая скомпилированный JS)
+pnpm build --filter @acme/db --filter @acme/api
 
-# Попробуйте компиляцию 
-cd services/api && npx tsc -p tsconfig.build.json
+# Компилируем все в production-ready JavaScript
+cd packages/db && pnpm build  # Компилируем db package
+cd ../../services/api && npx tsc -p tsconfig.build.json
 cd ../scheduler && npx tsc -p tsconfig.json
-
-# Или установить tsx локально для production (проще чем компиляция)
-#pnpm add tsx --workspace-root
 ```
 
 ## Шаг 3: Настройка окружения
