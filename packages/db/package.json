@@ -6,15 +6,42 @@
   "main": "./dist/src/index.js",
   "types": "./dist/src/index.d.ts",
   "exports": {
-    ".": "./dist/src/index.js",
-    "./constants": "./dist/src/constants.js",
-    "./db": "./dist/src/db.js",
-    "./mutations": "./dist/src/mutations.js",
-    "./orm": "./dist/src/orm.js",
-    "./queries": "./dist/src/queries.js",
-    "./schema": "./dist/src/schema.js",
-    "./schemas": "./dist/src/schemas.js",
-    "./types": "./dist/src/types.js"
+    ".": {
+      "types": "./dist/src/index.d.ts",
+      "default": "./dist/src/index.js"
+    },
+    "./constants": {
+      "types": "./dist/src/constants.d.ts", 
+      "default": "./dist/src/constants.js"
+    },
+    "./db": {
+      "types": "./dist/src/db.d.ts",
+      "default": "./dist/src/db.js"
+    },
+    "./mutations": {
+      "types": "./dist/src/mutations.d.ts",
+      "default": "./dist/src/mutations.js"
+    },
+    "./orm": {
+      "types": "./dist/src/orm.d.ts",
+      "default": "./dist/src/orm.js"
+    },
+    "./queries": {
+      "types": "./dist/src/queries.d.ts",
+      "default": "./dist/src/queries.js"
+    },
+    "./schema": {
+      "types": "./dist/src/schema.d.ts",
+      "default": "./dist/src/schema.js"
+    },
+    "./schemas": {
+      "types": "./dist/src/schemas.d.ts",
+      "default": "./dist/src/schemas.js"
+    },
+    "./types": {
+      "types": "./dist/src/types.d.ts",
+      "default": "./dist/src/types.js"
+    }
   },
   "scripts": {
     "build": "tsc",
