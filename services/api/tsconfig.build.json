@@ -15,7 +15,13 @@
     "noUncheckedIndexedAccess": false,
     "noUnusedLocals": false,
     "noUnusedParameters": false,
-    "noEmit": false
+    "noEmit": false,
+    "baseUrl": ".",
+    "paths": {
+      "@acme/db": ["../../packages/db/src"],
+      "@acme/db/*": ["../../packages/db/src/*"]
+    },
+    "typeRoots": ["../../node_modules/@types", "node_modules/@types"]
   },
   "include": ["src/**/*", "index.ts"],
   "exclude": ["node_modules"]

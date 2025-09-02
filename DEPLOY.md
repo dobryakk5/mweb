@@ -42,12 +42,8 @@ pnpm install
 # Собираем проект (только backend компоненты)
 pnpm build --filter @acme/api --filter @acme/db
 
-# Альтернатива: установить tsx локально для production (если компиляция проблематична)
-# pnpm add tsx --workspace-root
-
-# Компилируем в production-ready JavaScript (рекомендуется)
-cd services/api && npx tsc -p tsconfig.build.json
-cd ../scheduler && npx tsc -p tsconfig.json
+# Установить tsx локально для production (проще чем компиляция)
+pnpm add tsx --workspace-root
 ```
 
 ## Шаг 3: Настройка окружения
@@ -74,12 +70,12 @@ pnpm db:migrate
 
 ## Шаг 5: Запуск в production
 
-### Вариант 1: PM2 с компиляцией (рекомендуется для production)
+### Вариант 1A: PM2 с компиляцией (рекомендуется для production)
 
 ```bash
-# Компилируем TypeScript в JavaScript
-cd services/api
-npx tsc -p tsconfig.build.json
+# Компилируем TypeScript в JavaScript (теперь работает!)
+cd services/api && npx tsc -p tsconfig.build.json
+cd ../scheduler && npx tsc -p tsconfig.json
 
 # Создаем ecosystem файл для скомпилированного JS
 cat > ecosystem.config.js << 'EOF'
@@ -143,7 +139,7 @@ User=your-user
 WorkingDirectory=/path/to/your/mweb
 Environment=NODE_ENV=production
 Environment=PORT=13001
-ExecStart=/usr/bin/node services/api/dist/index.js
+ExecStart=/path/to/your/mweb/node_modules/.bin/tsx services/api/index.ts
 Restart=on-failure
 
 [Install]
@@ -161,7 +157,7 @@ Type=simple
 User=your-user
 WorkingDirectory=/path/to/your/mweb
 Environment=NODE_ENV=production
-ExecStart=/usr/bin/node services/scheduler/dist/index.js
+ExecStart=/path/to/your/mweb/node_modules/.bin/tsx services/scheduler/src/index.ts
 Restart=on-failure
 
 [Install]
@@ -177,21 +173,16 @@ sudo systemctl start acme-api acme-scheduler
 ### Вариант 3: Простой запуск в screen/tmux
 
 ```bash
-# Компиляция перед запуском
-cd /path/to/your/mweb
-npx tsc -p services/api/tsconfig.build.json
-npx tsc -p services/scheduler/tsconfig.json
-
 # Запуск API сервера
 screen -S api-server
 cd /path/to/your/mweb
-NODE_ENV=production PORT=13001 node services/api/dist/index.js
+NODE_ENV=production PORT=13001 ./node_modules/.bin/tsx services/api/index.ts
 # Detach: Ctrl+A, D
 
 # Запуск Scheduler в отдельной сессии
 screen -S scheduler
 cd /path/to/your/mweb
-NODE_ENV=production node services/scheduler/dist/index.js
+NODE_ENV=production ./node_modules/.bin/tsx services/scheduler/src/index.ts
 # Detach: Ctrl+A, D
 
 # Просмотр активных сессий: screen -ls
