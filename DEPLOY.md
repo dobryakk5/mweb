@@ -42,8 +42,12 @@ pnpm install
 # Собираем проект (только backend компоненты)
 pnpm build --filter @acme/api --filter @acme/db
 
-# Установить tsx локально для production (проще чем компиляция)
-pnpm add tsx --workspace-root
+# Попробуйте компиляцию 
+cd services/api && npx tsc -p tsconfig.build.json
+cd ../scheduler && npx tsc -p tsconfig.json
+
+# Или установить tsx локально для production (проще чем компиляция)
+#pnpm add tsx --workspace-root
 ```
 
 ## Шаг 3: Настройка окружения
@@ -77,7 +81,21 @@ pnpm db:migrate
 cd services/api && npx tsc -p tsconfig.build.json
 cd ../scheduler && npx tsc -p tsconfig.json
 
+
+
 # Создаем ecosystem файл для скомпилированного JS
+⏺ ecosystem.config.js должен лежать в корне проекта на
+  сервере, то есть в директории /var/py/mweb/.
+
+  /var/py/mweb/
+  ├── ecosystem.config.js  ← здесь
+  ├── package.json
+  ├── services/
+  │   ├── api/
+  │   └── scheduler/
+  ├── packages/
+  └── apps/
+
 cat > ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [
@@ -108,8 +126,7 @@ module.exports = {
       out_file: './logs/scheduler-out.log',
       log_file: './logs/scheduler-combined.log',
       time: true,
-      watch: false,
-      cron_restart: '0 0 * * *'  // Перезапуск каждый день в полночь
+      watch: false
     }
   ]
 }
@@ -228,7 +245,7 @@ Frontend уже развернут на Netlify: https://mrealty.netlify.app
 
 **Build settings:**
 - Build command: `pnpm build --filter @acme/web`
-- Publish directory: `apps/web/out` (для статической сборки) или `apps/web/.next` (для серверной)
+- Publish directory: `apps/web/.next`
 
 **Environment variables:**
 1. Зайдите в Netlify Dashboard → Site Settings → Environment variables
@@ -244,6 +261,11 @@ Frontend уже развернут на Netlify: https://mrealty.netlify.app
 
 [build.environment]
   NODE_VERSION = "18"
+  NPM_FLAGS = "--prefix=/dev/null"
+
+# For Next.js on Netlify
+[[plugins]]
+  package = "@netlify/plugin-nextjs"
 ```
 
 После изменений Netlify автоматически пересоберет и задеплоит приложение.
