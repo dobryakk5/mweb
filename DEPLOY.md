@@ -1,4 +1,12 @@
-# Развертывание API сервера на Self-hosted Server
+# Развертывание приложения в Production
+
+## Обзор архитектуры
+
+- **Frontend (Web)**: Развернут на Netlify - https://mrealty.netlify.app
+- **Backend (API)**: Развертывается на self-hosted сервере 
+- **Database**: PostgreSQL на self-hosted сервере
+
+## Развертывание API сервера на Self-hosted Server
 
 ## Требования
 
@@ -31,8 +39,8 @@ cd mweb
 # Устанавливаем зависимости
 pnpm install
 
-# Собираем проект
-pnpm build --filter @acme/api
+# Собираем проект (только backend компоненты)
+pnpm build --filter @acme/api --filter @acme/db
 ```
 
 ## Шаг 3: Настройка окружения
@@ -68,22 +76,40 @@ npm install -g tsx
 # Создаем ecosystem файл
 cat > ecosystem.config.js << 'EOF'
 module.exports = {
-  apps: [{
-    name: 'acme-api',
-    script: 'tsx',
-    args: './services/api/index.ts',
-    instances: 1,  // tsx не поддерживает cluster mode
-    exec_mode: 'fork',
-    env: {
-      NODE_ENV: 'production',
-      PORT: 13001
+  apps: [
+    {
+      name: 'acme-api',
+      script: 'tsx',
+      args: './services/api/index.ts',
+      instances: 1,  // tsx не поддерживает cluster mode
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 13001
+      },
+      error_file: './logs/api-error.log',
+      out_file: './logs/api-out.log',
+      log_file: './logs/api-combined.log',
+      time: true,
+      watch: false
     },
-    error_file: './logs/api-error.log',
-    out_file: './logs/api-out.log',
-    log_file: './logs/api-combined.log',
-    time: true,
-    watch: false
-  }]
+    {
+      name: 'scheduler',
+      script: 'tsx',
+      args: './services/scheduler/src/index.ts',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production'
+      },
+      error_file: './logs/scheduler-error.log',
+      out_file: './logs/scheduler-out.log',
+      log_file: './logs/scheduler-combined.log',
+      time: true,
+      watch: false,
+      cron_restart: '0 0 * * *'  // Перезапуск каждый день в полночь
+    }
+  ]
 }
 EOF
 
@@ -99,7 +125,7 @@ pm2 startup  # настройка автозапуска
 ### Вариант 2: systemd с tsx
 
 ```bash
-# Создаем service файл
+# Создаем service файл для API
 sudo cat > /etc/systemd/system/acme-api.service << 'EOF'
 [Unit]
 Description=Acme API Server
@@ -118,22 +144,47 @@ Restart=on-failure
 WantedBy=multi-user.target
 EOF
 
-# Запускаем
+# Создаем service файл для Scheduler
+sudo cat > /etc/systemd/system/acme-scheduler.service << 'EOF'
+[Unit]
+Description=Acme Scheduler Service
+After=network.target
+
+[Service]
+Type=simple
+User=your-user
+WorkingDirectory=/path/to/your/mweb
+Environment=NODE_ENV=production
+ExecStart=/usr/local/bin/tsx services/scheduler/src/index.ts
+Restart=on-failure
+
+[Install]
+WantedBy=multi-user.target
+EOF
+
+# Запускаем оба сервиса
 sudo systemctl daemon-reload
-sudo systemctl enable acme-api
-sudo systemctl start acme-api
+sudo systemctl enable acme-api acme-scheduler
+sudo systemctl start acme-api acme-scheduler
 ```
 
 ### Вариант 3: Простой запуск в screen/tmux
 
 ```bash
-# В screen сессии
+# Запуск API сервера
 screen -S api-server
 cd /path/to/your/mweb
 NODE_ENV=production PORT=13001 tsx services/api/index.ts
-
 # Detach: Ctrl+A, D
-# Attach: screen -r api-server
+
+# Запуск Scheduler в отдельной сессии
+screen -S scheduler
+cd /path/to/your/mweb
+NODE_ENV=production tsx services/scheduler/src/index.ts
+# Detach: Ctrl+A, D
+
+# Просмотр активных сессий: screen -ls
+# Подключение: screen -r api-server или screen -r scheduler
 ```
 
 ## Шаг 6: Настройка Nginx (опционально)
@@ -165,10 +216,18 @@ sudo nginx -t
 sudo systemctl reload nginx
 ```
 
-## Шаг 7: Обновление Frontend
+## Шаг 7: Настройка Frontend на Netlify
 
-Обновите переменную окружения в Netlify:
-- `NEXT_PUBLIC_API_URL` = `http://your-server-ip:13001` или `https://your-api-domain.com`
+Frontend уже развернут на Netlify: https://mrealty.netlify.app
+
+Для подключения к вашему API серверу обновите переменную окружения в Netlify Dashboard:
+
+1. Зайдите в Netlify Dashboard → Site Settings → Environment variables
+2. Обновите переменную `NEXT_PUBLIC_API_URL`:
+   - `http://your-server-ip:13001` (если без прокси)
+   - `https://your-api-domain.com` (если используете Nginx с SSL)
+
+После изменения переменной Netlify автоматически пересоберет и задеплоит приложение.
 
 ## Мониторинг и логи
 
@@ -176,28 +235,34 @@ sudo systemctl reload nginx
 # PM2 команды
 pm2 status
 pm2 logs acme-api
+pm2 logs scheduler
 pm2 restart acme-api
+pm2 restart scheduler
 pm2 stop acme-api
+pm2 stop scheduler
 
 # systemd команды  
 sudo systemctl status acme-api
+sudo systemctl status acme-scheduler
 sudo journalctl -u acme-api -f
+sudo journalctl -u acme-scheduler -f
 sudo systemctl restart acme-api
+sudo systemctl restart acme-scheduler
 ```
 
 ## Обновление
 
 ```bash
 # Остановка
-pm2 stop acme-api  # или sudo systemctl stop acme-api
+pm2 stop all  # или sudo systemctl stop acme-api acme-scheduler
 
 # Обновление кода
 git pull origin main
 pnpm install
-pnpm build --filter @acme/api
+pnpm build --filter @acme/api --filter @acme/db
 
 # Запуск
-pm2 start acme-api  # или sudo systemctl start acme-api
+pm2 start ecosystem.config.js  # или sudo systemctl start acme-api acme-scheduler
 ```
 
 ## Безопасность

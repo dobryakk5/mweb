@@ -1,4 +1,5 @@
 export * from './fetchers'
 export * from './hooks/mutations'
 export * from './hooks/queries'
+export * from './hooks/use-ad-history'
 export * from './query-keys'

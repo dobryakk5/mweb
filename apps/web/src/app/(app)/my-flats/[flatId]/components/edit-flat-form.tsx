@@ -26,6 +26,7 @@ import { toast } from 'sonner'
 import * as XLSX from 'xlsx'
 import HookFormDevtool from '@/components/hookform-devtool'
 import AddAdForm from './add-ad-form'
+import AdChangesHistory from '@/components/ad-changes-history'
 
 const formSchema = insertUserFlatSchema.pick({
   address: true,
@@ -1587,7 +1588,18 @@ export default function EditFlatForm({
                                 URL
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                                Цена
+                                <div className='flex items-center gap-1'>
+                                  Цена
+                                  <AdChangesHistory 
+                                    adId={0} 
+                                    trigger="hover"
+                                    children={
+                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                                        📊
+                                      </button>
+                                    }
+                                  />
+                                </div>
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
                                 Комнаты
@@ -1644,10 +1656,32 @@ export default function EditFlatForm({
                                 Статус
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                                Просмотры сегодня
+                                <div className='flex items-center gap-1'>
+                                  Просмотры сегодня
+                                  <AdChangesHistory 
+                                    adId={0} 
+                                    trigger="hover"
+                                    children={
+                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                                        📊
+                                      </button>
+                                    }
+                                  />
+                                </div>
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                                Всего просмотров
+                                <div className='flex items-center gap-1'>
+                                  Всего просмотров
+                                  <AdChangesHistory 
+                                    adId={0} 
+                                    trigger="hover"
+                                    children={
+                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                                        📊
+                                      </button>
+                                    }
+                                  />
+                                </div>
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-32'>
                                 Действия
@@ -1661,10 +1695,32 @@ export default function EditFlatForm({
                                 </div>
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                                Цена
+                                <div className='flex items-center gap-1'>
+                                  Цена
+                                  <AdChangesHistory 
+                                    adId={0} 
+                                    trigger="hover"
+                                    children={
+                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                                        📊
+                                      </button>
+                                    }
+                                  />
+                                </div>
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                                Просмотров сегодня
+                                <div className='flex items-center gap-1'>
+                                  Просмотров сегодня
+                                  <AdChangesHistory 
+                                    adId={0} 
+                                    trigger="hover"
+                                    children={
+                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
+                                        📊
+                                      </button>
+                                    }
+                                  />
+                                </div>
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
                                 Обновлено
@@ -1722,7 +1778,16 @@ export default function EditFlatForm({
                                       </a>
                                     </div>
                                   </td>
-                                  <td className='p-2 align-middle text-sm'>{formatPrice(ad.price)}</td>
+                                  <td className='p-2 align-middle text-sm'>
+                                    <div className='flex items-center gap-1'>
+                                      <span>{formatPrice(ad.price)}</span>
+                                      <AdChangesHistory 
+                                        adId={ad.id}
+                                        currentPrice={ad.price}
+                                        trigger="hover"
+                                      />
+                                    </div>
+                                  </td>
                                   <td className='p-2 align-middle text-sm'>{ad.rooms}</td>
                                   <td className='p-2 align-middle text-sm'>{formatArea(ad.totalArea)}</td>
                                   <td className='p-2 align-middle text-sm'>{formatArea(ad.livingArea)}</td>
@@ -1741,8 +1806,26 @@ export default function EditFlatForm({
                                   <td className='p-2 align-middle text-sm'>{ad.tags || ''}</td>
                                   <td className='p-2 align-middle text-sm'>{ad.description || ''}</td>
                                   <td className='p-2 align-middle text-sm'>{ad.status || ''}</td>
-                                  <td className='p-2 align-middle text-sm'>{ad.viewsToday || ''}</td>
-                                  <td className='p-2 align-middle text-sm'>{ad.totalViews || ''}</td>
+                                  <td className='p-2 align-middle text-sm'>
+                                    <div className='flex items-center gap-1'>
+                                      <span>{ad.viewsToday || ''}</span>
+                                      <AdChangesHistory 
+                                        adId={ad.id}
+                                        currentViewsToday={ad.viewsToday}
+                                        trigger="hover"
+                                      />
+                                    </div>
+                                  </td>
+                                  <td className='p-2 align-middle text-sm'>
+                                    <div className='flex items-center gap-1'>
+                                      <span>{ad.totalViews || ''}</span>
+                                      <AdChangesHistory 
+                                        adId={ad.id}
+                                        currentTotalViews={ad.totalViews}
+                                        trigger="hover"
+                                      />
+                                    </div>
+                                  </td>
                                   <td className='p-2 align-middle text-sm'>
                                     <div className='flex gap-2'>
                                       {refreshButton}
@@ -1764,8 +1847,27 @@ export default function EditFlatForm({
                                       </a>
                                     </div>
                                   </td>
-                                  <td className='p-2 align-middle text-sm'>{formatPrice(ad.price)}</td>
-                                  <td className='p-2 align-middle text-sm'>{ad.viewsToday || ''}</td>
+                                  <td className='p-2 align-middle text-sm'>
+                                    <div className='flex items-center gap-1'>
+                                      <span>{formatPrice(ad.price)}</span>
+                                      <AdChangesHistory 
+                                        adId={ad.id}
+                                        currentPrice={ad.price}
+                                        trigger="click"
+                                      />
+                                    </div>
+                                  </td>
+                                  <td className='p-2 align-middle text-sm'>
+                                    <div className='flex items-center gap-1'>
+                                      <span>{ad.viewsToday || ''}</span>
+                                      <AdChangesHistory 
+                                        adId={ad.id}
+                                        currentViewsToday={ad.viewsToday}
+                                        currentTotalViews={ad.totalViews}
+                                        trigger="click"
+                                      />
+                                    </div>
+                                  </td>
                                   <td className='p-2 align-middle text-sm'>
                                     {new Date(ad.updatedAt).toLocaleDateString('ru-RU')}
                                   </td>

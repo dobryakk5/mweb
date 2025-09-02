@@ -106,6 +106,24 @@ const updateAdSchema = z.object({
 })
 
 export default async function adsRoutes(fastify: FastifyInstance) {
+  // Получить историю изменений объявления
+  fastify.get('/ads/:id/history', async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string }
+      
+      const history = await db
+        .select()
+        .from(adHistory)
+        .where(eq(adHistory.adId, parseInt(id)))
+        .orderBy(sql`${adHistory.createdAt} DESC`)
+        .limit(20) // Последние 20 записей
+      
+      return reply.send(history)
+    } catch (error) {
+      fastify.log.error(`Error fetching history for ad ${request.params.id}:`, error)
+      return reply.status(500).send({ error: 'Internal server error' })
+    }
+  })
   // GET /ads - получить все объявления
   fastify.get('/ads', async (request, reply) => {
     try {
