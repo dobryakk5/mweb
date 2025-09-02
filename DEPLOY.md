@@ -41,6 +41,13 @@ pnpm install
 
 # Собираем проект (только backend компоненты)
 pnpm build --filter @acme/api --filter @acme/db
+
+# Альтернатива: установить tsx локально для production (если компиляция проблематична)
+# pnpm add tsx --workspace-root
+
+# Компилируем в production-ready JavaScript (рекомендуется)
+cd services/api && npx tsc -p tsconfig.build.json
+cd ../scheduler && npx tsc -p tsconfig.json
 ```
 
 ## Шаг 3: Настройка окружения
@@ -67,22 +74,22 @@ pnpm db:migrate
 
 ## Шаг 5: Запуск в production
 
-### Вариант 1: PM2 с tsx (рекомендуется)
+### Вариант 1: PM2 с компиляцией (рекомендуется для production)
 
 ```bash
-# Устанавливаем tsx глобально
-npm install -g tsx
+# Компилируем TypeScript в JavaScript
+cd services/api
+npx tsc -p tsconfig.build.json
 
-# Создаем ecosystem файл
+# Создаем ecosystem файл для скомпилированного JS
 cat > ecosystem.config.js << 'EOF'
 module.exports = {
   apps: [
     {
       name: 'acme-api',
-      script: 'tsx',
-      args: './services/api/index.ts',
-      instances: 1,  // tsx не поддерживает cluster mode
-      exec_mode: 'fork',
+      script: './services/api/dist/index.js',
+      instances: 1,
+      exec_mode: 'cluster',
       env: {
         NODE_ENV: 'production',
         PORT: 13001
@@ -95,8 +102,7 @@ module.exports = {
     },
     {
       name: 'scheduler',
-      script: 'tsx',
-      args: './services/scheduler/src/index.ts',
+      script: './services/scheduler/dist/index.js',
       instances: 1,
       exec_mode: 'fork',
       env: {
@@ -137,7 +143,7 @@ User=your-user
 WorkingDirectory=/path/to/your/mweb
 Environment=NODE_ENV=production
 Environment=PORT=13001
-ExecStart=/usr/local/bin/tsx services/api/index.ts
+ExecStart=/usr/bin/node services/api/dist/index.js
 Restart=on-failure
 
 [Install]
@@ -155,7 +161,7 @@ Type=simple
 User=your-user
 WorkingDirectory=/path/to/your/mweb
 Environment=NODE_ENV=production
-ExecStart=/usr/local/bin/tsx services/scheduler/src/index.ts
+ExecStart=/usr/bin/node services/scheduler/dist/index.js
 Restart=on-failure
 
 [Install]
@@ -171,16 +177,21 @@ sudo systemctl start acme-api acme-scheduler
 ### Вариант 3: Простой запуск в screen/tmux
 
 ```bash
+# Компиляция перед запуском
+cd /path/to/your/mweb
+npx tsc -p services/api/tsconfig.build.json
+npx tsc -p services/scheduler/tsconfig.json
+
 # Запуск API сервера
 screen -S api-server
 cd /path/to/your/mweb
-NODE_ENV=production PORT=13001 tsx services/api/index.ts
+NODE_ENV=production PORT=13001 node services/api/dist/index.js
 # Detach: Ctrl+A, D
 
 # Запуск Scheduler в отдельной сессии
 screen -S scheduler
 cd /path/to/your/mweb
-NODE_ENV=production tsx services/scheduler/src/index.ts
+NODE_ENV=production node services/scheduler/dist/index.js
 # Detach: Ctrl+A, D
 
 # Просмотр активных сессий: screen -ls
