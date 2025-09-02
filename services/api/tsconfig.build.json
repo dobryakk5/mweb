@@ -16,11 +16,6 @@
     "noUnusedLocals": false,
     "noUnusedParameters": false,
     "noEmit": false,
-    "baseUrl": ".",
-    "paths": {
-      "@acme/db": ["../../packages/db/dist"],
-      "@acme/db/*": ["../../packages/db/dist/*"]
-    },
     "typeRoots": ["../../node_modules/@types", "node_modules/@types"]
   },
   "include": ["src/**/*", "index.ts"],

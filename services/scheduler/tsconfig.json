@@ -6,11 +6,6 @@
     "moduleResolution": "node",
     "target": "ES2020",
     "skipLibCheck": true,
-    "baseUrl": ".",
-    "paths": {
-      "@acme/db": ["../../packages/db/dist"],
-      "@acme/db/*": ["../../packages/db/dist/*"]
-    }
   },
   "include": ["src/**/*"],
   "exclude": ["node_modules", "dist"]

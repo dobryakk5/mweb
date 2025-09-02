@@ -1,5 +1,5 @@
 [build]
-  pnpm build --filter @acme/web"
+  command = "pnpm build --filter @acme/web"
   publish = ".next"
 
 [build.environment]
