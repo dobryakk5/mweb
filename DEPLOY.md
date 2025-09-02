@@ -220,14 +220,31 @@ sudo systemctl reload nginx
 
 Frontend уже развернут на Netlify: https://mrealty.netlify.app
 
-Для подключения к вашему API серверу обновите переменную окружения в Netlify Dashboard:
+### Настройка сборки в Netlify
 
+В настройках Netlify необходимо указать:
+
+**Build settings:**
+- Build command: `pnpm build --filter @acme/web`
+- Publish directory: `apps/web/.next`
+
+**Environment variables:**
 1. Зайдите в Netlify Dashboard → Site Settings → Environment variables
-2. Обновите переменную `NEXT_PUBLIC_API_URL`:
-   - `http://your-server-ip:13001` (если без прокси)
-   - `https://your-api-domain.com` (если используете Nginx с SSL)
+2. Добавьте/обновите переменные:
+   - `NEXT_PUBLIC_API_URL` = `http://your-server-ip:13001` (или `https://your-api-domain.com`)
+   - `NODE_VERSION` = `18` (или выше)
 
-После изменения переменной Netlify автоматически пересоберет и задеплоит приложение.
+**netlify.toml в корне проекта:**
+```toml
+[build]
+  command = "pnpm build --filter @acme/web"
+  publish = "apps/web/.next"
+
+[build.environment]
+  NODE_VERSION = "18"
+```
+
+После изменений Netlify автоматически пересоберет и задеплоит приложение.
 
 ## Мониторинг и логи
 
