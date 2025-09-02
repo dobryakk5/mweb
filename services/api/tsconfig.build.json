@@ -18,8 +18,8 @@
     "noEmit": false,
     "baseUrl": ".",
     "paths": {
-      "@acme/db": ["../../packages/db/src"],
-      "@acme/db/*": ["../../packages/db/src/*"]
+      "@acme/db": ["../../packages/db/dist"],
+      "@acme/db/*": ["../../packages/db/dist/*"]
     },
     "typeRoots": ["../../node_modules/@types", "node_modules/@types"]
   },

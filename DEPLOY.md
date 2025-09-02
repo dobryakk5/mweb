@@ -39,13 +39,10 @@ cd mweb
 # Устанавливаем зависимости
 pnpm install
 
-# Собираем проект (все компоненты включая скомпилированный JS)
-pnpm build --filter @acme/db --filter @acme/api
-
-# Компилируем все в production-ready JavaScript
-cd packages/db && pnpm build  # Компилируем db package
-cd ../../services/api && npx tsc -p tsconfig.build.json
-cd ../scheduler && npx tsc -p tsconfig.json
+# Собираем проект по порядку: сначала db, потом остальные
+cd packages/db && pnpm build  # Сначала компилируем db package в dist/
+cd ../../services/api && npx tsc -p tsconfig.build.json  # Потом API
+cd ../scheduler && npx tsc -p tsconfig.json  # И scheduler
 ```
 
 ## Шаг 3: Настройка окружения
