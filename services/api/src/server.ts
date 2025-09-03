@@ -11,7 +11,12 @@ export default async function startServer() {
 
   // Регистрируем CORS middleware
   await fastify.register(cors, {
-    origin: ['http://localhost:13000', 'http://127.0.0.1:13000'],
+    origin: [
+      'http://localhost:13000', 
+      'http://127.0.0.1:13000',
+      'https://mrealty.netlify.app',
+      'http://217.114.15.233:13000'
+    ],
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
@@ -27,6 +32,7 @@ export default async function startServer() {
   try {
     const address = await fastify.listen({
       port: Number(process.env.PORT) || 13001,
+      host: '0.0.0.0',
     })
 
     console.log(`Server listening at ${address}`)
