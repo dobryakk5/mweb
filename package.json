@@ -14,7 +14,7 @@
     "typecheck": "turbo typecheck",
     "lint": "trunk check",
     "format": "trunk fmt",
-    "dev": "turbo dev",
+    "dev": "pnpm build --filter @acme/db && turbo dev",
     "build": "turbo build",
     "start": "turbo start"
   },

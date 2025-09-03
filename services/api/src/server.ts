@@ -11,12 +11,7 @@ export default async function startServer() {
 
   // Регистрируем CORS middleware
   await fastify.register(cors, {
-    origin: [
-      'http://localhost:13000', 
-      'http://127.0.0.1:13000',
-      'https://mrealty.netlify.app',
-      'http://217.114.15.233:13000'
-    ],
+    origin: true, // Разрешить все origins временно
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
