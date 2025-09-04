@@ -4,60 +4,34 @@ import { z } from 'zod'
 import { db, ads, userFlats, adHistory } from '@acme/db'
 import { eq, sql } from 'drizzle-orm'
 
-// Функция для записи изменений в историю
+// Функция для записи изменений в историю (только для значимых полей, не просмотров)
 async function recordAdChanges(
   adId: number, 
   oldAd: any, 
   newData: any,
-  trackingType: string = 'manual_update',
   fastify: FastifyInstance
 ) {
-  const changes: any = {}
+  const changes: any = { adId }
   
-  // Проверяем изменение цены - всегда записываем в историю
+  // Проверяем изменение цены (записываем в историю)
   if (newData.price !== undefined && newData.price !== oldAd.price) {
     changes.price = newData.price
-    fastify.log.info(`Ad ${adId}: price changed from ${oldAd.price} to ${newData.price}`)
+    fastify.log.info(`Manual update - Ad ${adId}: price changed from ${oldAd.price} to ${newData.price}`)
   }
   
-  // Проверяем изменение статуса - всегда записываем в историю
+  // НЕ записываем просмотры в историю при ручном обновлении
+  // Просмотры записывает только scheduler
+  
+  // Проверяем изменение статуса (записываем в историю)
   if (newData.status !== undefined && newData.status !== oldAd.status) {
     changes.status = newData.status
-    fastify.log.info(`Ad ${adId}: status changed from ${oldAd.status} to ${newData.status}`)
+    fastify.log.info(`Manual update - Ad ${adId}: status changed from ${oldAd.status} to ${newData.status}`)
   }
   
-  // Просмотры записываем в историю ТОЛЬКО для daily_snapshot
-  if (trackingType === 'daily_snapshot') {
-    // Проверяем изменение просмотров сегодня
-    if (newData.viewsToday !== undefined && newData.viewsToday !== oldAd.viewsToday) {
-      changes.viewsToday = newData.viewsToday
-      fastify.log.info(`Ad ${adId}: views today changed from ${oldAd.viewsToday} to ${newData.viewsToday}`)
-    }
-    
-    // Проверяем изменение общих просмотров
-    if (newData.totalViews !== undefined && newData.totalViews !== oldAd.totalViews) {
-      changes.totalViews = newData.totalViews
-      fastify.log.info(`Ad ${adId}: total views changed from ${oldAd.totalViews} to ${newData.totalViews}`)
-    }
-  } else {
-    // Для других типов обновлений логируем но не записываем просмотры в историю
-    if (newData.viewsToday !== undefined && newData.viewsToday !== oldAd.viewsToday) {
-      fastify.log.info(`Ad ${adId}: views today updated from ${oldAd.viewsToday} to ${newData.viewsToday} (not recorded in history - intraday data)`)
-    }
-    
-    if (newData.totalViews !== undefined && newData.totalViews !== oldAd.totalViews) {
-      fastify.log.info(`Ad ${adId}: total views updated from ${oldAd.totalViews} to ${newData.totalViews} (not recorded in history - intraday data)`)
-    }
-  }
-  
-  // Если есть изменения, записываем их в историю
-  if (Object.keys(changes).length > 0) {
-    await db.insert(adHistory).values({
-      adId: adId,
-      trackingType: trackingType,
-      ...changes,
-    })
-    fastify.log.info(`Ad ${adId}: changes recorded to history with type: ${trackingType}`)
+  // Записываем изменения в историю если есть что записать (только цена и статус)
+  if (Object.keys(changes).length > 1) { // больше 1, так как adId всегда есть
+    await db.insert(adHistory).values(changes)
+    fastify.log.info(`Manual update - Ad ${adId}: significant changes recorded to history`)
   }
 }
 
@@ -80,9 +54,9 @@ const updateAdSchema = z.object({
   rooms: z.number().positive().optional(),
   
   // Новые поля от API парсинга
-  totalArea: z.string().optional(),
-  livingArea: z.string().optional(),
-  kitchenArea: z.string().optional(),
+  totalArea: z.union([z.string(), z.number()]).optional(),
+  livingArea: z.union([z.string(), z.number()]).optional(),
+  kitchenArea: z.union([z.string(), z.number()]).optional(),
   floor: z.number().optional(),
   totalFloors: z.number().optional(),
   bathroom: z.string().optional(),
@@ -91,16 +65,15 @@ const updateAdSchema = z.object({
   furniture: z.string().optional(),
   constructionYear: z.number().optional(),
   houseType: z.string().optional(),
-  ceilingHeight: z.string().optional(),
+  ceilingHeight: z.union([z.string(), z.number()]).optional(),
   metroStation: z.string().optional(),
   metroTime: z.union([z.string(), z.number()]).optional(),
   tags: z.string().optional(),
   description: z.string().optional(),
   photoUrls: z.array(z.string()).optional(),
   source: z.number().optional(),
-  status: z.string().optional(),
+  status: z.boolean().optional(),
   viewsToday: z.number().optional(),
-  totalViews: z.number().optional(),
   from: z.number().int().min(1).max(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma: z.number().int().min(0).max(1).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
 })
@@ -115,7 +88,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         .select()
         .from(adHistory)
         .where(eq(adHistory.adId, parseInt(id)))
-        .orderBy(sql`${adHistory.createdAt} DESC`)
+        .orderBy(sql`${adHistory.recordedAt} DESC`)
         .limit(20) // Последние 20 записей
       
       return reply.send(history)
@@ -204,15 +177,30 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         fastify.log.info(`Current ad data before update:`, currentAd[0])
         
         // Записываем изменения в историю перед обновлением
-        await recordAdChanges(parseInt(id), currentAd[0], body, 'manual_update', fastify)
+        await recordAdChanges(parseInt(id), currentAd[0], body, fastify)
       }
       
-      // Используем body напрямую - decimal поля уже в строковом формате
+      // Подготавливаем данные для обновления
       const updateData: any = { ...body }
-      // Конвертируем metroTime в строку, если это число
+      
+      // Конвертируем числовые поля в строки для decimal полей БД
+      if (updateData.totalArea !== undefined && typeof updateData.totalArea === 'number') {
+        updateData.totalArea = updateData.totalArea.toString()
+      }
+      if (updateData.livingArea !== undefined && typeof updateData.livingArea === 'number') {
+        updateData.livingArea = updateData.livingArea.toString()
+      }
+      if (updateData.kitchenArea !== undefined && typeof updateData.kitchenArea === 'number') {
+        updateData.kitchenArea = updateData.kitchenArea.toString()
+      }
+      if (updateData.ceilingHeight !== undefined && typeof updateData.ceilingHeight === 'number') {
+        updateData.ceilingHeight = updateData.ceilingHeight.toString()
+      }
       if (updateData.metroTime !== undefined && typeof updateData.metroTime === 'number') {
         updateData.metroTime = updateData.metroTime.toString()
       }
+      
+      // Статус уже boolean в БД, конвертация не нужна
 
       const result = await db.update(ads)
         .set({
@@ -262,15 +250,30 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         fastify.log.info(`Current ad data before force update:`, currentAd[0])
         
         // Записываем изменения в историю перед принудительным обновлением
-        await recordAdChanges(parseInt(adId), currentAd[0], body, 'parsing_update', fastify)
+        await recordAdChanges(parseInt(adId), currentAd[0], body, fastify)
       }
       
-      // Используем body напрямую - decimal поля уже в строковом формате
+      // Подготавливаем данные для принудительного обновления
       const forceUpdateData: any = { ...body }
-      // Конвертируем metroTime в строку, если это число
+      
+      // Конвертируем числовые поля в строки для decimal полей БД
+      if (forceUpdateData.totalArea !== undefined && typeof forceUpdateData.totalArea === 'number') {
+        forceUpdateData.totalArea = forceUpdateData.totalArea.toString()
+      }
+      if (forceUpdateData.livingArea !== undefined && typeof forceUpdateData.livingArea === 'number') {
+        forceUpdateData.livingArea = forceUpdateData.livingArea.toString()
+      }
+      if (forceUpdateData.kitchenArea !== undefined && typeof forceUpdateData.kitchenArea === 'number') {
+        forceUpdateData.kitchenArea = forceUpdateData.kitchenArea.toString()
+      }
+      if (forceUpdateData.ceilingHeight !== undefined && typeof forceUpdateData.ceilingHeight === 'number') {
+        forceUpdateData.ceilingHeight = forceUpdateData.ceilingHeight.toString()
+      }
       if (forceUpdateData.metroTime !== undefined && typeof forceUpdateData.metroTime === 'number') {
         forceUpdateData.metroTime = forceUpdateData.metroTime.toString()
       }
+      
+      // Статус уже boolean в БД, конвертация не нужна
 
       // Принудительно обновляем все поля
       const result = await db.update(ads)

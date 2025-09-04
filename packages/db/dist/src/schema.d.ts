@@ -1041,29 +1041,10 @@ export declare const ads: import("drizzle-orm/pg-core").PgTableWithColumns<{
         status: import("drizzle-orm/pg-core").PgColumn<{
             name: "status";
             tableName: "ads";
-            dataType: "string";
-            columnType: "PgVarchar";
-            data: string;
-            driverParam: string;
-            notNull: false;
-            hasDefault: false;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
-        viewsToday: import("drizzle-orm/pg-core").PgColumn<{
-            name: "views_today";
-            tableName: "ads";
-            dataType: "number";
-            columnType: "PgSmallInt";
-            data: number;
-            driverParam: string | number;
+            dataType: "boolean";
+            columnType: "PgBoolean";
+            data: boolean;
+            driverParam: boolean;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
@@ -1074,11 +1055,11 @@ export declare const ads: import("drizzle-orm/pg-core").PgTableWithColumns<{
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
-        totalViews: import("drizzle-orm/pg-core").PgColumn<{
-            name: "total_views";
+        viewsToday: import("drizzle-orm/pg-core").PgColumn<{
+            name: "views_today";
             tableName: "ads";
             dataType: "number";
-            columnType: "PgInteger";
+            columnType: "PgSmallInt";
             data: number;
             driverParam: string | number;
             notNull: false;
@@ -1132,40 +1113,6 @@ export declare const adHistory: import("drizzle-orm/pg-core").PgTableWithColumns
     name: "ad_history";
     schema: "users";
     columns: {
-        createdAt: import("drizzle-orm/pg-core").PgColumn<{
-            name: "created_at";
-            tableName: "ad_history";
-            dataType: "date";
-            columnType: "PgTimestamp";
-            data: Date;
-            driverParam: string;
-            notNull: true;
-            hasDefault: true;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: undefined;
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {}>;
-        updatedAt: import("drizzle-orm/pg-core").PgColumn<{
-            name: "updated_at";
-            tableName: "ad_history";
-            dataType: "date";
-            columnType: "PgTimestamp";
-            data: Date;
-            driverParam: string;
-            notNull: true;
-            hasDefault: true;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: undefined;
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {}>;
         id: import("drizzle-orm/pg-core").PgColumn<{
             name: "id";
             tableName: "ad_history";
@@ -1221,23 +1168,6 @@ export declare const adHistory: import("drizzle-orm/pg-core").PgTableWithColumns
             name: "views_today";
             tableName: "ad_history";
             dataType: "number";
-            columnType: "PgSmallInt";
-            data: number;
-            driverParam: string | number;
-            notNull: false;
-            hasDefault: false;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: undefined;
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {}>;
-        totalViews: import("drizzle-orm/pg-core").PgColumn<{
-            name: "total_views";
-            tableName: "ad_history";
-            dataType: "number";
             columnType: "PgInteger";
             data: number;
             driverParam: string | number;
@@ -1251,44 +1181,57 @@ export declare const adHistory: import("drizzle-orm/pg-core").PgTableWithColumns
             identity: undefined;
             generated: undefined;
         }, {}, {}>;
+        recordedAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "recorded_at";
+            tableName: "ad_history";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
+            driverParam: string;
+            notNull: false;
+            hasDefault: true;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
         status: import("drizzle-orm/pg-core").PgColumn<{
             name: "status";
             tableName: "ad_history";
-            dataType: "string";
-            columnType: "PgVarchar";
-            data: string;
+            dataType: "boolean";
+            columnType: "PgBoolean";
+            data: boolean;
+            driverParam: boolean;
+            notNull: false;
+            hasDefault: false;
+            isPrimaryKey: false;
+            isAutoincrement: false;
+            hasRuntimeDefault: false;
+            enumValues: undefined;
+            baseColumn: never;
+            identity: undefined;
+            generated: undefined;
+        }, {}, {}>;
+        updatedAt: import("drizzle-orm/pg-core").PgColumn<{
+            name: "updated_at";
+            tableName: "ad_history";
+            dataType: "date";
+            columnType: "PgTimestamp";
+            data: Date;
             driverParam: string;
             notNull: false;
             hasDefault: false;
             isPrimaryKey: false;
             isAutoincrement: false;
             hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
+            enumValues: undefined;
             baseColumn: never;
             identity: undefined;
             generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
-        trackingType: import("drizzle-orm/pg-core").PgColumn<{
-            name: "tracking_type";
-            tableName: "ad_history";
-            dataType: "string";
-            columnType: "PgVarchar";
-            data: string;
-            driverParam: string;
-            notNull: true;
-            hasDefault: true;
-            isPrimaryKey: false;
-            isAutoincrement: false;
-            hasRuntimeDefault: false;
-            enumValues: [string, ...string[]];
-            baseColumn: never;
-            identity: undefined;
-            generated: undefined;
-        }, {}, {
-            length: number | undefined;
-        }>;
+        }, {}, {}>;
     };
     dialect: "pg";
 }>;

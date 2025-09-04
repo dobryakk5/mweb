@@ -91,9 +91,8 @@ export declare function getAdByUrl(url: string): Promise<{
     description: string | null;
     photoUrls: string[] | null;
     source: number | null;
-    status: string | null;
+    status: boolean | null;
     viewsToday: number | null;
-    totalViews: number | null;
     from: number;
     sma: number;
 }[]>;
@@ -125,9 +124,8 @@ export declare function getAdById(id: number): Promise<{
     description: string | null;
     photoUrls: string[] | null;
     source: number | null;
-    status: string | null;
+    status: boolean | null;
     viewsToday: number | null;
-    totalViews: number | null;
     from: number;
     sma: number;
 }[]>;
@@ -159,9 +157,8 @@ export declare function getAdsByFlatId(flatId: number): Promise<{
     description: string | null;
     photoUrls: string[] | null;
     source: number | null;
-    status: string | null;
+    status: boolean | null;
     viewsToday: number | null;
-    totalViews: number | null;
     from: number;
     sma: number;
 }[]>;

@@ -1,4 +1,4 @@
-import { pgTable, varchar, index, bigint, integer, pgSchema, decimal, smallint, text } from 'drizzle-orm/pg-core'
+import { pgTable, varchar, index, bigint, integer, pgSchema, decimal, smallint, text, timestamp, boolean } from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 import { id, timestamps } from './utils'
@@ -98,9 +98,8 @@ export const ads = usersSchema.table(
     description: text('description'),
     photoUrls: text('photo_urls').array(),
     source: smallint('source'),
-    status: varchar('status'),
+    status: boolean('status'),
     viewsToday: smallint('views_today'),
-    totalViews: integer('total_views'),
     from: smallint('from').default(2).notNull(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
     sma: smallint('sma').default(0).notNull(), // 0 - обычное объявление, 1 - в сравнении квартир
     
@@ -119,18 +118,15 @@ export const adHistory = usersSchema.table(
   'ad_history',
   {
     id: integer('id').primaryKey().generatedAlwaysAsIdentity(),
-    adId: integer('ad_id').notNull(), // Ссылка на объявление
-    price: integer('price'), // Новая цена (если изменилась)
-    viewsToday: smallint('views_today'), // Новое количество просмотров сегодня
-    totalViews: integer('total_views'), // Новое общее количество просмотров
-    status: varchar('status'), // Новый статус объявления (если изменился)
-    trackingType: varchar('tracking_type').notNull().default('manual_update'), // Тип отслеживания
-    ...timestamps,
+    adId: integer('ad_id').notNull(),
+    price: integer('price'),
+    viewsToday: integer('views_today'),
+    recordedAt: timestamp('recorded_at').defaultNow(),
+    status: boolean('status'),
+    updatedAt: timestamp('updated_at'),
   },
   (t) => [
-    index('ad_history_ad_id_idx').on(t.adId), // Индекс для быстрого поиска по объявлению
-    index('ad_history_created_at_idx').on(t.createdAt), // Индекс для сортировки по времени
-    index('ad_history_tracking_type_idx').on(t.trackingType), // Индекс для фильтрации по типу
+    index('ad_history_ad_id_idx').on(t.adId),
   ],
 )
 

@@ -75,9 +75,8 @@ exports.ads = exports.usersSchema.table('ads', {
     description: (0, pg_core_1.text)('description'),
     photoUrls: (0, pg_core_1.text)('photo_urls').array(),
     source: (0, pg_core_1.smallint)('source'),
-    status: (0, pg_core_1.varchar)('status'),
+    status: (0, pg_core_1.boolean)('status'),
     viewsToday: (0, pg_core_1.smallint)('views_today'),
-    totalViews: (0, pg_core_1.integer)('total_views'),
     from: (0, pg_core_1.smallint)('from').default(2).notNull(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
     sma: (0, pg_core_1.smallint)('sma').default(0).notNull(), // 0 - обычное объявление, 1 - в сравнении квартир
     ...utils_1.timestamps,
@@ -90,17 +89,14 @@ exports.ads = exports.usersSchema.table('ads', {
 ]);
 exports.adHistory = exports.usersSchema.table('ad_history', {
     id: (0, pg_core_1.integer)('id').primaryKey().generatedAlwaysAsIdentity(),
-    adId: (0, pg_core_1.integer)('ad_id').notNull(), // Ссылка на объявление
-    price: (0, pg_core_1.integer)('price'), // Новая цена (если изменилась)
-    viewsToday: (0, pg_core_1.smallint)('views_today'), // Новое количество просмотров сегодня
-    totalViews: (0, pg_core_1.integer)('total_views'), // Новое общее количество просмотров
-    status: (0, pg_core_1.varchar)('status'), // Новый статус объявления (если изменился)
-    trackingType: (0, pg_core_1.varchar)('tracking_type').notNull().default('manual_update'), // Тип отслеживания
-    ...utils_1.timestamps,
+    adId: (0, pg_core_1.integer)('ad_id').notNull(),
+    price: (0, pg_core_1.integer)('price'),
+    viewsToday: (0, pg_core_1.integer)('views_today'),
+    recordedAt: (0, pg_core_1.timestamp)('recorded_at').defaultNow(),
+    status: (0, pg_core_1.boolean)('status'),
+    updatedAt: (0, pg_core_1.timestamp)('updated_at'),
 }, (t) => [
-    (0, pg_core_1.index)('ad_history_ad_id_idx').on(t.adId), // Индекс для быстрого поиска по объявлению
-    (0, pg_core_1.index)('ad_history_created_at_idx').on(t.createdAt), // Индекс для сортировки по времени
-    (0, pg_core_1.index)('ad_history_tracking_type_idx').on(t.trackingType), // Индекс для фильтрации по типу
+    (0, pg_core_1.index)('ad_history_ad_id_idx').on(t.adId),
 ]);
 // Определяем связи между таблицами
 exports.userFlatsRelations = (0, drizzle_orm_1.relations)(exports.userFlats, ({ many }) => ({

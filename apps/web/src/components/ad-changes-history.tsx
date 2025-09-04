@@ -6,29 +6,30 @@ import Tooltip from '@acme/ui/components/tooltip'
 import Button from '@acme/ui/components/button'
 import Skeleton from '@acme/ui/components/skeleton'
 import { TrendingUp } from '@acme/ui/components/icon'
-import { useAdHistory, type AdHistoryItem } from '@/domains/ads/hooks/use-ad-history'
+import { useAdHistory, useMultipleAdHistory, type AdHistoryItem } from '@/domains/ads/hooks/use-ad-history'
+import TrendChart from './trend-chart'
 
 interface AdChangesHistoryProps {
-  adId: number
+  adId: number | number[] // Может быть одно объявление или массив для агрегации
   currentPrice?: number
   currentViewsToday?: number
-  currentTotalViews?: number
   trigger?: 'hover' | 'click'
   children?: React.ReactNode
+  chartType?: 'price' | 'views' // Тип графика для отображения
 }
 
 function HistoryContent({ 
   history, 
   isLoading, 
   currentPrice, 
-  currentViewsToday, 
-  currentTotalViews 
+  currentViewsToday,
+  chartType
 }: {
   history: AdHistoryItem[]
   isLoading: boolean
   currentPrice?: number
   currentViewsToday?: number
-  currentTotalViews?: number
+  chartType?: 'price' | 'views'
 }) {
   if (isLoading) {
     return (
@@ -42,7 +43,7 @@ function HistoryContent({
 
   if (!history?.length) {
     return (
-      <div className="text-sm text-muted-foreground p-2 w-80">
+      <div className="text-sm text-muted-foreground p-2 w-96 text-center py-8">
         История изменений пуста
       </div>
     )
@@ -63,18 +64,9 @@ function HistoryContent({
     })
   }
 
-  const getTrackingTypeLabel = (type: string) => {
-    switch (type) {
-      case 'manual_update': return 'Ручное обновление'
-      case 'parsing_update': return 'Автообновление'
-      case 'daily_tracking': return 'Ежедневное отслеживание'
-      default: return type
-    }
-  }
-
   // Группируем изменения по дням
   const groupedHistory = history.reduce((groups, item) => {
-    const date = new Date(item.createdAt).toLocaleDateString('ru-RU')
+    const date = new Date(item.recordedAt).toLocaleDateString('ru-RU')
     if (!groups[date]) {
       groups[date] = []
     }
@@ -82,81 +74,66 @@ function HistoryContent({
     return groups
   }, {} as Record<string, AdHistoryItem[]>)
 
-  return (
-    <div className="w-80 max-h-96 overflow-y-auto">
-      <div className="space-y-3">
-        {Object.entries(groupedHistory).map(([date, items]) => (
-          <div key={date} className="space-y-2">
-            <h4 className="text-sm font-medium text-foreground border-b pb-1">
-              {date}
-            </h4>
-            {items.map((item, index) => (
-              <div key={item.id} className="text-xs space-y-1 p-2 rounded bg-muted/50">
-                <div className="flex justify-between items-center">
-                  <span className="text-muted-foreground">
-                    {formatDate(item.createdAt)}
-                  </span>
-                  <span className="text-xs bg-primary/10 text-primary px-2 py-0.5 rounded">
-                    {getTrackingTypeLabel(item.trackingType)}
-                  </span>
-                </div>
-                
-                <div className="space-y-1">
-                  {item.price !== undefined && (
-                    <div className="flex justify-between">
-                      <span>Цена:</span>
-                      <span className="font-medium">{formatPrice(item.price)}</span>
-                    </div>
-                  )}
-                  {item.viewsToday !== undefined && (
-                    <div className="flex justify-between">
-                      <span>Просмотры сегодня:</span>
-                      <span className="font-medium">{item.viewsToday}</span>
-                    </div>
-                  )}
-                  {item.totalViews !== undefined && (
-                    <div className="flex justify-between">
-                      <span>Всего просмотров:</span>
-                      <span className="font-medium">{item.totalViews}</span>
-                    </div>
-                  )}
-                  {item.status && (
-                    <div className="flex justify-between">
-                      <span>Статус:</span>
-                      <span className="font-medium">{item.status}</span>
-                    </div>
-                  )}
-                </div>
-              </div>
-            ))}
-          </div>
-        ))}
-      </div>
+  // Подготавливаем данные для графика в зависимости от типа
+  const getChartData = () => {
+    if (chartType === 'price') {
+      // График цен - берем все записи с ценами
+      const priceData = history
+        .filter(item => item.price !== undefined && item.price !== null)
+        .map(item => ({
+          date: item.recordedAt,
+          value: item.price!
+        }))
       
-      {/* Показываем текущие значения */}
-      {(currentPrice || currentViewsToday || currentTotalViews) && (
-        <div className="mt-3 pt-3 border-t">
-          <h4 className="text-sm font-medium mb-2">Текущие значения</h4>
-          <div className="text-xs space-y-1 p-2 rounded bg-primary/5">
-            {currentPrice && (
-              <div className="flex justify-between">
-                <span>Цена:</span>
-                <span className="font-medium">{formatPrice(currentPrice)}</span>
-              </div>
-            )}
-            {currentViewsToday !== undefined && (
-              <div className="flex justify-between">
-                <span>Просмотры сегодня:</span>
-                <span className="font-medium">{currentViewsToday}</span>
-              </div>
-            )}
-            {currentTotalViews !== undefined && (
-              <div className="flex justify-between">
-                <span>Всего просмотров:</span>
-                <span className="font-medium">{currentTotalViews}</span>
-              </div>
-            )}
-          </div>
+      // Добавляем текущую цену если есть
+      if (currentPrice) {
+        priceData.push({
+          date: new Date().toISOString(),
+          value: currentPrice
+        })
+      }
+      
+      return priceData
+    } else {
+      // График просмотров - берем все записи с просмотрами  
+      const viewsData = history
+        .filter(item => item.viewsToday !== undefined && item.viewsToday !== null)
+        .map(item => ({
+          date: item.recordedAt,
+          value: item.viewsToday!
+        }))
+      
+      // Добавляем текущие просмотры если есть
+      if (currentViewsToday !== undefined && currentViewsToday !== null) {
+        viewsData.push({
+          date: new Date().toISOString(),
+          value: currentViewsToday
+        })
+      }
+      
+      return viewsData
+    }
+  }
+
+  const chartData = getChartData()
+  const title = chartType === 'price' ? 'Динамика цены' : 'Динамика просмотров'
+
+  return (
+    <div className="w-96">
+      {chartData.length > 1 ? (
+        <TrendChart
+          data={chartData}
+          title={title}
+          type={chartType || 'price'}
+          width={350}
+          height={250}
+        />
+      ) : (
+        <div className="text-center text-muted-foreground text-sm py-8">
+          {chartData.length === 1 
+            ? 'Недостаточно данных для графика (нужно минимум 2 точки)'
+            : 'Нет данных для отображения графика'
+          }
         </div>
       )}
     </div>
@@ -167,21 +144,30 @@ export default function AdChangesHistory({
   adId,
   currentPrice,
   currentViewsToday,
-  currentTotalViews,
   trigger = 'hover',
-  children
+  children,
+  chartType = 'price'
 }: AdChangesHistoryProps) {
-  const { data: history = [], isLoading } = useAdHistory(adId)
   const [isOpen, setIsOpen] = useState(false)
+  
+  // Определяем, какой хук использовать в зависимости от типа adId
+  const singleAdQuery = useAdHistory(typeof adId === 'number' ? adId : 0)
+  const multipleAdQuery = useMultipleAdHistory(Array.isArray(adId) ? adId : [])
+  
+  const { data: history = [], isLoading } = Array.isArray(adId) ? multipleAdQuery : singleAdQuery
 
   const defaultTrigger = children || (
-    <Button 
-      variant="outline" 
-      size="sm"
-      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground"
+    <button 
+      className="h-6 w-6 p-0 text-muted-foreground hover:text-foreground transition-colors flex items-center justify-center"
     >
-      <TrendingUp className="h-4 w-4" />
-    </Button>
+      <svg width="16" height="16" viewBox="0 0 16 16" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <path d="M2 12L6 8L10 10L14 6" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+        <circle cx="2" cy="12" r="1.5" fill="currentColor"/>
+        <circle cx="6" cy="8" r="1.5" fill="currentColor"/>
+        <circle cx="10" cy="10" r="1.5" fill="currentColor"/>
+        <circle cx="14" cy="6" r="1.5" fill="currentColor"/>
+      </svg>
+    </button>
   )
 
   const historyContent = (
@@ -192,7 +178,7 @@ export default function AdChangesHistory({
         isLoading={isLoading}
         currentPrice={currentPrice}
         currentViewsToday={currentViewsToday}
-        currentTotalViews={currentTotalViews}
+        chartType={chartType}
       />
     </div>
   )

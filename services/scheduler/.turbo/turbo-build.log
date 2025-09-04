@@ -2,13 +2,3 @@
 > @mweb/scheduler@1.0.0 build /Users/pavellebedev/Desktop/mweb/services/scheduler
 > tsc
 
-../../packages/db/src/index.ts(1,35): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './client.js'?
-../../packages/db/src/index.ts(2,31): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './db.js'?
-../../packages/db/src/index.ts(3,39): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './db.js'?
-../../packages/db/src/index.ts(5,15): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './orm.js'?
-../../packages/db/src/index.ts(6,15): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './schema.js'?
-../../packages/db/src/index.ts(7,15): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './schemas.js'?
-../../packages/db/src/index.ts(8,15): error TS2835: Relative import paths need explicit file extensions in ECMAScript imports when '--moduleResolution' is 'node16' or 'nodenext'. Did you mean './types.js'?
-src/index.ts(2,14): error TS2305: Module '"@acme/db"' has no exported member 'ads'.
-src/index.ts(68,38): error TS7006: Parameter 'ad' implicitly has an 'any' type.
- ELIFECYCLE  Command failed with exit code 2.

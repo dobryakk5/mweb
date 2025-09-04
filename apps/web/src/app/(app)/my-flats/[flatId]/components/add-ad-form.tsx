@@ -159,10 +159,6 @@ export default function AddAdForm({ flatId, flatAddress, flatRooms, onSuccess }:
       updateData.viewsToday = typeof views === 'number' ? views : parseInt(String(views))
     }
     
-    if (parsedData.total_views || parsedData.totalViews) {
-      const views = parsedData.total_views || parsedData.totalViews
-      updateData.totalViews = typeof views === 'number' ? views : parseInt(String(views))
-    }
 
     // Фильтруем undefined значения
     return Object.fromEntries(

@@ -223,8 +223,7 @@ export default function EditFlatForm({
       'Теги': ad.tags || '',
       'Описание': ad.description || '',
       'Статус': ad.status || '',
-      'Просмотры сегодня': ad.viewsToday || '',
-      'Всего просмотров': ad.totalViews || ''
+      'Просмотры на дату': ad.viewsToday !== null && ad.viewsToday !== undefined ? ad.viewsToday : '—',
     }))
 
     // Создаем рабочую книгу и лист
@@ -241,8 +240,15 @@ export default function EditFlatForm({
 
   // Универсальная функция для подготовки всех данных с парсинга
   const prepareUpdateData = (parsedData: any) => {
-    const updateData: any = {
-      status: parsedData.status || 'active',
+    const updateData: any = {}
+    
+    // Правильно обрабатываем status - может быть boolean или undefined
+    if (typeof parsedData.status === 'boolean') {
+      updateData.status = parsedData.status
+    } else if (parsedData.status === 'active' || parsedData.status === 'inactive') {
+      updateData.status = parsedData.status === 'active'
+    } else {
+      updateData.status = true // по умолчанию активно
     }
 
     // Основные поля
@@ -354,10 +360,6 @@ export default function EditFlatForm({
       updateData.viewsToday = typeof views === 'number' ? views : parseInt(String(views))
     }
     
-    if (parsedData.total_views || parsedData.totalViews) {
-      const views = parsedData.total_views || parsedData.totalViews
-      updateData.totalViews = typeof views === 'number' ? views : parseInt(String(views))
-    }
 
     // Фильтруем undefined значения
     return Object.fromEntries(
@@ -1588,18 +1590,7 @@ export default function EditFlatForm({
                                 URL
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                                <div className='flex items-center gap-1'>
-                                  Цена
-                                  <AdChangesHistory 
-                                    adId={0} 
-                                    trigger="hover"
-                                    children={
-                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                                        📊
-                                      </button>
-                                    }
-                                  />
-                                </div>
+                                Цена
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
                                 Комнаты
@@ -1657,29 +1648,11 @@ export default function EditFlatForm({
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
                                 <div className='flex items-center gap-1'>
-                                  Просмотры сегодня
+                                  Просмотры на дату
                                   <AdChangesHistory 
-                                    adId={0} 
+                                    adId={comparisonAds.map(ad => ad.id)}
                                     trigger="hover"
-                                    children={
-                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                                        📊
-                                      </button>
-                                    }
-                                  />
-                                </div>
-                              </th>
-                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                                <div className='flex items-center gap-1'>
-                                  Всего просмотров
-                                  <AdChangesHistory 
-                                    adId={0} 
-                                    trigger="hover"
-                                    children={
-                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                                        📊
-                                      </button>
-                                    }
+                                    chartType="views"
                                   />
                                 </div>
                               </th>
@@ -1695,32 +1668,20 @@ export default function EditFlatForm({
                                 </div>
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                                Цена
+                              </th>
+                              <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
                                 <div className='flex items-center gap-1'>
-                                  Цена
+                                  Просмотров на дату
                                   <AdChangesHistory 
-                                    adId={0} 
+                                    adId={comparisonAds.map(ad => ad.id)}
                                     trigger="hover"
-                                    children={
-                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                                        📊
-                                      </button>
-                                    }
+                                    chartType="views"
                                   />
                                 </div>
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
-                                <div className='flex items-center gap-1'>
-                                  Просмотров сегодня
-                                  <AdChangesHistory 
-                                    adId={0} 
-                                    trigger="hover"
-                                    children={
-                                      <button className="text-muted-foreground/50 hover:text-muted-foreground transition-colors">
-                                        📊
-                                      </button>
-                                    }
-                                  />
-                                </div>
+                                Статус
                               </th>
                               <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
                                 Обновлено
@@ -1785,6 +1746,7 @@ export default function EditFlatForm({
                                         adId={ad.id}
                                         currentPrice={ad.price}
                                         trigger="hover"
+                                        chartType="price"
                                       />
                                     </div>
                                   </td>
@@ -1808,21 +1770,12 @@ export default function EditFlatForm({
                                   <td className='p-2 align-middle text-sm'>{ad.status || ''}</td>
                                   <td className='p-2 align-middle text-sm'>
                                     <div className='flex items-center gap-1'>
-                                      <span>{ad.viewsToday || ''}</span>
+                                      <span>{ad.viewsToday !== null && ad.viewsToday !== undefined ? ad.viewsToday : '—'}</span>
                                       <AdChangesHistory 
                                         adId={ad.id}
                                         currentViewsToday={ad.viewsToday}
                                         trigger="hover"
-                                      />
-                                    </div>
-                                  </td>
-                                  <td className='p-2 align-middle text-sm'>
-                                    <div className='flex items-center gap-1'>
-                                      <span>{ad.totalViews || ''}</span>
-                                      <AdChangesHistory 
-                                        adId={ad.id}
-                                        currentTotalViews={ad.totalViews}
-                                        trigger="hover"
+                                        chartType="views"
                                       />
                                     </div>
                                   </td>
@@ -1854,18 +1807,28 @@ export default function EditFlatForm({
                                         adId={ad.id}
                                         currentPrice={ad.price}
                                         trigger="click"
+                                        chartType="price"
                                       />
                                     </div>
                                   </td>
                                   <td className='p-2 align-middle text-sm'>
                                     <div className='flex items-center gap-1'>
-                                      <span>{ad.viewsToday || ''}</span>
+                                      <span>{ad.viewsToday !== null && ad.viewsToday !== undefined ? ad.viewsToday : '—'}</span>
                                       <AdChangesHistory 
                                         adId={ad.id}
                                         currentViewsToday={ad.viewsToday}
-                                        currentTotalViews={ad.totalViews}
                                         trigger="click"
+                                        chartType="views"
                                       />
+                                    </div>
+                                  </td>
+                                  <td className='p-2 align-middle text-sm'>
+                                    <div className='flex items-center justify-center'>
+                                      {ad.status ? (
+                                        <span className='text-green-600'>✓</span>
+                                      ) : (
+                                        <span className='text-gray-400'>−</span>
+                                      )}
                                     </div>
                                   </td>
                                   <td className='p-2 align-middle text-sm'>

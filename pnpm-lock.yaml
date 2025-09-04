@@ -299,6 +299,9 @@ importers:
       '@acme/db':
         specifier: workspace:*
         version: link:../../packages/db
+      dotenv:
+        specifier: ~16.5.0
+        version: 16.5.0
       node-cron:
         specifier: ^3.0.3
         version: 3.0.3

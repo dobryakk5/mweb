@@ -8,15 +8,14 @@ import { eq } from 'drizzle-orm'
 const dailyUpdateSchema = z.object({
   adId: z.number().positive(),
   viewsToday: z.number().optional(),
-  totalViews: z.number().optional(),
-  status: z.string().optional(),
+  status: z.boolean().optional(),
 })
 
 export default async function schedulerRoutes(fastify: FastifyInstance) {
   // POST /scheduler/daily-update - эндпоинт для планировщика
   fastify.post('/scheduler/daily-update', async (request, reply) => {
     try {
-      const { adId, viewsToday, totalViews, status } = dailyUpdateSchema.parse(request.body)
+      const { adId, viewsToday, status } = dailyUpdateSchema.parse(request.body)
       
       // Получаем текущие данные объявления
       const currentAd = await db.select().from(ads).where(eq(ads.id, adId)).limit(1)
@@ -34,10 +33,6 @@ export default async function schedulerRoutes(fastify: FastifyInstance) {
         fastify.log.info(`Daily update - Ad ${adId}: views today changed from ${oldAd.viewsToday} to ${viewsToday}`)
       }
       
-      if (totalViews !== undefined && totalViews !== oldAd.totalViews) {
-        changes.totalViews = totalViews  
-        fastify.log.info(`Daily update - Ad ${adId}: total views changed from ${oldAd.totalViews} to ${totalViews}`)
-      }
       
       // Проверяем изменения статуса
       if (status !== undefined && status !== oldAd.status) {
@@ -45,31 +40,38 @@ export default async function schedulerRoutes(fastify: FastifyInstance) {
         fastify.log.info(`Daily update - Ad ${adId}: status changed from ${oldAd.status} to ${status}`)
       }
       
-      // Записываем в историю только если есть изменения
-      if (Object.keys(changes).length > 0) {
-        await db.insert(adHistory).values({
-          adId: adId,
-          trackingType: 'daily_snapshot',
-          ...changes,
-        })
-        fastify.log.info(`Daily update - Ad ${adId}: changes recorded to history`)
+      // Всегда записываем ежедневный снимок в историю (независимо от изменений)
+      const historyRecord: any = {
+        adId: adId,
+        price: oldAd.price, // Всегда записываем текущую цену
       }
       
-      // Обновляем основную таблицу ads
-      const updateData: any = {}
+      // Записываем только те поля, которые пришли от парсера
+      // Если данных нет (undefined), то поле не записывается (будет NULL в БД)
+      if (viewsToday !== undefined) {
+        historyRecord.viewsToday = viewsToday
+      }
+      if (status !== undefined) {
+        historyRecord.status = status
+      }
+      
+      await db.insert(adHistory).values(historyRecord)
+      fastify.log.info(`Daily update - Ad ${adId}: daily snapshot recorded to history`, historyRecord)
+      
+      // Всегда обновляем основную таблицу ads (scheduler всегда записывает данные)
+      const updateData: any = {
+        updatedAt: new Date()
+      }
+      
+      // Записываем все полученные данные в основную таблицу
       if (viewsToday !== undefined) updateData.viewsToday = viewsToday
-      if (totalViews !== undefined) updateData.totalViews = totalViews
       if (status !== undefined) updateData.status = status
       
-      if (Object.keys(updateData).length > 0) {
-        updateData.updatedAt = new Date()
-        
-        await db.update(ads)
-          .set(updateData)
-          .where(eq(ads.id, adId))
-        
-        fastify.log.info(`Daily update - Ad ${adId}: main table updated`)
-      }
+      await db.update(ads)
+        .set(updateData)
+        .where(eq(ads.id, adId))
+      
+      fastify.log.info(`Daily update - Ad ${adId}: main table updated with scheduler data`)
       
       return reply.send({ 
         success: true, 

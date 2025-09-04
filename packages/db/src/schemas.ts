@@ -1,7 +1,7 @@
 import { createSelectSchema, createInsertSchema } from 'drizzle-zod'
 import { z } from 'zod'
 
-import { users, userFlats, ads } from './schema'
+import { users, userFlats, ads, adHistory } from './schema'
 
 export const selectUserSchema = createSelectSchema(users)
 export const upsertUserSchema = createInsertSchema(users, {
@@ -31,7 +31,16 @@ export const insertUserFlatSchema = createInsertSchema(userFlats)
 export const selectAdSchema = createSelectSchema(ads)
 export const insertAdSchema = createInsertSchema(ads)
 
+// Ad history schemas
+export const selectAdHistorySchema = createSelectSchema(adHistory)
+export const insertAdHistorySchema = createInsertSchema(adHistory, {
+  adId: z.number().int().positive(),
+  price: z.number().int().positive().optional(),
+  viewsToday: z.number().int().min(0).optional(),
+  status: z.boolean().optional(),
+})
+
 // Экспортируем таблицы для использования в API
-export { ads, userFlats, users }
+export { ads, userFlats, users, adHistory }
 
 
