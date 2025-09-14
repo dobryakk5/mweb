@@ -161,7 +161,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       return reply.send(changes)
     } catch (error) {
       const errorMessage = error instanceof Error ? error.message : String(error)
-      fastify.log.error(`Error fetching price changes for ad ${id}: ${errorMessage}`)
+      fastify.log.error(`Error fetching price changes for ad: ${errorMessage}`)
       return reply.status(500).send({ error: 'Internal server error', details: errorMessage })
     }
   })
