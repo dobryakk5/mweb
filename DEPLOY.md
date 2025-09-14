@@ -417,7 +417,7 @@ pm2 stop all  # или sudo systemctl stop acme-api acme-scheduler
 # Обновление кода
 git pull origin main
 pnpm install
-pnpm build --filter @acme/api --filter @acme/db
+pnpm build --filter @acme/db --filter @acme/api --filter @acme/web
 
 # Запуск
 pm2 start ecosystem.config.js  # или sudo systemctl start acme-api acme-scheduler
