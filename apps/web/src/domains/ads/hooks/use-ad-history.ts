@@ -13,6 +13,15 @@ export interface AdHistoryItem {
   updatedAt?: string
 }
 
+export interface PriceChangeItem {
+  date: string
+  price: number
+  is_actual?: number
+  description?: string
+  ad_id?: number
+  url?: string
+}
+
 async function fetchAdHistory(adId: number): Promise<AdHistoryItem[]> {
   const response = await api.get(`/ads/${adId}/history`)
   return response.data
@@ -62,6 +71,33 @@ export function useMultipleAdHistory(adIds: number[]) {
   return useQuery({
     queryKey: ['multiple-ad-history', adIds.sort()],
     queryFn: () => fetchMultipleAdHistory(adIds),
+    enabled: adIds.length > 0,
+  })
+}
+
+// Функции для работы с изменениями цены из public.flats_changes
+async function fetchPriceChanges(adId: number): Promise<PriceChangeItem[]> {
+  const response = await api.get(`/ads/${adId}/price-changes`)
+  return response.data
+}
+
+async function fetchMultiplePriceChanges(adIds: number[]): Promise<PriceChangeItem[]> {
+  const response = await api.post('/ads/price-changes', { adIds })
+  return response.data
+}
+
+export function usePriceChanges(adId: number) {
+  return useQuery({
+    queryKey: ['price-changes', adId],
+    queryFn: () => fetchPriceChanges(adId),
+    enabled: !!adId,
+  })
+}
+
+export function useMultiplePriceChanges(adIds: number[]) {
+  return useQuery({
+    queryKey: ['multiple-price-changes', adIds.sort()],
+    queryFn: () => fetchMultiplePriceChanges(adIds),
     enabled: adIds.length > 0,
   })
 }

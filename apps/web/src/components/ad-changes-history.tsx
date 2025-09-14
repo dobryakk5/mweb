@@ -6,7 +6,7 @@ import Tooltip from '@acme/ui/components/tooltip'
 import Button from '@acme/ui/components/button'
 import Skeleton from '@acme/ui/components/skeleton'
 import { TrendingUp } from '@acme/ui/components/icon'
-import { useAdHistory, useMultipleAdHistory, type AdHistoryItem } from '@/domains/ads/hooks/use-ad-history'
+import { useAdHistory, useMultipleAdHistory, usePriceChanges, useMultiplePriceChanges, type AdHistoryItem, type PriceChangeItem } from '@/domains/ads/hooks/use-ad-history'
 import TrendChart from './trend-chart'
 
 interface AdChangesHistoryProps {
@@ -20,12 +20,14 @@ interface AdChangesHistoryProps {
 
 function HistoryContent({ 
   history, 
+  priceChanges,
   isLoading, 
   currentPrice, 
   currentViewsToday,
   chartType
 }: {
   history: AdHistoryItem[]
+  priceChanges: PriceChangeItem[]
   isLoading: boolean
   currentPrice?: number
   currentViewsToday?: number
@@ -77,13 +79,20 @@ function HistoryContent({
   // Подготавливаем данные для графика в зависимости от типа
   const getChartData = () => {
     if (chartType === 'price') {
-      // График цен - берем все записи с ценами
-      const priceData = history
-        .filter(item => item.price !== undefined && item.price !== null)
-        .map(item => ({
-          date: item.recordedAt,
-          value: item.price!
-        }))
+      // График цен - используем данные из flats_changes если есть, иначе из history
+      const priceData = priceChanges && priceChanges.length > 0 
+        ? priceChanges
+            .filter(item => item.price !== undefined && item.price !== null)
+            .map(item => ({
+              date: item.date,
+              value: item.price
+            }))
+        : history
+            .filter(item => item.price !== undefined && item.price !== null)
+            .map(item => ({
+              date: item.recordedAt,
+              value: item.price!
+            }))
       
       // Добавляем текущую цену если есть
       if (currentPrice) {
@@ -95,7 +104,7 @@ function HistoryContent({
       
       return priceData
     } else {
-      // График просмотров - берем все записи с просмотрами  
+      // График просмотров - используем данные из history  
       const viewsData = history
         .filter(item => item.viewsToday !== undefined && item.viewsToday !== null)
         .map(item => ({
@@ -154,7 +163,14 @@ export default function AdChangesHistory({
   const singleAdQuery = useAdHistory(typeof adId === 'number' ? adId : 0)
   const multipleAdQuery = useMultipleAdHistory(Array.isArray(adId) ? adId : [])
   
+  // Загружаем данные об изменениях цены из flats_changes
+  const singlePriceQuery = usePriceChanges(typeof adId === 'number' ? adId : 0)
+  const multiplePriceQuery = useMultiplePriceChanges(Array.isArray(adId) ? adId : [])
+  
   const { data: history = [], isLoading } = Array.isArray(adId) ? multipleAdQuery : singleAdQuery
+  const { data: priceChanges = [], isLoading: isPriceLoading } = Array.isArray(adId) ? multiplePriceQuery : singlePriceQuery
+  
+  const isDataLoading = isLoading || isPriceLoading
 
   const defaultTrigger = children || (
     <button 
@@ -175,7 +191,8 @@ export default function AdChangesHistory({
       <h3 className="font-semibold text-sm">История изменений</h3>
       <HistoryContent 
         history={history}
-        isLoading={isLoading}
+        priceChanges={priceChanges}
+        isLoading={isDataLoading}
         currentPrice={currentPrice}
         currentViewsToday={currentViewsToday}
         chartType={chartType}

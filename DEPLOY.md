@@ -43,6 +43,7 @@ pnpm install
 cd packages/db && pnpm build  # Сначала компилируем db package в dist/
 cd ../../services/api && npx tsc -p tsconfig.build.json  # Потом API
 cd ../scheduler && npx tsc -p tsconfig.json  # И scheduler
+cd ../../apps/web && pnpm build  # Собираем Next.js приложение
 ```
 
 ## Шаг 3: Настройка окружения
@@ -50,6 +51,9 @@ cd ../scheduler && npx tsc -p tsconfig.json  # И scheduler
 ```bash
 # Создаем конфиг API
 cp services/api/.env.example services/api/.env
+
+# Создаем конфиг для веб-приложения
+cp apps/web/.env.example apps/web/.env.local
 ```
 
 Отредактируйте `services/api/.env`:
@@ -57,6 +61,12 @@ cp services/api/.env.example services/api/.env
 PORT=13001
 DATABASE_URL=postgresql://your_user:your_password@localhost:5432/your_db
 PYTHON_API_URL=http://localhost:8008  # если есть Python API
+```
+
+Отредактируйте `apps/web/.env.local`:
+```env
+NEXT_PUBLIC_API_URL=http://localhost:13001
+NEXT_PUBLIC_BASE_URL=http://localhost:13000
 ```
 
 ## Шаг 4: Настройка базы данных
@@ -67,6 +77,97 @@ cd packages/db
 pnpm db:migrate
 ```
 
+### Настройка синхронизации с публичными таблицами
+
+Система включает автоматическую синхронизацию данных между пользовательскими и публичными таблицами. 
+
+**Архитектура синхронизации:**
+
+1. **Пользовательские таблицы** (`users.ads`, `users.user_flats`):
+   - Содержат данные пользователей и их объявления
+   - Обновляются парсером и пользователем напрямую
+   - Имеют кеширующие поля: `house_id`, `person_type_id`
+
+2. **Публичные таблицы** (`public.flats`, `public.flats_history`, `public.flats_changes`):
+   - Нормализованные данные для анализа и поиска
+   - Обновляются через процедуру синхронизации
+   - `flats_changes` - детальная история изменений цены и статуса
+   - Связаны с lookup-таблицами для типизированных значений
+
+**Процесс синхронизации:**
+
+```bash
+# 1. Установка прав пользователя БД (от имени администратора)
+psql "postgresql://admin:password@host:5432/db" -f grant_permissions.sql
+
+# 2. Создание процедур синхронизации в схеме users (от имени администратора) 
+psql "postgresql://admin:password@host:5432/db" -f transfer_to_public_flats.sql
+```
+
+**Автоматическая синхронизация:**
+
+- **Scheduler** (ежедневно в 23:00): автоматически синхронизирует все обработанные объявления
+- **API endpoint**: `POST /ads/transfer-to-public` для ручной синхронизации
+- **Оптимизация**: повторные синхронизации используют кеш (`house_id`, `person_type_id`)
+
+**Логика маппинга данных:**
+
+1. **Определение source_id по URL:**
+   - `cian.ru` → 4 (Cian)
+   - `avito.ru` → 1 (Avito) 
+   - `realty.yandex.ru`, `realty.ya.ru` → 3 (Yandex)
+   - Остальные → 2 (Other)
+
+2. **Извлечение avitoid из URL:** последние цифры в URL
+   
+3. **Маппинг house_type:** через `public.lookup_types` с fuzzy поиском
+
+4. **Определение person_type_id:**
+   - Приоритет: строковое значение от парсера
+   - Fallback: анализ описания/тегов на ключевые слова
+   - 1 = Частное лицо, 2 = Агентство, 3 = Собственник
+
+5. **Получение house_id:** через `public.get_house_id_by_address(address)`
+
+**Файлы конфигурации:**
+
+- `grant_permissions.sql` - права для пользователя БД
+- `transfer_to_public_flats.sql` - процедуры синхронизации  
+- `update_cache_only.sql` - тестовая процедура (только кеш)
+
+**Новые API endpoints:**
+
+- `GET /ads/:id/price-changes` - получить изменения цены для одного объявления
+- `POST /ads/price-changes` - получить изменения цены для нескольких объявлений
+
+**Мониторинг синхронизации:**
+
+```bash
+# Проверка логов scheduler
+pm2 logs scheduler
+
+# Ручная синхронизация через API
+curl -X POST http://localhost:13001/ads/transfer-to-public \
+  -H "Content-Type: application/json" \
+  -d '{"adIds": [4, 11, 20]}'
+
+# Проверка изменений цены
+curl -X GET http://localhost:13001/ads/4/price-changes
+
+# Проверка заполненности кеша
+psql "postgresql://user:pass@host:5432/db" -c "
+  SELECT id, house_id, person_type_id 
+  FROM users.ads 
+  WHERE house_id IS NOT NULL OR person_type_id IS NOT NULL;"
+
+# Проверка записей в flats_changes
+psql "postgresql://user:pass@host:5432/db" -c "
+  SELECT fc.*, fh.url 
+  FROM public.flats_changes fc 
+  JOIN public.flats_history fh ON fc.flats_history_id = fh.id 
+  ORDER BY fc.updated DESC LIMIT 10;"
+```
+
 ## Шаг 5: Запуск в production
 
 ### Вариант 1A: PM2 с компиляцией (рекомендуется для production)
@@ -75,6 +176,7 @@ pnpm db:migrate
 # Компилируем TypeScript в JavaScript (теперь работает!)
 cd services/api && npx tsc -p tsconfig.build.json
 cd ../scheduler && npx tsc -p tsconfig.json
+cd ../../apps/web && pnpm build
 
 
 
@@ -106,6 +208,25 @@ module.exports = {
       error_file: './logs/api-error.log',
       out_file: './logs/api-out.log',
       log_file: './logs/api-combined.log',
+      time: true,
+      watch: false
+    },
+    {
+      name: 'acme-web',
+      script: 'npm',
+      args: 'start',
+      cwd: './apps/web',
+      instances: 1,
+      exec_mode: 'fork',
+      env: {
+        NODE_ENV: 'production',
+        PORT: 13000,
+        NEXT_PUBLIC_API_URL: 'http://localhost:13001',
+        NEXT_PUBLIC_BASE_URL: 'http://localhost:13000'
+      },
+      error_file: './logs/web-error.log',
+      out_file: './logs/web-out.log',
+      log_file: './logs/web-combined.log',
       time: true,
       watch: false
     },

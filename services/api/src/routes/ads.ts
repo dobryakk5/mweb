@@ -2,7 +2,7 @@ import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { db, ads, userFlats, adHistory } from '@acme/db'
-import { eq, sql } from 'drizzle-orm'
+import { eq, sql, inArray } from 'drizzle-orm'
 
 // Функция для записи изменений в историю (только для значимых полей, не просмотров)
 async function recordAdChanges(
@@ -78,8 +78,13 @@ const updateAdSchema = z.object({
   sma: z.number().int().min(0).max(1).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
 })
 
+// Схема для переноса данных в публичные таблицы
+const transferToPublicSchema = z.object({
+  adIds: z.array(z.number().positive()).min(1).max(100), // Массив ID объявлений, максимум 100 за раз
+})
+
 export default async function adsRoutes(fastify: FastifyInstance) {
-  // Получить историю изменений объявления
+  // Получить историю изменений объявления из users.ads_history
   fastify.get('/ads/:id/history', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
@@ -95,6 +100,141 @@ export default async function adsRoutes(fastify: FastifyInstance) {
     } catch (error) {
       fastify.log.error(`Error fetching history for ad:`, error)
       return reply.status(500).send({ error: 'Internal server error' })
+    }
+  })
+
+  // Получить изменения цены из public.flats_changes по URL объявления
+  fastify.get('/ads/:id/price-changes', async (request, reply) => {
+    try {
+      const { id } = request.params as { id: string }
+      
+      // Сначала получаем URL объявления
+      const ad = await db.select({ url: ads.url }).from(ads).where(eq(ads.id, parseInt(id))).limit(1)
+      
+      if (ad.length === 0) {
+        return reply.status(404).send({ error: 'Ad not found' })
+      }
+      
+      // Извлекаем avitoid из URL (те же правила что в процедуре)
+      const url = ad[0].url
+      const avitoidMatch = url.match(/(\d+)\/?$/)
+      if (!avitoidMatch) {
+        return reply.send([]) // Если не удалось извлечь ID, возвращаем пустой массив
+      }
+      const avitoid = parseInt(avitoidMatch[1])
+      
+      // Определяем source_id по URL
+      let sourceId: number
+      if (url.includes('cian.ru')) {
+        sourceId = 4
+      } else if (url.includes('avito.ru')) {
+        sourceId = 1
+      } else if (url.includes('realty.yandex.ru') || url.includes('realty.ya.ru')) {
+        sourceId = 3
+      } else {
+        sourceId = 2
+      }
+      
+      // Получаем изменения цены из public.flats_changes
+      const priceChanges = await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users, public`)
+        return await tx.execute(sql`
+          SELECT 
+            fc.updated as date,
+            fc.price,
+            fc.is_actual,
+            fc.description
+          FROM public.flats_changes fc
+          JOIN public.flats_history fh ON fc.flats_history_id = fh.id
+          WHERE fh.avitoid = ${avitoid} AND fh.source_id = ${sourceId}
+          AND fc.price IS NOT NULL
+          ORDER BY fc.updated DESC
+          LIMIT 50
+        `)
+      })
+      
+      // Преобразуем результат в нужный формат
+      const changes = Array.isArray(priceChanges) ? priceChanges : (priceChanges as any).rows || []
+      
+      fastify.log.info(`Found ${changes.length} price changes for ad ${id} (avitoid: ${avitoid}, source: ${sourceId})`)
+      
+      return reply.send(changes)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error fetching price changes for ad ${id}: ${errorMessage}`)
+      return reply.status(500).send({ error: 'Internal server error', details: errorMessage })
+    }
+  })
+
+  // Получить агрегированные изменения цены для нескольких объявлений
+  fastify.post('/ads/price-changes', async (request, reply) => {
+    try {
+      const body = z.object({
+        adIds: z.array(z.number().positive()).min(1).max(10) // Максимум 10 объявлений для графика
+      }).parse(request.body)
+      
+      fastify.log.info(`Fetching price changes for ads: ${body.adIds}`)
+      
+      // Получаем URL всех объявлений
+      const adsData = await db.select({ id: ads.id, url: ads.url }).from(ads).where(inArray(ads.id, body.adIds))
+      
+      const allChanges: any[] = []
+      
+      for (const ad of adsData) {
+        try {
+          // Извлекаем avitoid и source_id для каждого объявления
+          const avitoidMatch = ad.url.match(/(\d+)\/?$/)
+          if (!avitoidMatch) continue
+          
+          const avitoid = parseInt(avitoidMatch[1])
+          let sourceId: number
+          
+          if (ad.url.includes('cian.ru')) {
+            sourceId = 4
+          } else if (ad.url.includes('avito.ru')) {
+            sourceId = 1
+          } else if (ad.url.includes('realty.yandex.ru') || ad.url.includes('realty.ya.ru')) {
+            sourceId = 3
+          } else {
+            sourceId = 2
+          }
+          
+          // Получаем изменения для этого объявления
+          const changes = await db.transaction(async (tx) => {
+            await tx.execute(sql`SET search_path TO users, public`)
+            return await tx.execute(sql`
+              SELECT 
+                fc.updated as date,
+                fc.price,
+                ${ad.id} as ad_id,
+                '${ad.url}' as url
+              FROM public.flats_changes fc
+              JOIN public.flats_history fh ON fc.flats_history_id = fh.id
+              WHERE fh.avitoid = ${avitoid} AND fh.source_id = ${sourceId}
+              AND fc.price IS NOT NULL
+              ORDER BY fc.updated DESC
+              LIMIT 20
+            `)
+          })
+          
+          const adChanges = Array.isArray(changes) ? changes : (changes as any).rows || []
+          allChanges.push(...adChanges)
+          
+        } catch (adError) {
+          fastify.log.warn(`Error processing ad ${ad.id}: ${adError}`)
+        }
+      }
+      
+      // Сортируем все изменения по дате
+      allChanges.sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime())
+      
+      fastify.log.info(`Found ${allChanges.length} total price changes for ${body.adIds.length} ads`)
+      
+      return reply.send(allChanges)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error fetching bulk price changes: ${errorMessage}`)
+      return reply.status(500).send({ error: 'Internal server error', details: errorMessage })
     }
   })
   // GET /ads - получить все объявления
@@ -445,6 +585,59 @@ export default async function adsRoutes(fastify: FastifyInstance) {
     } catch (error) {
       fastify.log.error(error)
       return reply.status(500).send({ error: 'Internal server error' })
+    }
+  })
+
+  // POST /ads/transfer-to-public - перенести объявления в публичные таблицы
+  fastify.post('/ads/transfer-to-public', async (request, reply) => {
+    try {
+      const body = transferToPublicSchema.parse(request.body)
+      
+      fastify.log.info(`Transferring ${body.adIds.length} ads to public tables:`, body.adIds)
+      
+      // Проверяем, что все указанные объявления существуют
+      const existingAds = await db.select({ id: ads.id })
+        .from(ads)
+        .where(inArray(ads.id, body.adIds))
+      
+      const existingIds = existingAds.map(ad => ad.id)
+      const missingIds = body.adIds.filter(id => !existingIds.includes(id))
+      
+      if (missingIds.length > 0) {
+        fastify.log.warn(`Some ads not found: ${missingIds}`)
+        return reply.status(400).send({ 
+          error: 'Some ads not found', 
+          missingIds,
+          existingIds 
+        })
+      }
+      
+      // Вызываем процедуру переноса данных
+      await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users, public`)
+        // Преобразуем массив в PostgreSQL формат
+        const arrayParam = `{${body.adIds.join(',')}}`
+        await tx.execute(
+          sql`CALL users.transfer_user_ads_to_public(${arrayParam}::INTEGER[])`
+        )
+      })
+      
+      fastify.log.info(`Successfully transferred ${body.adIds.length} ads to public tables`)
+      
+      return reply.send({ 
+        success: true,
+        message: `Successfully transferred ${body.adIds.length} ads to public tables`,
+        transferredIds: body.adIds
+      })
+      
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error transferring ads to public tables: ${errorMessage}`)
+      
+      return reply.status(500).send({ 
+        error: 'Internal server error', 
+        details: errorMessage 
+      })
     }
   })
 }

@@ -144,6 +144,50 @@ async function performDailyTracking() {
     
     console.log('🎉 Daily views tracking completed!')
     
+    // Синхронизируем данные с публичными таблицами
+    try {
+      console.log('🔄 Starting synchronization with public tables...')
+      
+      // Получаем ID всех объявлений, которые были обработаны
+      const processedIds = adsToTrack.map(ad => ad.id)
+      
+      // Вызываем API для синхронизации (разбиваем на батчи по 50)
+      const batchSize = 50
+      for (let i = 0; i < processedIds.length; i += batchSize) {
+        const batch = processedIds.slice(i, i + batchSize)
+        
+        try {
+          const response = await fetch('http://localhost:13001/ads/transfer-to-public', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              adIds: batch
+            }),
+          })
+          
+          if (response.ok) {
+            const result = await response.json()
+            console.log(`✅ Successfully synced batch ${i/batchSize + 1}: ${result.message}`)
+          } else {
+            const error = await response.text()
+            console.warn(`⚠️ Failed to sync batch ${i/batchSize + 1}: ${error}`)
+          }
+        } catch (syncError) {
+          console.error(`❌ Error syncing batch ${i/batchSize + 1}:`, syncError)
+        }
+        
+        // Пауза между батчами
+        await new Promise(resolve => setTimeout(resolve, 1000))
+      }
+      
+      console.log('🎯 Public tables synchronization completed!')
+      
+    } catch (syncError) {
+      console.error('💥 Error in public tables synchronization:', syncError)
+    }
+    
   } catch (error) {
     console.error('💥 Error in daily tracking:', error)
   }
