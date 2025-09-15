@@ -2,7 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'acme-api',
-      script: './services/api/dist/index.js',
+      script: './services/api/index.ts',
+      interpreter: 'npx tsx',
       instances: 1,
       exec_mode: 'cluster',
       env: {
