@@ -20,6 +20,8 @@ const createUserFlatSchema = z.object({
 })
 
 export default async (fastify: FastifyInstance) => {
+  console.log('[user-flats.ts] Регистрация маршрутов начата')
+
   // Создать новую квартиру
   fastify.post('/user-flats', async (request, reply) => {
     try {
@@ -161,6 +163,7 @@ export default async (fastify: FastifyInstance) => {
   })
 
   // Удалить квартиру и всю связанную статистику
+  console.log('[user-flats.ts] Регистрация DELETE маршрута /user-flats/:id')
   fastify.delete('/user-flats/:id', async (request, reply) => {
     console.log(`[DELETE /user-flats/:id] Запрос на удаление квартиры с ID: ${(request.params as any).id}`)
     console.log(`[DELETE /user-flats/:id] Полный URL запроса: ${request.url}`)
@@ -233,4 +236,6 @@ export default async (fastify: FastifyInstance) => {
       return reply.status(500).send({ error: 'Internal server error' })
     }
   })
+
+  console.log('[user-flats.ts] Все маршруты зарегистрированы')
 }

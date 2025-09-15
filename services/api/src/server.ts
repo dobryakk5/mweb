@@ -31,6 +31,12 @@ export default async function startServer() {
     })
 
     console.log(`Server listening at ${address}`)
+
+    // Выводим все зарегистрированные маршруты для диагностики
+    console.log('\n=== Зарегистрированные маршруты ===')
+    fastify.printRoutes()
+    console.log('=== Конец списка маршрутов ===\n')
+
   } catch (error) {
     fastify.log.error(`Failed to start server: ${error instanceof Error ? error.message : String(error)}`)
 
