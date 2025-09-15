@@ -162,39 +162,74 @@ export default async (fastify: FastifyInstance) => {
 
   // Удалить квартиру и всю связанную статистику
   fastify.delete('/user-flats/:id', async (request, reply) => {
+    console.log(`[DELETE /user-flats/:id] Запрос на удаление квартиры с ID: ${request.params.id}`)
+    console.log(`[DELETE /user-flats/:id] Полный URL запроса: ${request.url}`)
+    console.log(`[DELETE /user-flats/:id] Метод запроса: ${request.method}`)
+    console.log(`[DELETE /user-flats/:id] Headers:`, request.headers)
+
     try {
       const { id } = getFlatByIdSchema.parse(request.params)
+      console.log(`[DELETE /user-flats/:id] Parsed ID: ${id}`)
+
+      // Проверяем существование квартиры перед удалением
+      const existingFlat = await db
+        .select()
+        .from(userFlats)
+        .where(eq(userFlats.id, id))
+        .limit(1)
+
+      console.log(`[DELETE /user-flats/:id] Существующая квартира найдена: ${existingFlat.length > 0}`)
+      if (existingFlat.length > 0) {
+        console.log(`[DELETE /user-flats/:id] Данные квартиры:`, existingFlat[0])
+      }
 
       // Получаем все объявления по этой квартире для удаления истории
+      console.log(`[DELETE /user-flats/:id] Поиск объявлений для квартиры ID: ${id}`)
       const flatAds = await db
         .select({ id: ads.id })
         .from(ads)
         .where(eq(ads.flatId, id))
 
+      console.log(`[DELETE /user-flats/:id] Найдено объявлений: ${flatAds.length}`)
+      if (flatAds.length > 0) {
+        console.log(`[DELETE /user-flats/:id] IDs объявлений:`, flatAds.map(ad => ad.id))
+      }
+
       // Удаляем историю для всех объявлений этой квартиры
       if (flatAds.length > 0) {
         const adIds = flatAds.map(ad => ad.id)
+        console.log(`[DELETE /user-flats/:id] Удаление истории для ${adIds.length} объявлений`)
+
         for (const adId of adIds) {
           await db.delete(adHistory).where(eq(adHistory.adId, adId))
         }
+        console.log(`[DELETE /user-flats/:id] Удаление истории завершено`)
       }
 
       // Удаляем все объявления по этой квартире
-      await db.delete(ads).where(eq(ads.flatId, id))
+      console.log(`[DELETE /user-flats/:id] Удаление объявлений для квартиры ID: ${id}`)
+      const adsDeleted = await db.delete(ads).where(eq(ads.flatId, id))
+      console.log(`[DELETE /user-flats/:id] Объявления удалены`)
 
       // Удаляем саму квартиру
+      console.log(`[DELETE /user-flats/:id] Удаление квартиры ID: ${id}`)
       const deletedFlat = await db
         .delete(userFlats)
         .where(eq(userFlats.id, id))
         .returning()
 
+      console.log(`[DELETE /user-flats/:id] Результат удаления квартиры:`, deletedFlat)
+
       if (deletedFlat.length === 0) {
+        console.log(`[DELETE /user-flats/:id] Квартира с ID ${id} не найдена`)
         return reply.status(404).send({ error: 'Flat not found' })
       }
 
+      console.log(`[DELETE /user-flats/:id] Квартира и связанные данные успешно удалены. ID: ${id}`)
       return reply.send({ message: 'Flat and all related data deleted successfully' })
     } catch (error) {
-      console.error('Error deleting flat:', error)
+      console.error(`[DELETE /user-flats/:id] Ошибка при удалении квартиры:`, error)
+      console.error(`[DELETE /user-flats/:id] Stack trace:`, error.stack)
       return reply.status(500).send({ error: 'Internal server error' })
     }
   })
