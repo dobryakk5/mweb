@@ -8,6 +8,15 @@ config({ path: join(__dirname, '../.env'), override: true })
 
 export default async function startServer() {
   console.log('=== SERVER.TS STARTING ===')
+
+  // Выводим версию API для отслеживания деплоев
+  try {
+    const packageJson = await import('../package.json', { assert: { type: 'json' } })
+    console.log(`=== API VERSION: ${packageJson.default.version} ===`)
+  } catch (error) {
+    console.log('=== API VERSION: unknown ===')
+  }
+
   const fastify = Fastify({ logger: true })
 
   console.log('=== REGISTERING CORS ===')
