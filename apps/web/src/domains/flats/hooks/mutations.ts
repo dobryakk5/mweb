@@ -40,7 +40,7 @@ export const useCreateFlat: () => UseMutationResult<
         queryKey: flatKeys.getUserFlats(data.tgUserId, {}),
       })
 
-      push(`/my-flats`)
+      push(`/my-flats/${data.id}`)
 
       toast.success('Квартира добавлена успешно!')
     },
