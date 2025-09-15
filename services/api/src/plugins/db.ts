@@ -1,8 +1,6 @@
 import fp from 'fastify-plugin'
 
-// Используем default import для CommonJS совместимости
-import pkg from '@acme/db'
-const { db, client } = pkg
+import { db, client } from '@acme/db'
 
 export default fp(
   async function fastifyDrizzleORM(fastify) {
