@@ -7,8 +7,10 @@ import { join } from 'node:path'
 config({ path: join(__dirname, '../.env'), override: true })
 
 export default async function startServer() {
+  console.log('=== SERVER.TS STARTING ===')
   const fastify = Fastify({ logger: true })
 
+  console.log('=== REGISTERING CORS ===')
   // Регистрируем CORS middleware
   await fastify.register(cors, {
     origin: true, // Разрешить все origins временно
@@ -16,10 +18,13 @@ export default async function startServer() {
     methods: ['GET', 'POST', 'PUT', 'PATCH', 'DELETE', 'OPTIONS'],
   })
 
+  console.log('=== REGISTERING PLUGINS ===')
   fastify.register(autoLoad, {
     dir: join(__dirname, 'plugins'),
   })
 
+  console.log('=== REGISTERING ROUTES ===')
+  console.log('Routes dir path:', join(__dirname, 'routes'))
   fastify.register(autoLoad, {
     dir: join(__dirname, 'routes'),
   })

@@ -1651,7 +1651,10 @@ export default function EditFlatForm({
                       }
                     }}
                     disabled={isLoadingNearbyAds}
-                    className='inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                    className={buttonVariants({
+                      variant: 'outline',
+                      size: 'sm',
+                    })}
                   >
                     {isLoadingNearbyAds ? 'Поиск...' : 'Искать еще'}
                   </button>
