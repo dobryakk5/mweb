@@ -3,6 +3,12 @@ import Fastify from 'fastify'
 import autoLoad from '@fastify/autoload'
 import cors from '@fastify/cors'
 import { join } from 'node:path'
+import { fileURLToPath } from 'node:url'
+import { dirname } from 'node:path'
+
+// ESM эквивалент __dirname
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = dirname(__filename)
 
 config({ path: join(__dirname, '../.env'), override: true })
 
