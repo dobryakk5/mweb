@@ -99,7 +99,7 @@ export const useDeleteFlat: (
     onSuccess: async () => {
       // Инвалидируем все кеши, связанные с квартирами
       queryClient.invalidateQueries({
-        queryKey: flatKeys.all(),
+        queryKey: flatKeys.all,
       })
 
       // Перенаправляем на список квартир
