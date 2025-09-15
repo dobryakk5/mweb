@@ -9,8 +9,8 @@ import '@/styles/globals.css'
 import Providers from './providers'
 
 export const metadata: Metadata = {
-  title: 'ACME',
-  description: 'Базовый шаблон для Next.js.',
+  title: 'Сравнение квартир',
+  description: 'Личный кабинет для аналитики к боту mrealty_bot',
 }
 
 interface RootLayoutProps {
