@@ -19,7 +19,7 @@ const createUserFlatSchema = z.object({
   floor: z.number(),
 })
 
-export default async function userFlatsRoutes(fastify: FastifyInstance) {
+export default async (fastify: FastifyInstance) => {
   // Создать новую квартиру
   fastify.post('/user-flats', async (request, reply) => {
     try {
