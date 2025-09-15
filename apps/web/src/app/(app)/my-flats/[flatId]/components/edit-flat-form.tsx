@@ -77,7 +77,7 @@ export default function EditFlatForm({
   // Получаем данные из find_ads для замены в таблицах
   const { data: flatAdsFromFindAds = [] } = useFlatAdsFromFindAds(flat?.id || 0)
   const { data: broaderAdsFromFindAds = [] } = useBroaderAdsFromFindAds(flat?.id || 0)
-  const { data: nearbyAdsFromFindAds = [] } = useNearbyAdsFromFindAds(flat?.id || 0)
+  const { data: nearbyAdsFromFindAds = [], refetch: refetchNearbyAds, isLoading: isLoadingNearbyAds } = useNearbyAdsFromFindAds(flat?.id || 0)
   
   // Исключаем из "Другие объявления" те, что уже попали в "По этой квартире"
   const filteredBroaderAds = broaderAdsFromFindAds.filter(broaderAd => {
