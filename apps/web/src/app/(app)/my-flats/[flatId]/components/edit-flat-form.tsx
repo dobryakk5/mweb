@@ -19,7 +19,7 @@ import Skeleton from '@acme/ui/components/skeleton'
 import Input from '@acme/ui/components/input'
 
 import { useUpdateFlat, useDeleteFlat } from '@/domains/flats/hooks/mutations'
-import { useAds, useFlatAdsFromFindAds, useBroaderAdsFromFindAds, useUpdateAd, forceUpdateAd, findSimilarAds, findSimilarAdsByFlat, findBroaderAdsByAddress, createAdFromSimilar, createAdFromSimilarWithFrom, toggleAdComparison, type SimilarAd } from '@/domains/ads'
+import { useAds, useFlatAdsFromFindAds, useBroaderAdsFromFindAds, useNearbyAdsFromFindAds, useUpdateAd, forceUpdateAd, findSimilarAds, findSimilarAdsByFlat, findBroaderAdsByAddress, createAd, createAdFromSimilar, createAdFromSimilarWithFrom, toggleAdComparison, type SimilarAd } from '@/domains/ads'
 import { useDeleteAd } from '@/domains/ads/hooks/mutations'
 import { useParseProperty } from '@/domains/property-parser'
 import { toast } from 'sonner'
@@ -77,6 +77,7 @@ export default function EditFlatForm({
   // Получаем данные из find_ads для замены в таблицах
   const { data: flatAdsFromFindAds = [] } = useFlatAdsFromFindAds(flat?.id || 0)
   const { data: broaderAdsFromFindAds = [] } = useBroaderAdsFromFindAds(flat?.id || 0)
+  const { data: nearbyAdsFromFindAds = [] } = useNearbyAdsFromFindAds(flat?.id || 0)
   
   // Исключаем из "Другие объявления" те, что уже попали в "По этой квартире"
   const filteredBroaderAds = broaderAdsFromFindAds.filter(broaderAd => {
@@ -587,6 +588,41 @@ export default function EditFlatForm({
         console.error('Ошибка удаления квартиры:', error)
         toast.error('Ошибка при удалении квартиры')
       }
+    }
+  }
+
+  // Функция для добавления объявления в сравнение
+  const handleAddToComparison = async (adData: any) => {
+    if (!flat) {
+      toast.error('Квартира не найдена')
+      return
+    }
+
+    try {
+      // Проверим, есть ли уже такое объявление в сравнении
+      const existingAd = comparisonAds.find(ad => ad.url === adData.url)
+      if (existingAd) {
+        toast.info('Объявление уже добавлено в сравнение')
+        return
+      }
+
+      // Создаем объект объявления для добавления в базу
+      const adToAdd = {
+        flatId: flat.id,
+        url: adData.url,
+        address: flat.address, // используем адрес квартиры
+        price: adData.price ? parseFloat(adData.price.toString().replace(/[^\d.]/g, '')) : 0,
+        rooms: adData.rooms || flat.rooms, // используем количество комнат из данных или из квартиры
+        from: 2, // добавлено вручную
+        sma: 1 // добавляем в сравнение
+      }
+
+      // Добавляем объявление через API
+      await createAd(adToAdd)
+      toast.success('Объявление добавлено в сравнение')
+    } catch (error) {
+      console.error('Ошибка добавления в сравнение:', error)
+      toast.error('Ошибка при добавлении в сравнение')
     }
   }
 
@@ -1173,12 +1209,17 @@ export default function EditFlatForm({
                               Автор
                             </div>
                           </th>
+                          <th className='h-12 px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            <div className='flex items-center justify-center gap-2'>
+                              Сравнить
+                            </div>
+                          </th>
                         </tr>
                       </thead>
                       <tbody className='[&_tr:last-child]:border-0'>
                         {flatAdsFromFindAds.length === 0 ? (
                           <tr className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
-                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0' colSpan={6}>
+                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0' colSpan={7}>
                               <div className='text-sm text-center'>Нет объявлений по этой квартире</div>
                             </td>
                           </tr>
@@ -1335,15 +1376,32 @@ export default function EditFlatForm({
                                 </td>
                                 {/* Активно */}
                                 <td className='p-4 align-middle text-sm'>
-                                  <span className={`px-2 py-1 rounded text-xs ${
-                                    findAdsItem.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {findAdsItem.is_active ? 'Активно' : 'Неактивно'}
-                                  </span>
+                                  {findAdsItem.is_active ? (
+                                    <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  ) : (
+                                    <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800">
+                                      Неактивно
+                                    </span>
+                                  )}
                                 </td>
                                 {/* Тип лица (person_type) */}
                                 <td className='p-4 align-middle text-sm'>
                                   {findAdsItem.person_type || '-'}
+                                </td>
+                                {/* Кнопка добавления в сравнение */}
+                                <td className='p-4 align-middle text-sm text-center'>
+                                  <button
+                                    type='button'
+                                    onClick={() => handleAddToComparison(findAdsItem)}
+                                    className='inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors'
+                                    title='Добавить в сравнение'
+                                  >
+                                    <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                      <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
+                                    </svg>
+                                  </button>
                                 </td>
                               </tr>
                             )
@@ -1425,8 +1483,8 @@ export default function EditFlatForm({
                           <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
                             Активно
                           </th>
-                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-12'>
-                            
+                          <th className='h-12 px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-12'>
+                            Сравнить
                           </th>
                         </tr>
                       </thead>
@@ -1506,14 +1564,27 @@ export default function EditFlatForm({
                                 </td>
                                 <td className='p-2 align-middle text-sm'>{findAdsItem.person_type || '-'}</td>
                                 <td className='p-2 align-middle text-sm'>
-                                  <span className={`px-2 py-1 rounded text-xs ${
-                                    findAdsItem.is_active ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'
-                                  }`}>
-                                    {findAdsItem.is_active ? 'Активно' : 'Неактивно'}
-                                  </span>
+                                  {findAdsItem.is_active ? (
+                                    <svg className="w-5 h-5 text-green-600" fill="currentColor" viewBox="0 0 20 20">
+                                      <path fillRule="evenodd" d="M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z" clipRule="evenodd" />
+                                    </svg>
+                                  ) : (
+                                    <span className="px-2 py-1 rounded text-xs bg-red-100 text-red-800">
+                                      Неактивно
+                                    </span>
+                                  )}
                                 </td>
                                 <td className='p-2 align-middle text-sm text-center'>
-                                  {deleteButton || '-'}
+                                  <button
+                                    type='button'
+                                    onClick={() => handleAddToComparison(findAdsItem)}
+                                    className='inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors'
+                                    title='Добавить в сравнение'
+                                  >
+                                    <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                      <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
+                                    </svg>
+                                  </button>
                                 </td>
                               </tr>
                             )
@@ -1525,6 +1596,105 @@ export default function EditFlatForm({
                 </div>
               </div>
 
+              {/* Блок близлежащих объявлений в радиусе 500м */}
+              <div className='py-4 px-4 bg-gray-50 rounded-lg mb-4'>
+                <div className='flex items-center justify-between mb-4'>
+                  <h3 className='text-lg font-medium'>Объявления в радиусе 500м и дешевле</h3>
+                </div>
+
+                <div className='overflow-hidden rounded-md border border-gray-200'>
+                  <div className='relative w-full overflow-auto'>
+                    <table className='w-full caption-bottom text-sm'>
+                      <thead className='[&_tr]:border-b'>
+                        <tr className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
+                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            Сайт
+                          </th>
+                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            Цена, млн
+                          </th>
+                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            Комнат
+                          </th>
+                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            Этаж
+                          </th>
+                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            Расстояние, м
+                          </th>
+                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            Создано
+                          </th>
+                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            Обновлено
+                          </th>
+                          <th className='h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0'>
+                            Автор
+                          </th>
+                          <th className='h-12 px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-12'>
+                            Сравнить
+                          </th>
+                        </tr>
+                      </thead>
+                      <tbody className='[&_tr:last-child]:border-0'>
+                        {nearbyAdsFromFindAds.length === 0 ? (
+                          <tr className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
+                            <td className='p-4 align-middle [&:has([role=checkbox])]:pr-0' colSpan={9}>
+                              <div className='text-sm text-center'>Нет близлежащих объявлений</div>
+                            </td>
+                          </tr>
+                        ) : (
+                          nearbyAdsFromFindAds.map((findAdsItem, index) => {
+                            const formatDate = (dateStr: string | Date) => {
+                              if (!dateStr) return '-'
+                              const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
+                              return date.toLocaleDateString('ru-RU')
+                            }
+
+                            const getDomainFromUrl = (url: string) => {
+                              if (url.includes('cian.ru')) return 'cian'
+                              if (url.includes('avito.ru')) return 'avito'
+                              if (url.includes('yandex.ru') || url.includes('realty.ya.ru')) return 'yandex'
+                              return 'другое'
+                            }
+
+                            return (
+                              <tr key={`${findAdsItem.url}-${index}`} className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'>
+                                <td className='p-2 align-middle text-sm'>
+                                  <a href={findAdsItem.url} target='_blank' rel='noopener noreferrer' className='text-blue-600 hover:underline'>
+                                    {getDomainFromUrl(findAdsItem.url)}
+                                  </a>
+                                </td>
+                                <td className='p-2 align-middle text-sm'>{(findAdsItem.price / 1000000).toFixed(2)}</td>
+                                <td className='p-2 align-middle text-sm'>{findAdsItem.rooms}</td>
+                                <td className='p-2 align-middle text-sm'>{findAdsItem.floor || '-'}</td>
+                                <td className='p-2 align-middle text-sm'>{(findAdsItem as any).distance_m || '-'}</td>
+                                <td className='p-2 align-middle text-sm'>{findAdsItem.created ? formatDate(findAdsItem.created) : '-'}</td>
+                                <td className='p-2 align-middle text-sm'>
+                                  {findAdsItem.updated ? formatDate(findAdsItem.updated) : '-'}
+                                </td>
+                                <td className='p-2 align-middle text-sm'>{findAdsItem.person_type || '-'}</td>
+                                <td className='p-2 align-middle text-sm text-center'>
+                                  <button
+                                    type='button'
+                                    onClick={() => handleAddToComparison(findAdsItem)}
+                                    className='inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors'
+                                    title='Добавить в сравнение'
+                                  >
+                                    <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                      <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
+                                    </svg>
+                                  </button>
+                                </td>
+                              </tr>
+                            )
+                          })
+                        )}
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+              </div>
 
               {/* Блок сравнения квартир (sma = 1) */}
               <div className='py-4 px-4 bg-gray-50 rounded-lg mb-4'>

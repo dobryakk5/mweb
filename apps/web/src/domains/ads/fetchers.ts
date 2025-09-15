@@ -215,3 +215,7 @@ export async function createAdFromSimilar(similarAd: SimilarAd, flatId: number, 
     throw error
   }
 }
+export async function findNearbyAdsByFlat(flatId: number): Promise<SimilarAd[]> {
+  const response = await api.get<SimilarAd[]>(`/ads/nearby-by-flat/${flatId}`)
+  return response.data
+}

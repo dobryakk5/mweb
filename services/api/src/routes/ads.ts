@@ -640,4 +640,53 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       })
     }
   })
+
+  // GET /ads/nearby-by-flat/:flatId - найти близлежащие объявления в радиусе 500м
+  fastify.get('/ads/nearby-by-flat/:flatId', async (request, reply) => {
+    let flatId: string | undefined
+    try {
+      const params = z.object({ flatId: z.string() }).parse(request.params)
+      flatId = params.flatId
+
+      // Получаем данные квартиры
+      const flats = await db.select().from(userFlats).where(eq(userFlats.id, parseInt(flatId))).limit(1)
+
+      if (flats.length === 0) {
+        return reply.status(404).send({ error: 'Flat not found' })
+      }
+
+      const currentFlat = flats[0]
+
+      // Находим самую дешевую цену среди объявлений по этой квартире
+      const priceResult = await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users,public`)
+        return await tx.execute(
+          sql`SELECT MIN(price) as current_price
+              FROM public.find_ads(${currentFlat.address}, ${currentFlat.floor}, ${currentFlat.rooms})`
+        )
+      })
+
+      const priceData = Array.isArray(priceResult) ? priceResult : (priceResult as any).rows || []
+      const currentPrice = priceData[0]?.current_price || 999999999
+
+      // Ищем близлежащие квартиры дешевле текущей цены
+      const nearbyResult = await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users,public`)
+        return await tx.execute(
+          sql`SELECT price, floor, rooms, person_type, created, updated, url, is_active, house_id, distance_m
+              FROM public.find_nearby_apartments(${currentFlat.address}, ${currentFlat.rooms}, ${currentPrice}, 500)`
+        )
+      })
+
+      const nearbyAds = Array.isArray(nearbyResult) ? nearbyResult : (nearbyResult as any).rows || []
+
+      fastify.log.info(`Found ${nearbyAds.length} nearby ads for flat ${flatId} within 500m`)
+
+      return reply.send(nearbyAds)
+    } catch (error) {
+      const errorMessage = error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error finding nearby ads for flat ${flatId || 'unknown'}: ${errorMessage}`)
+      return reply.status(500).send({ error: 'Internal server error', details: errorMessage })
+    }
+  })
 }
