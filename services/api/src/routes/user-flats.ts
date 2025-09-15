@@ -162,7 +162,7 @@ export default async (fastify: FastifyInstance) => {
 
   // Удалить квартиру и всю связанную статистику
   fastify.delete('/user-flats/:id', async (request, reply) => {
-    console.log(`[DELETE /user-flats/:id] Запрос на удаление квартиры с ID: ${request.params.id}`)
+    console.log(`[DELETE /user-flats/:id] Запрос на удаление квартиры с ID: ${(request.params as any).id}`)
     console.log(`[DELETE /user-flats/:id] Полный URL запроса: ${request.url}`)
     console.log(`[DELETE /user-flats/:id] Метод запроса: ${request.method}`)
     console.log(`[DELETE /user-flats/:id] Headers:`, request.headers)

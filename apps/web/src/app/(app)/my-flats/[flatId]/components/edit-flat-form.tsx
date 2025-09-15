@@ -619,6 +619,10 @@ export default function EditFlatForm({
 
       // Добавляем объявление через API
       await createAd(adToAdd)
+
+      // Обновляем список объявлений чтобы отразить изменения
+      await refetch()
+
       toast.success('Объявление добавлено в сравнение')
     } catch (error) {
       console.error('Ошибка добавления в сравнение:', error)
@@ -1392,16 +1396,33 @@ export default function EditFlatForm({
                                 </td>
                                 {/* Кнопка добавления в сравнение */}
                                 <td className='p-4 align-middle text-sm text-center'>
-                                  <button
-                                    type='button'
-                                    onClick={() => handleAddToComparison(findAdsItem)}
-                                    className='inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors'
-                                    title='Добавить в сравнение'
-                                  >
-                                    <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                                      <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
-                                    </svg>
-                                  </button>
+                                  {(() => {
+                                    // Проверяем есть ли уже объявление с таким URL в сравнении
+                                    const isInComparison = ads.some(ad => ad.url === findAdsItem.url && ad.sma === 1)
+                                    return (
+                                      <button
+                                        type='button'
+                                        onClick={() => handleAddToComparison(findAdsItem)}
+                                        disabled={isInComparison}
+                                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                                          isInComparison
+                                            ? 'bg-green-100 text-green-600 cursor-not-allowed'
+                                            : 'bg-blue-100 hover:bg-blue-200 text-blue-600'
+                                        }`}
+                                        title={isInComparison ? 'Уже в сравнении' : 'Добавить в сравнение'}
+                                      >
+                                        {isInComparison ? (
+                                          <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                            <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                                          </svg>
+                                        ) : (
+                                          <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                            <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    )
+                                  })()}
                                 </td>
                               </tr>
                             )
@@ -1575,16 +1596,33 @@ export default function EditFlatForm({
                                   )}
                                 </td>
                                 <td className='p-2 align-middle text-sm text-center'>
-                                  <button
-                                    type='button'
-                                    onClick={() => handleAddToComparison(findAdsItem)}
-                                    className='inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors'
-                                    title='Добавить в сравнение'
-                                  >
-                                    <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                                      <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
-                                    </svg>
-                                  </button>
+                                  {(() => {
+                                    // Проверяем есть ли уже объявление с таким URL в сравнении
+                                    const isInComparison = ads.some(ad => ad.url === findAdsItem.url && ad.sma === 1)
+                                    return (
+                                      <button
+                                        type='button'
+                                        onClick={() => handleAddToComparison(findAdsItem)}
+                                        disabled={isInComparison}
+                                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                                          isInComparison
+                                            ? 'bg-green-100 text-green-600 cursor-not-allowed'
+                                            : 'bg-blue-100 hover:bg-blue-200 text-blue-600'
+                                        }`}
+                                        title={isInComparison ? 'Уже в сравнении' : 'Добавить в сравнение'}
+                                      >
+                                        {isInComparison ? (
+                                          <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                            <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                                          </svg>
+                                        ) : (
+                                          <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                            <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    )
+                                  })()}
                                 </td>
                               </tr>
                             )
@@ -1600,6 +1638,23 @@ export default function EditFlatForm({
               <div className='py-4 px-4 bg-gray-50 rounded-lg mb-4'>
                 <div className='flex items-center justify-between mb-4'>
                   <h3 className='text-lg font-medium'>Объявления в радиусе 500м и дешевле</h3>
+                  <button
+                    type="button"
+                    onClick={async () => {
+                      if (!flat) return
+                      try {
+                        await refetchNearbyAds()
+                        toast.success('Данные о близлежащих объявлениях обновлены')
+                      } catch (error) {
+                        console.error('Ошибка при обновлении близлежащих объявлений:', error)
+                        toast.error('Ошибка при обновлении данных')
+                      }
+                    }}
+                    disabled={isLoadingNearbyAds}
+                    className='inline-flex items-center px-3 py-2 text-sm font-medium text-blue-600 bg-white border border-blue-600 rounded-md hover:bg-blue-50 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2 disabled:opacity-50 disabled:cursor-not-allowed'
+                  >
+                    {isLoadingNearbyAds ? 'Поиск...' : 'Искать еще'}
+                  </button>
                 </div>
 
                 <div className='overflow-hidden rounded-md border border-gray-200'>
@@ -1675,16 +1730,33 @@ export default function EditFlatForm({
                                 </td>
                                 <td className='p-2 align-middle text-sm'>{findAdsItem.person_type || '-'}</td>
                                 <td className='p-2 align-middle text-sm text-center'>
-                                  <button
-                                    type='button'
-                                    onClick={() => handleAddToComparison(findAdsItem)}
-                                    className='inline-flex items-center justify-center w-8 h-8 rounded-full bg-blue-100 hover:bg-blue-200 text-blue-600 transition-colors'
-                                    title='Добавить в сравнение'
-                                  >
-                                    <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
-                                      <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
-                                    </svg>
-                                  </button>
+                                  {(() => {
+                                    // Проверяем есть ли уже объявление с таким URL в сравнении
+                                    const isInComparison = ads.some(ad => ad.url === findAdsItem.url && ad.sma === 1)
+                                    return (
+                                      <button
+                                        type='button'
+                                        onClick={() => handleAddToComparison(findAdsItem)}
+                                        disabled={isInComparison}
+                                        className={`inline-flex items-center justify-center w-8 h-8 rounded-full transition-colors ${
+                                          isInComparison
+                                            ? 'bg-green-100 text-green-600 cursor-not-allowed'
+                                            : 'bg-blue-100 hover:bg-blue-200 text-blue-600'
+                                        }`}
+                                        title={isInComparison ? 'Уже в сравнении' : 'Добавить в сравнение'}
+                                      >
+                                        {isInComparison ? (
+                                          <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                            <path fillRule='evenodd' d='M16.707 5.293a1 1 0 010 1.414l-8 8a1 1 0 01-1.414 0l-4-4a1 1 0 011.414-1.414L8 12.586l7.293-7.293a1 1 0 011.414 0z' clipRule='evenodd' />
+                                          </svg>
+                                        ) : (
+                                          <svg className='w-4 h-4' fill='currentColor' viewBox='0 0 20 20'>
+                                            <path fillRule='evenodd' d='M10 3a1 1 0 011 1v5h5a1 1 0 110 2h-5v5a1 1 0 11-2 0v-5H4a1 1 0 110-2h5V4a1 1 0 011-1z' clipRule='evenodd' />
+                                          </svg>
+                                        )}
+                                      </button>
+                                    )
+                                  })()}
                                 </td>
                               </tr>
                             )
