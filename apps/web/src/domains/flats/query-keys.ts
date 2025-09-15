@@ -14,4 +14,5 @@ export const flatKeys = {
   getFlat: (id: number) => [...flatKeys.details(), id] as const,
   addFlat: () => [...flatKeys.all, 'add'] as const,
   updateFlat: (id: number) => [...flatKeys.all, 'update', { id }] as const,
+  deleteFlat: (id: number) => [...flatKeys.all, 'delete', { id }] as const,
 }

@@ -81,3 +81,31 @@ export const useUpdateFlat: (
     },
   })
 }
+
+export const useDeleteFlat: (
+  id: number,
+) => UseMutationResult<AxiosResponse, AxiosError, void> = (id) => {
+  const queryClient = useQueryClient()
+  const { push } = useRouter()
+
+  return useMutation<AxiosResponse, AxiosError, void>({
+    mutationKey: flatKeys.deleteFlat(id),
+    mutationFn: () => api.delete(`/user-flats/${id}`),
+    onError() {
+      toast.error(
+        'Удаление квартиры временно недоступно. Попробуйте позже. 🙁',
+      )
+    },
+    onSuccess: async () => {
+      // Инвалидируем все кеши, связанные с квартирами
+      queryClient.invalidateQueries({
+        queryKey: flatKeys.all(),
+      })
+
+      // Перенаправляем на список квартир
+      push('/my-flats')
+
+      toast.success('Квартира и вся связанная статистика удалена успешно!')
+    },
+  })
+}

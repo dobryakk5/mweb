@@ -18,7 +18,7 @@ import Card from '@acme/ui/components/card'
 import Skeleton from '@acme/ui/components/skeleton'
 import Input from '@acme/ui/components/input'
 
-import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
+import { useUpdateFlat, useDeleteFlat } from '@/domains/flats/hooks/mutations'
 import { useAds, useFlatAdsFromFindAds, useBroaderAdsFromFindAds, useUpdateAd, forceUpdateAd, findSimilarAds, findSimilarAdsByFlat, findBroaderAdsByAddress, createAdFromSimilar, createAdFromSimilarWithFrom, toggleAdComparison, type SimilarAd } from '@/domains/ads'
 import { useDeleteAd } from '@/domains/ads/hooks/mutations'
 import { useParseProperty } from '@/domains/property-parser'
@@ -397,6 +397,7 @@ export default function EditFlatForm({
   }, [flat, defaultValues, reset])
 
   const { mutateAsync: updateFlat } = useUpdateFlat(flat?.id as number)
+  const { mutateAsync: deleteFlat } = useDeleteFlat(flat?.id as number)
   const { mutateAsync: parseProperty, isPending: isParsing } = useParseProperty()
   const { mutateAsync: updateAd } = useUpdateAd()
 
@@ -573,6 +574,18 @@ export default function EditFlatForm({
       } catch (error) {
         console.error('Ошибка удаления объявления:', error)
         toast.error('Ошибка при удалении объявления')
+      }
+    }
+  }
+
+  // Функция для удаления квартиры
+  const handleDeleteFlat = async () => {
+    if (window.confirm('Вы уверены, что хотите удалить эту квартиру? Вся статистика по объявлениям будет удалена безвозвратно.')) {
+      try {
+        await deleteFlat()
+      } catch (error) {
+        console.error('Ошибка удаления квартиры:', error)
+        toast.error('Ошибка при удалении квартиры')
       }
     }
   }
@@ -1017,6 +1030,19 @@ export default function EditFlatForm({
                     onClick={autoFindSimilarAds}
                   >
                     {isLoadingSimilar ? 'Поиск...' : 'Объявления'}
+                  </button>
+
+                  {/* Кнопка удаления квартиры */}
+                  <button
+                    type='button'
+                    className={buttonVariants({
+                      variant: 'destructive',
+                      size: 'sm',
+                    })}
+                    onClick={handleDeleteFlat}
+                    title="Удалить квартиру"
+                  >
+                    <TrashIcon className="h-4 w-4" />
                   </button>
                 </div>
               </div>

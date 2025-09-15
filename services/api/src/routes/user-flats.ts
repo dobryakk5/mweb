@@ -1,6 +1,6 @@
 import { FastifyInstance } from 'fastify'
 import { z } from 'zod'
-import { db, userFlats } from '@acme/db'
+import { db, userFlats, ads, adHistory } from '@acme/db'
 import { eq, desc, and, ilike } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 
@@ -157,6 +157,45 @@ export default async function userFlatsRoutes(fastify: FastifyInstance) {
       return reply.send({ count: Number(result[0]?.count || 0) })
     } catch (error) {
       return reply.status(400).send({ error: 'Invalid request' })
+    }
+  })
+
+  // Удалить квартиру и всю связанную статистику
+  fastify.delete('/user-flats/:id', async (request, reply) => {
+    try {
+      const { id } = getFlatByIdSchema.parse(request.params)
+
+      // Получаем все объявления по этой квартире для удаления истории
+      const flatAds = await db
+        .select({ id: ads.id })
+        .from(ads)
+        .where(eq(ads.flatId, id))
+
+      // Удаляем историю для всех объявлений этой квартиры
+      if (flatAds.length > 0) {
+        const adIds = flatAds.map(ad => ad.id)
+        for (const adId of adIds) {
+          await db.delete(adHistory).where(eq(adHistory.adId, adId))
+        }
+      }
+
+      // Удаляем все объявления по этой квартире
+      await db.delete(ads).where(eq(ads.flatId, id))
+
+      // Удаляем саму квартиру
+      const deletedFlat = await db
+        .delete(userFlats)
+        .where(eq(userFlats.id, id))
+        .returning()
+
+      if (deletedFlat.length === 0) {
+        return reply.status(404).send({ error: 'Flat not found' })
+      }
+
+      return reply.send({ message: 'Flat and all related data deleted successfully' })
+    } catch (error) {
+      console.error('Error deleting flat:', error)
+      return reply.status(500).send({ error: 'Internal server error' })
     }
   })
 }
