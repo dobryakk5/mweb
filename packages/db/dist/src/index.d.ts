@@ -1,6 +1,6 @@
-export { default as client } from './client';
-export { default as db } from './db';
-export { default as dbInstance } from './db';
+export { client, default as clientInstance } from './client';
+export { db, default as dbInstance } from './db';
+export { default } from './db';
 export * from './orm';
 export * from './schema';
 export * from './schemas';

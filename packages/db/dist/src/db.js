@@ -36,13 +36,15 @@ var __importDefault = (this && this.__importDefault) || function (mod) {
     return (mod && mod.__esModule) ? mod : { "default": mod };
 };
 Object.defineProperty(exports, "__esModule", { value: true });
+exports.db = void 0;
 const postgres_js_1 = require("drizzle-orm/postgres-js");
 const client_1 = __importDefault(require("./client"));
 const env_1 = require("./env");
 const schema = __importStar(require("./schema"));
-const db = (0, postgres_js_1.drizzle)(client_1.default, {
+const database = (0, postgres_js_1.drizzle)(client_1.default, {
     logger: env_1.env.NODE_ENV === 'development',
     schema,
 });
-exports.default = db;
+exports.db = database;
+exports.default = database;
 //# sourceMappingURL=db.js.map

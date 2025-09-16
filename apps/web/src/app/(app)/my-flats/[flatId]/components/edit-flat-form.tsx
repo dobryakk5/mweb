@@ -12,7 +12,7 @@ import Form from '@acme/ui/components/form'
 import cn from '@acme/ui/utils/cn'
 import Page from '@acme/ui/components/page'
 import Button, { buttonVariants } from '@acme/ui/components/button'
-import { ArrowLeftIcon, Loader2Icon, TrashIcon, PlusIcon, MinusIcon, DownloadIcon, RefreshCwIcon } from '@acme/ui/components/icon'
+import { ArrowLeftIcon, Loader2Icon, TrashIcon, PlusIcon, MinusIcon, DownloadIcon, RefreshCwIcon, ChevronUpIcon, ChevronDownIcon } from '@acme/ui/components/icon'
 import Fieldset from '@acme/ui/components/fieldset'
 import Card from '@acme/ui/components/card'
 import Skeleton from '@acme/ui/components/skeleton'
@@ -69,7 +69,22 @@ export default function EditFlatForm({
   const [isUpdatingComparisonCian, setIsUpdatingComparisonCian] = useState(false)
   const [isUpdatingComparisonAvito, setIsUpdatingComparisonAvito] = useState(false)
   const [isUpdatingComparisonYandex, setIsUpdatingComparisonYandex] = useState(false)
-  
+
+  // Состояния сворачивания блоков
+  const [isBlocksCollapsed, setIsBlocksCollapsed] = useState({
+    flatAds: false,      // Объявления по этой квартире
+    houseAds: false,     // Объявления по этому дому
+    nearbyAds: false,    // Объявления в радиусе 500м
+    comparison: false    // Сравнение квартир
+  })
+
+  const toggleBlock = (blockName: keyof typeof isBlocksCollapsed) => {
+    setIsBlocksCollapsed(prev => ({
+      ...prev,
+      [blockName]: !prev[blockName]
+    }))
+  }
+
   // Получаем объявления для этой квартиры (react-query)
   const { data: ads = [], refetch } = useAds({ flatId: flat?.id })
   const { mutateAsync: deleteAd } = useDeleteAd()
@@ -1119,7 +1134,17 @@ export default function EditFlatForm({
               {/* Блок объявлений по этой квартире (from = 1) */}
               <div className='py-4 px-4 bg-gray-50 rounded-lg mb-4'>
                 <div className='flex items-center justify-between mb-4'>
-                  <h3 className='text-lg font-medium'>Объявления по этой квартире</h3>
+                  <div
+                    className='flex items-center gap-2 cursor-pointer hover:text-blue-600'
+                    onClick={() => toggleBlock('flatAds')}
+                  >
+                    <h3 className='text-lg font-medium'>Объявления по этой квартире</h3>
+                    {isBlocksCollapsed.flatAds ? (
+                      <ChevronDownIcon className='w-5 h-5' />
+                    ) : (
+                      <ChevronUpIcon className='w-5 h-5' />
+                    )}
+                  </div>
                   <div className='flex items-center gap-2'>
                     <div className='flex items-center gap-2'>
                       <button
