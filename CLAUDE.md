@@ -120,3 +120,52 @@ The project uses:
 - Space indentation
 - Semicolons as needed (asNeeded)
 - Trunk for additional code quality checks
+
+## Component Architecture
+
+### My-Flats Page Refactoring (January 2025)
+
+The main apartment editing form (`edit-flat-form.tsx`) was refactored from a monolithic 2155+ line component into a modular architecture with 17 separate files:
+
+#### File Structure:
+```
+my-flats/[flatId]/components/
+├── types/
+│   ├── flat-form.types.ts        # Form state and collapse types
+│   └── ads-blocks.types.ts       # Block component prop types
+├── utils/
+│   ├── ad-formatters.ts          # Data formatting utilities
+│   ├── ad-updaters.ts            # Update operation helpers
+│   └── excel-export.ts           # Excel export functionality
+├── hooks/
+│   ├── use-collapse-state.ts     # Collapsible blocks state management
+│   ├── use-flat-ads-state.ts     # Main form state management
+│   ├── use-flat-ads-actions.ts   # Action handlers (delete, toggle, etc.)
+│   └── use-excel-export.ts       # Excel export hook
+├── shared/
+│   ├── collapsible-block.tsx     # Universal collapsible container
+│   ├── ads-table.tsx             # Reusable ads table component
+│   ├── update-buttons.tsx        # Update action buttons
+│   └── flat-form-fields.tsx      # Form input fields
+├── blocks/
+│   ├── flat-ads-block.tsx        # "По этой квартире" block
+│   ├── house-ads-block.tsx       # "По этому дому" block
+│   ├── nearby-ads-block.tsx      # "В радиусе 500м" block
+│   └── comparison-ads-block.tsx  # "Сравнение квартир" block
+└── edit-flat-form.tsx            # Main orchestrating component (~200 lines)
+```
+
+#### Key Features:
+- **Collapsible Blocks**: All 4 tabular blocks can be collapsed/expanded via chevron icons
+- **Modular State Management**: Separate custom hooks for different concerns
+- **Reusable Components**: Shared table and button components across blocks
+- **Type Safety**: Comprehensive TypeScript interfaces for all props and state
+- **Excel Export**: Dedicated hook for comparison data export
+- **Action Handlers**: Centralized delete, update, and comparison toggle logic
+
+#### Technical Patterns:
+- Custom hooks pattern for state management (`use-*`)
+- Component composition over inheritance
+- Props drilling minimization through specialized hooks
+- Separation of concerns (formatting, actions, state)
+- TypeScript strict typing for all interfaces
