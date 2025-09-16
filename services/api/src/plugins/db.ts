@@ -1,6 +1,6 @@
 import fp from 'fastify-plugin'
 
-import { db, client } from '@acme/db'
+import db, { client } from '@acme/db'
 
 export default fp(
   async function fastifyDrizzleORM(fastify) {
