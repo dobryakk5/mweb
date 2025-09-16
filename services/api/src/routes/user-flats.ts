@@ -1,4 +1,4 @@
-import { FastifyInstance } from 'fastify'
+import { type FastifyInstance } from 'fastify'
 import { z } from 'zod'
 import { db, userFlats, ads, adHistory } from '@acme/db'
 import { eq, desc, and, ilike } from 'drizzle-orm'
