@@ -2,10 +2,9 @@ module.exports = {
   apps: [
     {
       name: 'acme-api',
-      script: './services/api/index.ts',
-      cwd: '/Users/pavellebedev/Desktop/mweb/services/api',
-      interpreter: 'node',
-      interpreter_args: '--loader=tsx/esm',
+      script: 'index.ts',
+      cwd: './services/api',
+      interpreter: 'tsx',
       instances: 1,
       exec_mode: 'cluster',
       env: {
