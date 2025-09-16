@@ -11,6 +11,7 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 13001
       },
+      env_file: './services/api/.env',
       error_file: '../../logs/api-error.log',
       out_file: '../../logs/api-out.log',
       log_file: '../../logs/api-combined.log',
