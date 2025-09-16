@@ -1,4 +1,4 @@
-export { default as client } from './client'
+export { client, default as clientInstance } from './client'
 export { default as db } from './db'
 export { default as dbInstance } from './db'
 export { default } from './db'

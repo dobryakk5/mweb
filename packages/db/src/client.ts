@@ -6,7 +6,7 @@ const globalForDb = globalThis as unknown as {
   client: postgres.Sql | undefined
 }
 
-const client =
+const clientInstance =
   globalForDb.client ??
   postgres(env.DATABASE_URL as string, {
     max: 100,
@@ -14,7 +14,8 @@ const client =
   })
 
 if (env.NODE_ENV !== 'production') {
-  globalForDb.client = client
+  globalForDb.client = clientInstance
 }
 
-export default client
+export const client = clientInstance
+export default clientInstance
