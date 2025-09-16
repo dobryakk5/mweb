@@ -4,7 +4,7 @@ module.exports = {
       name: 'acme-api',
       script: 'index.ts',
       cwd: './services/api',
-      interpreter: 'tsx',
+      interpreter: './node_modules/.bin/tsx',
       instances: 1,
       exec_mode: 'cluster',
       env: {
