@@ -2,7 +2,8 @@ module.exports = {
   apps: [
     {
       name: 'acme-api',
-      script: './services/api/index.ts',
+      script: 'index.ts',
+      cwd: './services/api',
       interpreter: 'tsx',
       instances: 1,
       exec_mode: 'cluster',
@@ -10,9 +11,9 @@ module.exports = {
         NODE_ENV: 'production',
         PORT: 13001
       },
-      error_file: './logs/api-error.log',
-      out_file: './logs/api-out.log',
-      log_file: './logs/api-combined.log',
+      error_file: '../../logs/api-error.log',
+      out_file: '../../logs/api-out.log',
+      log_file: '../../logs/api-combined.log',
       time: true,
       watch: false
     },
