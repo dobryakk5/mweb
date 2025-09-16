@@ -4,9 +4,10 @@ import client from './client'
 import { env } from './env'
 import * as schema from './schema'
 
-const db = drizzle(client, {
+const database = drizzle(client, {
   logger: env.NODE_ENV === 'development',
   schema,
 })
 
-export default db
+export const db = database
+export default database
