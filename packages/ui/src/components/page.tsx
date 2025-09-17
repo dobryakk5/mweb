@@ -8,7 +8,7 @@ type PageProps = HTMLAttributes<HTMLElement>
 const Page = ({ className, ...props }: PageProps) => {
   return (
     <article
-      className={cn('flex h-full flex-1 flex-col', className)}
+      className={cn('flex h-full flex-1 flex-col bg-background', className)}
       {...props}
     />
   )
@@ -47,7 +47,7 @@ const PageTitle = ({ className, ...props }: PageTitleProps) => {
 type PageContentProps = HTMLAttributes<HTMLElement>
 
 const PageContent = ({ className, ...props }: PageContentProps) => {
-  return <section className={cn('flex-1 p-4 lg:px-5', className)} {...props} />
+  return <section className={cn('flex-1 p-4 lg:px-5 bg-background', className)} {...props} />
 }
 
 type PageFooterProps = HTMLAttributes<HTMLElement>

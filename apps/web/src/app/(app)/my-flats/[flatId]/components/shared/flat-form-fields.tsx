@@ -29,10 +29,16 @@ export default function FlatFormFields({
 }: FlatFormFieldsProps) {
   return (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className='space-y-6'>
-        <Fieldset title="Информация о квартире">
-          <div className='grid grid-cols-1 md:grid-cols-12 gap-4 items-end'>
-            <div className='md:col-span-8'>
+      <form onSubmit={form.handleSubmit(onSubmit)}>
+        <div className='flex flex-col lg:flex-row lg:items-end gap-6'>
+          {/* Заголовок */}
+          <div className='lg:w-48 flex-shrink-0'>
+            <h3 className='text-lg font-medium text-gray-900'>Информация о квартире</h3>
+          </div>
+
+          {/* Поля формы */}
+          <div className='flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-end'>
+            <div className='md:col-span-6'>
               <Form.Field
                 control={form.control}
                 name='address'
@@ -96,30 +102,29 @@ export default function FlatFormFields({
                 )}
               />
             </div>
-          </div>
-        </Fieldset>
 
-        <div className='flex items-center justify-between'>
-          <div className='flex gap-2'>
-            <Button
-              type='submit'
-              disabled={isLoading}
-            >
-              {isLoading ? 'Сохранение...' : 'Сохранить изменения'}
-            </Button>
-          </div>
+            {/* Кнопки */}
+            <div className='md:col-span-2 flex items-end gap-2'>
+              <Button
+                type='submit'
+                size='sm'
+                disabled={isLoading}
+              >
+                {isLoading ? 'Сохранение...' : 'Сохранить'}
+              </Button>
 
-          {flat && (
-            <Button
-              type='button'
-              variant='destructive'
-              size='sm'
-              onClick={onDelete}
-            >
-              <TrashIcon className='h-4 w-4 mr-2' />
-              Удалить квартиру
-            </Button>
-          )}
+              {flat && (
+                <Button
+                  type='button'
+                  variant='destructive'
+                  size='sm'
+                  onClick={onDelete}
+                >
+                  <TrashIcon className='h-4 w-4' />
+                </Button>
+              )}
+            </div>
+          </div>
         </div>
       </form>
     </Form>
