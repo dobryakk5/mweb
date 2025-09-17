@@ -13,7 +13,7 @@ import Page from '@acme/ui/components/page'
 import { ArrowLeftIcon } from '@acme/ui/components/icon'
 
 import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
-import { useAds, useNearbyAdsFromFindAds, useFlatAdsFromFindAds } from '@/domains/ads'
+import { useAds, useNearbyAdsFromFindAds, useFlatAdsFromFindAds, useBroaderAdsFromFindAds } from '@/domains/ads'
 import HookFormDevtool from '@/components/hookform-devtool'
 
 // Import our refactored components
@@ -58,6 +58,7 @@ export default function EditFlatFormRefactored({
   // Data fetching hooks
   const { data: ads = [], refetch } = useAds({ flatId: flat?.id })
   const { data: flatAdsFromFindAds = [], refetch: refetchFlatAds } = useFlatAdsFromFindAds(flat?.id || 0)
+  const { data: broaderAdsFromFindAds = [], refetch: refetchBroaderAds } = useBroaderAdsFromFindAds(flat?.id || 0)
   const { data: nearbyAdsFromFindAds = [], refetch: refetchNearbyAds, isLoading: isLoadingNearbyAds } = useNearbyAdsFromFindAds(flat?.id || 0)
 
   // Actions hook
@@ -128,6 +129,7 @@ export default function EditFlatFormRefactored({
     try {
       // Update logic here
       await refetch()
+      await refetchBroaderAds() // Refresh broader ads data
     } finally {
       state.setHouseUpdateStates(false, false, false)
     }
@@ -153,6 +155,7 @@ export default function EditFlatFormRefactored({
 
   const handleFindBroaderAds = async () => {
     await actions.handleFindBroaderAds(state.setIsLoadingSimilar)
+    await refetchBroaderAds() // Refresh broader ads data after finding new ones
   }
 
   return (
@@ -198,7 +201,7 @@ export default function EditFlatFormRefactored({
           {/* House Ads Block */}
           <HouseAdsBlock
             flat={flat!}
-            ads={otherAds}
+            ads={broaderAdsFromFindAds}
             isCollapsed={isCollapsed('houseAds')}
             onToggleCollapse={() => toggleBlock('houseAds')}
             onUpdate={handleUpdateHouseAds}
@@ -218,6 +221,7 @@ export default function EditFlatFormRefactored({
             onRefetch={async () => { await refetchNearbyAds() }}
             isLoading={isLoadingNearbyAds}
             onAddToComparison={actions.handleAddToComparison}
+            onToggleComparison={actions.handleToggleComparison}
             comparisonAds={comparisonAds}
           />
 

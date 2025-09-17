@@ -25,6 +25,8 @@ export default function HouseAdsBlock({
     { key: 'price', label: 'Цена, млн' },
     { key: 'rooms', label: 'Комнат' },
     { key: 'floor', label: 'Этаж' },
+    { key: 'area', label: 'Площадь' },
+    { key: 'kitchenArea', label: 'Кухня' },
     { key: 'status', label: 'Статус' },
     { key: 'updatedAt', label: 'Обновлено' }
   ]

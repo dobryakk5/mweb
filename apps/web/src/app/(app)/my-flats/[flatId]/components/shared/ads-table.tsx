@@ -92,21 +92,25 @@ export default function AdsTable({
         )
 
       case 'createdAt':
+        return formatDate(ad.createdAt || ad.created)
       case 'updatedAt':
-        return formatDate(ad[key])
+        return formatDate(ad.updatedAt || ad.updated)
 
       case 'distance':
         return formatDistance(ad.distance_m || ad.distance)
 
       case 'personType':
-        return formatPersonType(ad.person_type_id || ad.personType)
+        return ad.person_type || formatPersonType(ad.person_type_id || ad.personType)
 
       case 'area':
       case 'totalArea':
       case 'livingArea':
-      case 'kitchenArea':
         const area = ad[key]
         return area ? area.toString() : '—'
+
+      case 'kitchenArea':
+        const kitchenArea = ad.kitchenArea || ad.kitchen_area
+        return kitchenArea ? kitchenArea.toString() : '—'
 
       case 'bathroom':
       case 'balcony':
