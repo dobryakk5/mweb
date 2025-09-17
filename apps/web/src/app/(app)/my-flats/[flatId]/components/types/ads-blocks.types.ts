@@ -79,6 +79,7 @@ export type NearbyAdsBlockProps = BaseBlockProps & {
   onRefetch: () => Promise<void>
   isLoading: boolean
   onAddToComparison: (adData: any) => Promise<void>
+  comparisonAds: any[]
 }
 
 // Comparison ads block specific types

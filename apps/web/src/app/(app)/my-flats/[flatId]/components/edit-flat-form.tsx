@@ -13,7 +13,7 @@ import Page from '@acme/ui/components/page'
 import { ArrowLeftIcon } from '@acme/ui/components/icon'
 
 import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
-import { useAds, useNearbyAdsFromFindAds } from '@/domains/ads'
+import { useAds, useNearbyAdsFromFindAds, useFlatAdsFromFindAds } from '@/domains/ads'
 import HookFormDevtool from '@/components/hookform-devtool'
 
 // Import our refactored components
@@ -57,6 +57,7 @@ export default function EditFlatFormRefactored({
 
   // Data fetching hooks
   const { data: ads = [], refetch } = useAds({ flatId: flat?.id })
+  const { data: flatAdsFromFindAds = [], refetch: refetchFlatAds } = useFlatAdsFromFindAds(flat?.id || 0)
   const { data: nearbyAdsFromFindAds = [], refetch: refetchNearbyAds, isLoading: isLoadingNearbyAds } = useNearbyAdsFromFindAds(flat?.id || 0)
 
   // Actions hook
@@ -116,6 +117,7 @@ export default function EditFlatFormRefactored({
     try {
       // Update logic here
       await refetch()
+      await refetchFlatAds() // Refresh find_ads data
     } finally {
       state.setFlatUpdateStates(false, false, false)
     }
@@ -143,7 +145,7 @@ export default function EditFlatFormRefactored({
 
   const handleAutoFindSimilar = async () => {
     await actions.handleAutoFindSimilar(
-      flatAds,
+      flatAdsFromFindAds,
       state.setSimilarAds,
       state.setIsLoadingSimilar
     )
@@ -180,7 +182,7 @@ export default function EditFlatFormRefactored({
           {/* Flat Ads Block */}
           <FlatAdsBlock
             flat={flat!}
-            ads={flatAds}
+            ads={flatAdsFromFindAds}
             isCollapsed={isCollapsed('flatAds')}
             onToggleCollapse={() => toggleBlock('flatAds')}
             onUpdate={handleUpdateFlatAds}
@@ -216,6 +218,7 @@ export default function EditFlatFormRefactored({
             onRefetch={async () => { await refetchNearbyAds() }}
             isLoading={isLoadingNearbyAds}
             onAddToComparison={actions.handleAddToComparison}
+            comparisonAds={comparisonAds}
           />
 
           {/* Comparison Ads Block */}

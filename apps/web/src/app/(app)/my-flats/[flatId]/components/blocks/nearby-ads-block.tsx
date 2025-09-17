@@ -1,7 +1,7 @@
 'use client'
 
 import { buttonVariants } from '@acme/ui/components/button'
-import { PlusIcon } from '@acme/ui/components/icon'
+import { PlusIcon, CheckIcon } from '@acme/ui/components/icon'
 import CollapsibleBlock from '../shared/collapsible-block'
 import { RefreshNearbyButton } from '../shared/update-buttons'
 import type { NearbyAdsBlockProps, ColumnConfig } from '../types/ads-blocks.types'
@@ -17,7 +17,8 @@ export default function NearbyAdsBlock({
   onToggleCollapse,
   onRefetch,
   isLoading,
-  onAddToComparison
+  onAddToComparison,
+  comparisonAds
 }: NearbyAdsBlockProps) {
   const headerActions = (
     <RefreshNearbyButton
@@ -114,16 +115,26 @@ export default function NearbyAdsBlock({
                       <td className='p-2 align-middle text-sm'>{findAdsItem.person_type || '—'}</td>
                       <td className='p-2 align-middle text-sm'>
                         <div className='flex items-center justify-center'>
-                          <button
-                            type='button'
-                            className={buttonVariants({
-                              variant: 'outline',
-                              size: 'sm',
-                            })}
-                            onClick={() => onAddToComparison(findAdsItem)}
-                          >
-                            <PlusIcon className='h-4 w-4' />
-                          </button>
+                          {(() => {
+                            const isInComparison = comparisonAds.some(ad => ad.url === findAdsItem.url && ad.sma === 1)
+                            return (
+                              <button
+                                type='button'
+                                className={buttonVariants({
+                                  variant: isInComparison ? 'default' : 'outline',
+                                  size: 'sm',
+                                })}
+                                onClick={() => onAddToComparison(findAdsItem)}
+                                disabled={isInComparison}
+                              >
+                                {isInComparison ? (
+                                  <CheckIcon className='h-4 w-4 text-white' />
+                                ) : (
+                                  <PlusIcon className='h-4 w-4' />
+                                )}
+                              </button>
+                            )
+                          })()}
                         </div>
                       </td>
                     </tr>
