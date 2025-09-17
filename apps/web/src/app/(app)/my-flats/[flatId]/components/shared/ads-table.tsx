@@ -101,11 +101,12 @@ export default function AdsTable({
       case 'personType':
         return formatPersonType(ad.person_type_id || ad.personType)
 
+      case 'area':
       case 'totalArea':
       case 'livingArea':
       case 'kitchenArea':
         const area = ad[key]
-        return area ? `${area} м²` : '—'
+        return area ? area.toString() : '—'
 
       case 'bathroom':
       case 'balcony':

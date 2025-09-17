@@ -67,6 +67,27 @@ export default function EditFlatFormRefactored({
     state.setMounted(true)
   }, [state])
 
+  // Update form when flat data loads
+  useEffect(() => {
+    if (flat && !isLoading) {
+      const currentValues = form.getValues()
+      const newValues = {
+        address: flat.address || '',
+        rooms: flat.rooms || 1,
+        floor: flat.floor || 1,
+      }
+
+      // Only reset if values actually changed to avoid unnecessary re-renders
+      if (
+        currentValues.address !== newValues.address ||
+        currentValues.rooms !== newValues.rooms ||
+        currentValues.floor !== newValues.floor
+      ) {
+        form.reset(newValues)
+      }
+    }
+  }, [flat, isLoading, form])
+
   // Separate ads by type
   const flatAds = ads.filter(ad => ad.from === 1) // По этой квартире (найдено автоматически)
   const otherAds = ads.filter(ad => ad.from === 2) // Другие объявления (добавлено вручную)

@@ -473,7 +473,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const result = await db.transaction(async (tx) => {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
-          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor 
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
               FROM public.find_ads(${currentFlat.address}, null, null)`
         )
       })
@@ -512,7 +512,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const result = await db.transaction(async (tx) => {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
-          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor 
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
               FROM public.find_ads(${currentFlat.address}, ${currentFlat.floor}, ${currentFlat.rooms})`
         )
       })
@@ -550,7 +550,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const result = await db.transaction(async (tx) => {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
-          sql`SELECT price, rooms, person_type, created, updated, url, is_active 
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
               FROM public.find_ads(${currentAd.address}, ${currentAd.floor}, ${currentAd.rooms})`
         )
       })
