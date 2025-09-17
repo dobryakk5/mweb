@@ -674,7 +674,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
           sql`SELECT price, floor, rooms, person_type, created, updated, url, is_active, house_id, distance_m
-              FROM public.find_nearby_apartments(${currentFlat.address}, ${currentFlat.rooms}, ${currentPrice}, 500)`
+              FROM public.find_nearby_apartments(${currentFlat.address}, ${currentFlat.rooms}, ${currentPrice}, NULL, NULL, 500)`
         )
       })
 

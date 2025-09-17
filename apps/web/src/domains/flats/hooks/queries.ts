@@ -31,6 +31,13 @@ const useFlat = (id: number): UseQueryResult<UserFlat | undefined, Error> => {
   return useQuery({
     queryKey: flatKeys.getFlat(id),
     queryFn: () => fetchFlat(id),
+    retry: (failureCount, error: any) => {
+      // Не повторяем запрос если квартира не найдена (404)
+      if (error?.response?.status === 404) {
+        return false
+      }
+      return failureCount < 3
+    },
   })
 }
 

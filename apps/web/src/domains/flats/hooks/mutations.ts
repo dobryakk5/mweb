@@ -97,6 +97,11 @@ export const useDeleteFlat: (
       )
     },
     onSuccess: async () => {
+      // Удаляем кеш конкретной квартиры
+      queryClient.removeQueries({
+        queryKey: flatKeys.getFlat(id),
+      })
+
       // Инвалидируем все кеши, связанные с квартирами
       queryClient.invalidateQueries({
         queryKey: flatKeys.all,
@@ -105,7 +110,7 @@ export const useDeleteFlat: (
       // Перенаправляем на список квартир
       push('/my-flats')
 
-      toast.success('Квартира и вся связанная статистика удалена успешно!')
+      toast.success('Квартира удалена')
     },
   })
 }
