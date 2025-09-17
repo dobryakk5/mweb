@@ -25,7 +25,6 @@ export default function FlatAdsBlock({
     { key: 'price', label: 'Цена, млн' },
     { key: 'rooms', label: 'Комнат' },
     { key: 'floor', label: 'Этаж' },
-    { key: 'viewsToday', label: 'Просмотры сегодня' },
     { key: 'status', label: 'Статус' },
     { key: 'updatedAt', label: 'Обновлено' }
   ]

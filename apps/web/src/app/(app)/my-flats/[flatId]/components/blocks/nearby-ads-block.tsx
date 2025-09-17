@@ -5,7 +5,7 @@ import { PlusIcon } from '@acme/ui/components/icon'
 import CollapsibleBlock from '../shared/collapsible-block'
 import { RefreshNearbyButton } from '../shared/update-buttons'
 import type { NearbyAdsBlockProps, ColumnConfig } from '../types/ads-blocks.types'
-import { formatPrice, formatDate, formatDistance, formatPersonType } from '../utils/ad-formatters'
+import { formatPrice, formatDate, formatDistance } from '../utils/ad-formatters'
 
 /**
  * Block component for nearby ads within 500m radius
@@ -111,7 +111,7 @@ export default function NearbyAdsBlock({
                       <td className='p-2 align-middle text-sm'>{formatDistance(findAdsItem.distance_m)}</td>
                       <td className='p-2 align-middle text-sm'>{formatDate(findAdsItem.created)}</td>
                       <td className='p-2 align-middle text-sm'>{formatDate(findAdsItem.updated)}</td>
-                      <td className='p-2 align-middle text-sm'>{formatPersonType(findAdsItem.person_type)}</td>
+                      <td className='p-2 align-middle text-sm'>{findAdsItem.person_type || '—'}</td>
                       <td className='p-2 align-middle text-sm'>
                         <div className='flex items-center justify-center'>
                           <button

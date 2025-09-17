@@ -30,7 +30,7 @@ export interface UpdateAdData extends Partial<CreateAdData> {
   description?: string
   photoUrls?: string[]
   source?: number
-  status?: string
+  status?: boolean
   viewsToday?: number
   totalViews?: number
   from?: number // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
@@ -67,7 +67,7 @@ export interface Ad {
   description?: string
   photoUrls?: string[]
   source?: number
-  status?: string
+  status?: boolean
   viewsToday?: number
   totalViews?: number
   from?: number // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную

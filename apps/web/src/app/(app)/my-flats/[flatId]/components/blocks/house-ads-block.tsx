@@ -25,7 +25,6 @@ export default function HouseAdsBlock({
     { key: 'price', label: 'Цена, млн' },
     { key: 'rooms', label: 'Комнат' },
     { key: 'floor', label: 'Этаж' },
-    { key: 'viewsToday', label: 'Просмотры сегодня' },
     { key: 'status', label: 'Статус' },
     { key: 'updatedAt', label: 'Обновлено' }
   ]
@@ -57,7 +56,7 @@ export default function HouseAdsBlock({
         onDeleteAd={onDeleteAd}
         onToggleComparison={onToggleComparison}
         updatingAdIds={new Set()}
-        showActions={true}
+        showActions={false}
         showComparison={true}
       />
     </CollapsibleBlock>
