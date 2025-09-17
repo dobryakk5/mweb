@@ -189,6 +189,8 @@ export default function EditFlatFormRefactored({
             onToggleComparison={actions.handleToggleComparison}
             onUpdateAd={(adId) => actions.handleUpdateAdFromSource(adId, 'cian')}
             updatingAdIds={state.updatingAdIds}
+            onFindSimilar={handleAutoFindSimilar}
+            isLoadingSimilar={state.isLoadingSimilar}
           />
 
           {/* House Ads Block */}

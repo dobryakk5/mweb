@@ -58,6 +58,8 @@ export type FlatAdsBlockProps = BaseBlockProps & {
   onToggleComparison: (adId: number, inComparison: boolean) => Promise<void>
   onUpdateAd: (adId: number) => Promise<void>
   updatingAdIds: Set<number>
+  onFindSimilar: () => Promise<void>
+  isLoadingSimilar: boolean
 }
 
 // House ads block specific types

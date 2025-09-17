@@ -18,7 +18,9 @@ export default function FlatAdsBlock({
   onDeleteAd,
   onToggleComparison,
   onUpdateAd,
-  updatingAdIds
+  updatingAdIds,
+  onFindSimilar,
+  isLoadingSimilar
 }: FlatAdsBlockProps) {
   const columns: ColumnConfig[] = [
     { key: 'url', label: 'URL', className: 'w-40' },
@@ -39,11 +41,8 @@ export default function FlatAdsBlock({
         label="Обновить все источники"
       />
       <FindSimilarButton
-        onFind={async () => {
-          // This would be handled by a parent component
-          // as it needs access to setSimilarAds and setIsLoading
-        }}
-        isLoading={false}
+        onFind={onFindSimilar}
+        isLoading={isLoadingSimilar}
         label="Автопоиск"
       />
     </>
