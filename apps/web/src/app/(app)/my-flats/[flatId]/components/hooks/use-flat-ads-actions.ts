@@ -142,7 +142,7 @@ export const useFlatAdsActions = ({ flat, refetch, refetchNearbyAds }: AdActionH
 
       for (const similarAd of newAds) {
         try {
-          await createAdFromSimilar(similarAd, flat.id) // Use regular createAdFromSimilar
+          await createAdFromSimilar(similarAd, flat.id, flat.address) // Pass flat address
           addedCount++
         } catch (error) {
           console.error('Ошибка добавления похожего объявления:', error)
@@ -185,7 +185,7 @@ export const useFlatAdsActions = ({ flat, refetch, refetchNearbyAds }: AdActionH
       let addedCount = 0
       for (const broaderAd of broaderAds) {
         try {
-          await createAdFromSimilar(broaderAd, flat.id) // Use regular createAdFromSimilar
+          await createAdFromSimilar(broaderAd, flat.id, flat.address) // Pass flat address
           addedCount++
         } catch (error) {
           console.error('Ошибка добавления объявления по адресу:', error)
