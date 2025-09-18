@@ -272,15 +272,17 @@ export const useFlatAdsActions = ({
         if (aIsCian && !bIsCian) return -1
         if (!aIsCian && bIsCian) return 1
 
-        // Secondary priority: Yandex (including ya.ru)
+        // Secondary priority: Yandex (including ya.ru and realty.ya.ru)
         const aIsYandex =
           a.url?.includes('yandex.ru') ||
           a.url?.includes('ya.ru') ||
+          a.url?.includes('realty.ya.ru') ||
           a.source === 3 ||
           false
         const bIsYandex =
           b.url?.includes('yandex.ru') ||
           b.url?.includes('ya.ru') ||
+          b.url?.includes('realty.ya.ru') ||
           b.source === 3 ||
           false
         if (aIsYandex && !bIsYandex) return -1
@@ -373,15 +375,17 @@ export const useFlatAdsActions = ({
         if (aIsCian && !bIsCian) return -1
         if (!aIsCian && bIsCian) return 1
 
-        // Secondary priority: Yandex (including ya.ru)
+        // Secondary priority: Yandex (including ya.ru and realty.ya.ru)
         const aIsYandex =
           a.url?.includes('yandex.ru') ||
           a.url?.includes('ya.ru') ||
+          a.url?.includes('realty.ya.ru') ||
           a.source === 3 ||
           false
         const bIsYandex =
           b.url?.includes('yandex.ru') ||
           b.url?.includes('ya.ru') ||
+          b.url?.includes('realty.ya.ru') ||
           b.source === 3 ||
           false
         if (aIsYandex && !bIsYandex) return -1

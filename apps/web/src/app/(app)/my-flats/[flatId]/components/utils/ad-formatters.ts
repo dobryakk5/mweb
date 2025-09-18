@@ -26,7 +26,8 @@ export const getDomainFromUrl = (url: string): string => {
     if (
       domain.includes('yandex.ru') ||
       domain.includes('realty.yandex.ru') ||
-      domain.includes('ya.ru')
+      domain.includes('ya.ru') ||
+      domain.includes('realty.ya.ru')
     )
       return 'yandex'
     if (domain.includes('cian.ru')) return 'cian'
