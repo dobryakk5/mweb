@@ -782,12 +782,13 @@ export default async function adsRoutes(fastify: FastifyInstance) {
 
       const currentFlat = flats[0]
 
-      // Используем хранимую процедуру find_ads для поиска по адресу только (этаж и комнаты = null)
+      // Используем хранимую процедуру find_ads для поиска по адресу, исключая точное совпадение этажа и комнат
       const result = await db.transaction(async (tx) => {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
           sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
-              FROM public.find_ads(${currentFlat.address}, null, null)`,
+              FROM public.find_ads(${currentFlat.address}, null, null)
+              WHERE NOT (floor = ${currentFlat.floor} AND rooms = ${currentFlat.rooms})`,
         )
       })
 
@@ -1037,7 +1038,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const nearbyResult = await db.transaction(async (tx) => {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
-          sql`SELECT price, floor, rooms, person_type, created, updated, url, is_active, house_id, distance_m
+          sql`SELECT price, floor, rooms, person_type, created, updated, url, is_active, house_id, distance_m, area, kitchen_area
               FROM public.find_nearby_apartments(${currentFlat.address}, ${currentFlat.rooms}, ${currentPrice}, NULL, NULL, 500)`,
         )
       })

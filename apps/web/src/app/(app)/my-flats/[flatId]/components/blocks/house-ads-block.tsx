@@ -2,10 +2,7 @@
 
 import CollapsibleBlock from '../shared/collapsible-block'
 import AdsTable from '../shared/ads-table'
-import {
-  MultiUpdateButtons,
-  FindByAddressButton,
-} from '../shared/update-buttons'
+import { MultiUpdateButtons } from '../shared/update-buttons'
 import type {
   HouseAdsBlockProps,
   ColumnConfig,
@@ -40,17 +37,11 @@ export default function HouseAdsBlock({
   ]
 
   const headerActions = (
-    <>
-      <MultiUpdateButtons
-        onUpdate={onUpdate}
-        isUpdating={isUpdating}
-        label='Обновить'
-      />
-      <FindByAddressButton
-        onFind={onFindSimilar}
-        isLoading={isLoadingSimilar}
-      />
-    </>
+    <MultiUpdateButtons
+      onUpdate={onUpdate}
+      isUpdating={isUpdating}
+      label='Обновить статусы'
+    />
   )
 
   return (

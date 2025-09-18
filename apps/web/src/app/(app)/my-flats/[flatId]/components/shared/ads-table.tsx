@@ -240,7 +240,7 @@ export default function AdsTable({
                         <button
                           type='button'
                           className={buttonVariants({
-                            variant: ad.sma ? 'default' : 'outline',
+                            variant: 'outline',
                             size: 'sm',
                           })}
                           onClick={() => onToggleComparison?.(ad.id, !ad.sma)}
