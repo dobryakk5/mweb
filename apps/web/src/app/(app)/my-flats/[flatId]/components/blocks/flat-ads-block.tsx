@@ -23,6 +23,7 @@ export default function FlatAdsBlock({
   isLoadingSimilar,
   onUpdateAllOld,
   isUpdatingAllOld,
+  updatedTodayAdIds = new Set(),
 }: FlatAdsBlockProps) {
   const columns: ColumnConfig[] = [
     { key: 'url', label: 'URL', className: 'w-40' },
@@ -59,6 +60,8 @@ export default function FlatAdsBlock({
         updatingAdIds={updatingAdIds}
         showActions={true}
         showComparison={true}
+        isBulkUpdating={isUpdatingAllOld}
+        updatedTodayAdIds={updatedTodayAdIds}
       />
     </CollapsibleBlock>
   )

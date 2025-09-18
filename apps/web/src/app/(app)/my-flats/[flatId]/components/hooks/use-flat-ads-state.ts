@@ -28,6 +28,9 @@ export const useFlatAdsState = () => {
   const [isUpdatingHouseAvito, setIsUpdatingHouseAvito] = useState(false)
   const [isUpdatingHouseYandex, setIsUpdatingHouseYandex] = useState(false)
 
+  // Update states for house ads statuses
+  const [isUpdatingHouseStatuses, setIsUpdatingHouseStatuses] = useState(false)
+
   // Update states for comparison ads
   const [isUpdatingComparisonCian, setIsUpdatingComparisonCian] =
     useState(false)
@@ -38,6 +41,9 @@ export const useFlatAdsState = () => {
 
   // Individual ad update tracking
   const [updatingAdIds, setUpdatingAdIds] = useState(new Set<number>())
+
+  // Track ads updated today (session only)
+  const [updatedTodayAdIds, setUpdatedTodayAdIds] = useState(new Set<number>())
 
   // Bulk update states
   const [isUpdatingAllOldAds, setIsUpdatingAllOldAds] = useState(false)
@@ -106,6 +112,11 @@ export const useFlatAdsState = () => {
     })
   }, [])
 
+  // Mark ad as updated today (session only)
+  const markAdAsUpdatedToday = useCallback((adId: number) => {
+    setUpdatedTodayAdIds((prev) => new Set(prev).add(adId))
+  }, [])
+
   const isUpdatingAd = useCallback(
     (adId: number): boolean => {
       return updatingAdIds.has(adId)
@@ -150,6 +161,9 @@ export const useFlatAdsState = () => {
     isUpdatingHouseYandex,
     setIsUpdatingHouseYandex,
 
+    isUpdatingHouseStatuses,
+    setIsUpdatingHouseStatuses,
+
     isUpdatingComparisonCian,
     setIsUpdatingComparisonCian,
     isUpdatingComparisonAvito,
@@ -163,6 +177,11 @@ export const useFlatAdsState = () => {
     startUpdatingAd,
     stopUpdatingAd,
     isUpdatingAd,
+
+    // Updated today tracking
+    updatedTodayAdIds,
+    setUpdatedTodayAdIds,
+    markAdAsUpdatedToday,
 
     // Bulk update states
     isUpdatingAllOldAds,

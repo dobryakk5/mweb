@@ -14,7 +14,7 @@ import {
   updateAdStatusExtended,
   type SimilarAd,
 } from '@/domains/ads'
-import { isStatusOld } from '../utils/ad-formatters'
+import { isStatusOld, isUpdatedToday } from '../utils/ad-formatters'
 import { useDeleteAd } from '@/domains/ads/hooks/mutations'
 import { useDeleteFlat } from '@/domains/flats/hooks/mutations'
 
@@ -24,6 +24,7 @@ type AdActionHookProps = {
   refetchNearbyAds?: () => Promise<any>
   startUpdatingAd?: (adId: number) => void
   stopUpdatingAd?: (adId: number) => void
+  markAdAsUpdatedToday?: (adId: number) => void
 }
 
 /**
@@ -35,6 +36,7 @@ export const useFlatAdsActions = ({
   refetchNearbyAds,
   startUpdatingAd,
   stopUpdatingAd,
+  markAdAsUpdatedToday,
 }: AdActionHookProps) => {
   const { mutateAsync: deleteAd } = useDeleteAd()
   const { mutateAsync: deleteFlat } = useDeleteFlat(flat?.id || 0)
@@ -141,6 +143,7 @@ export const useFlatAdsActions = ({
       try {
         await updateAdStatusSingle(adId)
         await refetch()
+        if (markAdAsUpdatedToday) markAdAsUpdatedToday(adId)
         toast.success('Объявление обновлено')
       } catch (error) {
         console.error(`Ошибка обновления объявления из ${source}:`, error)
@@ -258,15 +261,19 @@ export const useFlatAdsActions = ({
       ads: any[],
       setUpdatingIds: React.Dispatch<React.SetStateAction<Set<number>>>,
     ) => {
-      const oldAds = ads.filter((ad) => isStatusOld(ad.updatedAt || ad.updated))
+      // Filter ads that haven't been updated today
+      const adsToUpdate = ads.filter((ad) => {
+        const lastUpdate = ad.updatedAt || ad.updated
+        return !isUpdatedToday(lastUpdate)
+      })
 
-      if (oldAds.length === 0) {
-        toast.info('Все объявления имеют актуальный статус')
+      if (adsToUpdate.length === 0) {
+        toast.info('Все объявления уже обновлены сегодня')
         return
       }
 
       // Sort ads by priority: Cian first, then others
-      const sortedAds = oldAds.sort((a, b) => {
+      const sortedAds = adsToUpdate.sort((a, b) => {
         const aIsCian = a.url?.includes('cian.ru') || a.source === 4 || false
         const bIsCian = b.url?.includes('cian.ru') || b.source === 4 || false
         if (aIsCian && !bIsCian) return -1
@@ -303,6 +310,9 @@ export const useFlatAdsActions = ({
           try {
             await updateAdStatusSingle(ad.id)
             successCount++
+
+            // Mark as updated today
+            if (markAdAsUpdatedToday) markAdAsUpdatedToday(ad.id)
 
             // Remove from updating set as each completes
             setUpdatingIds((prev) => {
@@ -355,6 +365,101 @@ export const useFlatAdsActions = ({
       }
     },
     [refetch, startUpdatingAd, stopUpdatingAd],
+  )
+
+  // House ads statuses update function
+  const handleUpdateHouseStatuses = useCallback(
+    async (
+      ads: any[],
+      setUpdatingIds: React.Dispatch<React.SetStateAction<Set<number>>>,
+    ) => {
+      if (ads.length === 0) {
+        toast.info('Нет объявлений для обновления')
+        return
+      }
+
+      // Filter ads that haven't been updated today
+      const adsToUpdate = ads.filter((ad) => {
+        const lastUpdate = ad.updatedAt || ad.updated
+        return !isUpdatedToday(lastUpdate)
+      })
+
+      if (adsToUpdate.length === 0) {
+        toast.info('Все объявления уже обновлены сегодня')
+        return
+      }
+
+      // Sort ads by priority: Cian first, then Yandex, then others
+      const sortedAds = adsToUpdate.sort((a, b) => {
+        const aIsCian = a.url?.includes('cian.ru') || a.source === 4 || false
+        const bIsCian = b.url?.includes('cian.ru') || b.source === 4 || false
+        if (aIsCian && !bIsCian) return -1
+        if (!aIsCian && bIsCian) return 1
+
+        const aIsYandex =
+          a.url?.includes('yandex.ru') ||
+          a.url?.includes('ya.ru') ||
+          a.url?.includes('realty.ya.ru') ||
+          a.source === 3 ||
+          false
+        const bIsYandex =
+          b.url?.includes('yandex.ru') ||
+          b.url?.includes('ya.ru') ||
+          b.url?.includes('realty.ya.ru') ||
+          b.source === 3 ||
+          false
+        if (aIsYandex && !bIsYandex) return -1
+        if (!aIsYandex && bIsYandex) return 1
+
+        return 0
+      })
+
+      const updatingIds = new Set(sortedAds.map((ad) => ad.id))
+      setUpdatingIds(updatingIds)
+
+      try {
+        let successCount = 0
+        let errorCount = 0
+
+        // Update ads one by one to show individual progress
+        for (const ad of sortedAds) {
+          try {
+            await updateAdStatusSingle(ad.id)
+            successCount++
+
+            // Mark as updated today
+            if (markAdAsUpdatedToday) markAdAsUpdatedToday(ad.id)
+
+            // Remove from updating set as each completes
+            setUpdatingIds((prev) => {
+              const newSet = new Set(prev)
+              newSet.delete(ad.id)
+              return newSet
+            })
+
+            // Small delay to show progress
+            await new Promise((resolve) => setTimeout(resolve, 100))
+          } catch (error) {
+            console.error(`Ошибка обновления объявления ${ad.id}:`, error)
+            errorCount++
+          }
+        }
+
+        await refetch()
+
+        if (errorCount === 0) {
+          toast.success(`Обновлено ${successCount} объявлений`)
+        } else {
+          toast.warning(
+            `Обновлено ${successCount} из ${sortedAds.length} объявлений. ${errorCount} ошибок.`,
+          )
+        }
+      } catch (error) {
+        console.error('Ошибка массового обновления дома:', error)
+        toast.error('Ошибка при обновлении объявлений дома')
+      }
+    },
+    [refetch, markAdAsUpdatedToday],
   )
 
   // Update all ads in comparison block (single endpoint for bulk)
@@ -452,5 +557,6 @@ export const useFlatAdsActions = ({
     handleFindBroaderAds,
     handleUpdateAllOldAds,
     handleUpdateAllComparisonAds,
+    handleUpdateHouseStatuses,
   }
 }

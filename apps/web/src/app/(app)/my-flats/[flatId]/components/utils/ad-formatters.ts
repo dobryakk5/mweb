@@ -183,3 +183,20 @@ export const isStatusOld = (
   sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
   return updated < sevenDaysAgo
 }
+
+// Check if ad was updated today
+export const isUpdatedToday = (
+  updatedAt: string | Date | null | undefined,
+): boolean => {
+  if (!updatedAt) return false
+
+  const updated =
+    typeof updatedAt === 'string' ? new Date(updatedAt) : updatedAt
+  const today = new Date()
+
+  return (
+    updated.getFullYear() === today.getFullYear() &&
+    updated.getMonth() === today.getMonth() &&
+    updated.getDate() === today.getDate()
+  )
+}

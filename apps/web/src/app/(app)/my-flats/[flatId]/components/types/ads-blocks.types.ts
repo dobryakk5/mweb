@@ -47,6 +47,8 @@ export type AdsTableProps = {
   updatingAdIds?: Set<number>
   showActions?: boolean
   showComparison?: boolean
+  isBulkUpdating?: boolean
+  updatedTodayAdIds?: Set<number>
 }
 
 // Flat ads block specific types
@@ -62,6 +64,7 @@ export type FlatAdsBlockProps = BaseBlockProps & {
   isLoadingSimilar: boolean
   onUpdateAllOld: () => Promise<void>
   isUpdatingAllOld: boolean
+  updatedTodayAdIds?: Set<number>
 }
 
 // House ads block specific types
@@ -75,6 +78,9 @@ export type HouseAdsBlockProps = BaseBlockProps & {
   updatingAdIds?: Set<number>
   onFindSimilar: () => Promise<void>
   isLoadingSimilar: boolean
+  updatedTodayAdIds?: Set<number>
+  onUpdateStatuses: () => Promise<void>
+  isUpdatingStatuses: boolean
 }
 
 // Nearby ads block specific types

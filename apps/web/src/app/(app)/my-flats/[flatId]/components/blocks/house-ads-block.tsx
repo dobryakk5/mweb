@@ -24,6 +24,9 @@ export default function HouseAdsBlock({
   updatingAdIds,
   onFindSimilar,
   isLoadingSimilar,
+  updatedTodayAdIds = new Set(),
+  onUpdateStatuses,
+  isUpdatingStatuses,
 }: HouseAdsBlockProps) {
   const columns: ColumnConfig[] = [
     { key: 'url', label: 'URL', className: 'w-40' },
@@ -37,11 +40,18 @@ export default function HouseAdsBlock({
   ]
 
   const headerActions = (
-    <MultiUpdateButtons
-      onUpdate={onUpdate}
-      isUpdating={isUpdating}
-      label='Обновить статусы'
-    />
+    <div className='flex gap-2'>
+      <MultiUpdateButtons
+        onUpdate={onUpdate}
+        isUpdating={isUpdating}
+        label='Искать объявления'
+      />
+      <MultiUpdateButtons
+        onUpdate={onUpdateStatuses}
+        isUpdating={isUpdatingStatuses}
+        label='Обновить статусы'
+      />
+    </div>
   )
 
   return (
@@ -60,6 +70,8 @@ export default function HouseAdsBlock({
         updatingAdIds={updatingAdIds || new Set()}
         showActions={true}
         showComparison={true}
+        isBulkUpdating={isUpdatingStatuses}
+        updatedTodayAdIds={updatedTodayAdIds}
       />
     </CollapsibleBlock>
   )

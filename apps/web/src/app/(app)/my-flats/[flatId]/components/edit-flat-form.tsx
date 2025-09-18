@@ -32,6 +32,7 @@ import { useCollapseState } from './hooks/use-collapse-state'
 import { useFlatAdsState } from './hooks/use-flat-ads-state'
 import { useFlatAdsActions } from './hooks/use-flat-ads-actions'
 import { useExcelExport } from './hooks/use-excel-export'
+import { isUpdatedToday } from './utils/ad-formatters'
 import {
   formSchema,
   type FormValues,
@@ -80,6 +81,7 @@ export default function EditFlatFormRefactored({
     refetchNearbyAds,
     startUpdatingAd: state.startUpdatingAd,
     stopUpdatingAd: state.stopUpdatingAd,
+    markAdAsUpdatedToday: state.markAdAsUpdatedToday,
   })
 
   // Set mounted state
@@ -107,6 +109,19 @@ export default function EditFlatFormRefactored({
       }
     }
   }, [flat, isLoading, form])
+
+  // Initialize ads updated today state when ads data loads
+  useEffect(() => {
+    if (ads && ads.length > 0) {
+      const updatedTodayIds = new Set<number>()
+      ads.forEach((ad) => {
+        if (isUpdatedToday(ad.updatedAt || ad.updated)) {
+          updatedTodayIds.add(ad.id)
+        }
+      })
+      state.setUpdatedTodayAdIds(updatedTodayIds)
+    }
+  }, [ads, state])
 
   // Separate ads by type
   const flatAds = ads.filter((ad) => ad.from === 1) // По этой квартире (найдено автоматически)
@@ -150,6 +165,20 @@ export default function EditFlatFormRefactored({
       await refetchBroaderAds() // Refresh broader ads data
     } finally {
       state.setHouseUpdateStates(false, false, false)
+    }
+  }
+
+  const handleUpdateHouseStatuses = async () => {
+    state.setIsUpdatingHouseStatuses(true)
+    try {
+      await actions.handleUpdateHouseStatuses(
+        broaderAdsFromFindAds,
+        state.setUpdatingAdIds,
+      )
+      await refetch()
+      await refetchBroaderAds()
+    } finally {
+      state.setIsUpdatingHouseStatuses(false)
     }
   }
 
@@ -235,6 +264,7 @@ export default function EditFlatFormRefactored({
             isLoadingSimilar={state.isLoadingSimilar}
             onUpdateAllOld={handleUpdateAllOldAds}
             isUpdatingAllOld={state.isUpdatingAllOldAds}
+            updatedTodayAdIds={state.updatedTodayAdIds}
           />
 
           {/* House Ads Block */}
@@ -257,6 +287,9 @@ export default function EditFlatFormRefactored({
             updatingAdIds={state.updatingAdIds}
             onFindSimilar={handleFindBroaderAds}
             isLoadingSimilar={state.isLoadingSimilar}
+            updatedTodayAdIds={state.updatedTodayAdIds}
+            onUpdateStatuses={handleUpdateHouseStatuses}
+            isUpdatingStatuses={state.isUpdatingHouseStatuses}
           />
 
           {/* Nearby Ads Block */}

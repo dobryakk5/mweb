@@ -33,6 +33,8 @@ export default function AdsTable({
   updatingAdIds = new Set(),
   showActions = true,
   showComparison = true,
+  isBulkUpdating = false,
+  updatedTodayAdIds = new Set(),
 }: AdsTableProps) {
   const renderCell = (ad: any, column: ColumnConfig) => {
     const { key } = column
@@ -220,6 +222,7 @@ export default function AdsTable({
           <tbody className='[&_tr:last-child]:border-0'>
             {ads.map((ad) => {
               const isUpdating = updatingAdIds.has(ad.id)
+              const isUpdatedToday = updatedTodayAdIds.has(ad.id)
 
               return (
                 <tr
@@ -258,41 +261,88 @@ export default function AdsTable({
                   {showActions && (
                     <td className='p-2 align-middle text-sm'>
                       <div className='flex gap-2'>
-                        <button
-                          type='button'
-                          className={buttonVariants({
-                            variant: 'outline',
-                            size: 'sm',
-                          })}
-                          disabled={isUpdating}
-                          onClick={() => onUpdateAd?.(ad.id)}
-                        >
-                          {isUpdating ? (
-                            <div className='flex items-center gap-1'>
-                              <svg
-                                className='w-3 h-3 animate-spin'
-                                fill='none'
-                                viewBox='0 0 24 24'
+                        {/* Update button - hide during bulk update or show checkmark if updated today */}
+                        {!isBulkUpdating && (
+                          <>
+                            {isUpdatedToday ? (
+                              <div className='flex items-center justify-center w-8 h-8'>
+                                <span className='text-green-600 font-semibold text-lg opacity-50'>
+                                  ✓
+                                </span>
+                              </div>
+                            ) : (
+                              <button
+                                type='button'
+                                className={buttonVariants({
+                                  variant: 'outline',
+                                  size: 'sm',
+                                })}
+                                disabled={isUpdating}
+                                onClick={() => onUpdateAd?.(ad.id)}
                               >
-                                <circle
-                                  className='opacity-25'
-                                  cx='12'
-                                  cy='12'
-                                  r='10'
-                                  stroke='currentColor'
-                                  strokeWidth='4'
-                                ></circle>
-                                <path
-                                  className='opacity-75'
-                                  fill='currentColor'
-                                  d='m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
-                                ></path>
-                              </svg>
-                            </div>
-                          ) : (
-                            <RefreshCwIcon className='h-4 w-4' />
-                          )}
-                        </button>
+                                {isUpdating ? (
+                                  <div className='flex items-center gap-1'>
+                                    <svg
+                                      className='w-3 h-3 animate-spin'
+                                      fill='none'
+                                      viewBox='0 0 24 24'
+                                    >
+                                      <circle
+                                        className='opacity-25'
+                                        cx='12'
+                                        cy='12'
+                                        r='10'
+                                        stroke='currentColor'
+                                        strokeWidth='4'
+                                      ></circle>
+                                      <path
+                                        className='opacity-75'
+                                        fill='currentColor'
+                                        d='m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                                      ></path>
+                                    </svg>
+                                  </div>
+                                ) : (
+                                  <RefreshCwIcon className='h-4 w-4' />
+                                )}
+                              </button>
+                            )}
+                          </>
+                        )}
+
+                        {/* Show spinner during bulk update for currently updating ad */}
+                        {isBulkUpdating && isUpdating && (
+                          <div className='flex items-center justify-center w-8 h-8'>
+                            <svg
+                              className='w-4 h-4 animate-spin'
+                              fill='none'
+                              viewBox='0 0 24 24'
+                            >
+                              <circle
+                                className='opacity-25'
+                                cx='12'
+                                cy='12'
+                                r='10'
+                                stroke='currentColor'
+                                strokeWidth='4'
+                              ></circle>
+                              <path
+                                className='opacity-75'
+                                fill='currentColor'
+                                d='m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                              ></path>
+                            </svg>
+                          </div>
+                        )}
+
+                        {/* Show checkmark during bulk update for completed ad */}
+                        {isBulkUpdating && !isUpdating && isUpdatedToday && (
+                          <div className='flex items-center justify-center w-8 h-8'>
+                            <span className='text-green-600 font-semibold text-lg opacity-50'>
+                              ✓
+                            </span>
+                          </div>
+                        )}
 
                         <button
                           type='button'
