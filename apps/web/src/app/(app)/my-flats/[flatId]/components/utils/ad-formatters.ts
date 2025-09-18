@@ -190,11 +190,21 @@ export const isStatusOld = (
   updatedAt: string | Date | null | undefined,
 ): boolean => {
   if (!updatedAt) return true
-  const updated =
-    typeof updatedAt === 'string' ? new Date(updatedAt) : updatedAt
-  const sevenDaysAgo = new Date()
-  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
-  return updated < sevenDaysAgo
+
+  try {
+    const updated =
+      typeof updatedAt === 'string' ? new Date(updatedAt) : updatedAt
+
+    // Check if the date is valid
+    if (isNaN(updated.getTime())) return true
+
+    const sevenDaysAgo = new Date()
+    sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+    return updated < sevenDaysAgo
+  } catch (error) {
+    console.warn('isStatusOld: Invalid date', updatedAt, error)
+    return true
+  }
 }
 
 // Check if ad was updated today
@@ -203,13 +213,21 @@ export const isUpdatedToday = (
 ): boolean => {
   if (!updatedAt) return false
 
-  const updated =
-    typeof updatedAt === 'string' ? new Date(updatedAt) : updatedAt
-  const today = new Date()
+  try {
+    const updated =
+      typeof updatedAt === 'string' ? new Date(updatedAt) : updatedAt
+    const today = new Date()
 
-  return (
-    updated.getFullYear() === today.getFullYear() &&
-    updated.getMonth() === today.getMonth() &&
-    updated.getDate() === today.getDate()
-  )
+    // Check if the date is valid
+    if (isNaN(updated.getTime())) return false
+
+    return (
+      updated.getFullYear() === today.getFullYear() &&
+      updated.getMonth() === today.getMonth() &&
+      updated.getDate() === today.getDate()
+    )
+  } catch (error) {
+    console.warn('isUpdatedToday: Invalid date', updatedAt, error)
+    return false
+  }
 }

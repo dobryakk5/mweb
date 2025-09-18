@@ -292,7 +292,14 @@ export default function AdsTable({
                                   size: 'sm',
                                 })}
                                 disabled={isUpdating}
-                                onClick={() => onUpdateAd?.(ad.id)}
+                                onClick={() => {
+                                  console.log('Update button clicked for ad:', {
+                                    id: ad.id,
+                                    typeof_id: typeof ad.id,
+                                    ad: ad,
+                                  })
+                                  onUpdateAd?.(ad.id)
+                                }}
                               >
                                 {isUpdating ? (
                                   <div className='flex items-center gap-1'>

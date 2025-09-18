@@ -104,6 +104,10 @@ export async function createAd(data: CreateAdData) {
 }
 
 export async function updateAd(id: number, data: UpdateAdData) {
+  if (!id || id === undefined || id === null || typeof id !== 'number') {
+    throw new Error(`Invalid ad id: ${id}`)
+  }
+
   console.log(`Sending PATCH request to /ads/${id} with data:`, data)
   const response = await api.patch<Ad>(`/ads/${id}`, data)
   console.log(`PATCH response:`, response.data)
@@ -111,6 +115,10 @@ export async function updateAd(id: number, data: UpdateAdData) {
 }
 
 export async function forceUpdateAd(id: number, data: UpdateAdData) {
+  if (!id || id === undefined || id === null || typeof id !== 'number') {
+    throw new Error(`Invalid ad id: ${id}`)
+  }
+
   console.log(`Sending PUT request to /ads/${id} with data:`, data)
   const response = await api.put<Ad>(`/ads/${id}`, data)
   console.log(`PUT response:`, response.data)
@@ -118,6 +126,10 @@ export async function forceUpdateAd(id: number, data: UpdateAdData) {
 }
 
 export async function deleteAd(id: number) {
+  if (!id || id === undefined || id === null || typeof id !== 'number') {
+    throw new Error(`Invalid ad id: ${id}`)
+  }
+
   const response = await api.delete(`/ads/${id}`)
   return response.data
 }
@@ -257,6 +269,16 @@ export async function findNearbyAdsByFlat(
 
 // Python API endpoints for ad updates
 export async function updateAdStatusSingle(adId: number): Promise<Ad> {
+  // Validate adId before making API call
+  if (
+    !adId ||
+    adId === undefined ||
+    adId === null ||
+    typeof adId !== 'number'
+  ) {
+    throw new Error(`Invalid adId: ${adId}`)
+  }
+
   console.log(
     `Updating ad status via Python API single endpoint for ad ${adId}`,
   )

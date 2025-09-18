@@ -261,8 +261,34 @@ export const useFlatAdsActions = ({
       ads: any[],
       setUpdatingIds: React.Dispatch<React.SetStateAction<Set<number>>>,
     ) => {
-      // Filter ads that haven't been updated today
+      // Safety check: ensure ads is a valid array
+      if (!ads || !Array.isArray(ads)) {
+        console.warn('handleUpdateAllOldAds: ads is not a valid array', ads)
+        return
+      }
+
+      console.log(
+        'handleUpdateAllOldAds: Starting with ads:',
+        ads.map((ad) => ({
+          id: ad?.id,
+          typeof_id: typeof ad?.id,
+          from: ad?.from,
+          url: ad?.url?.substring(0, 50) + '...',
+        })),
+      )
+
+      // Filter ads that haven't been updated today - add safety checks
       const adsToUpdate = ads.filter((ad) => {
+        // Safety check: ensure ad has required properties
+        if (!ad || !ad.id) {
+          console.warn('Filtering out ad with missing/invalid id:', {
+            ad,
+            id: ad?.id,
+            typeof_id: typeof ad?.id,
+          })
+          return false
+        }
+
         const lastUpdate = ad.updatedAt
         return !isUpdatedToday(lastUpdate)
       })
@@ -308,6 +334,13 @@ export const useFlatAdsActions = ({
         // Update ads one by one to show individual progress
         for (const ad of sortedAds) {
           try {
+            // Double-check ad.id before API call
+            if (!ad.id || ad.id === undefined || ad.id === null) {
+              console.warn('Skipping ad with invalid id:', ad)
+              errorCount++
+              continue
+            }
+
             await updateAdStatusSingle(ad.id)
             successCount++
 
@@ -378,8 +411,18 @@ export const useFlatAdsActions = ({
         return
       }
 
-      // Filter ads that haven't been updated today
+      // Filter ads that haven't been updated today - add safety checks
       const adsToUpdate = ads.filter((ad) => {
+        // Safety check: ensure ad has required properties
+        if (!ad || !ad.id) {
+          console.warn('Filtering out ad with missing/invalid id:', {
+            ad,
+            id: ad?.id,
+            typeof_id: typeof ad?.id,
+          })
+          return false
+        }
+
         const lastUpdate = ad.updatedAt
         return !isUpdatedToday(lastUpdate)
       })
@@ -424,6 +467,13 @@ export const useFlatAdsActions = ({
         // Update ads one by one to show individual progress
         for (const ad of sortedAds) {
           try {
+            // Double-check ad.id before API call
+            if (!ad.id || ad.id === undefined || ad.id === null) {
+              console.warn('Skipping ad with invalid id:', ad)
+              errorCount++
+              continue
+            }
+
             await updateAdStatusSingle(ad.id)
             successCount++
 
@@ -509,6 +559,13 @@ export const useFlatAdsActions = ({
         // Update ads one by one using single endpoint for bulk update
         for (const ad of sortedAds) {
           try {
+            // Double-check ad.id before API call
+            if (!ad.id || ad.id === undefined || ad.id === null) {
+              console.warn('Skipping ad with invalid id:', ad)
+              errorCount++
+              continue
+            }
+
             await updateAdStatusSingle(ad.id)
             successCount++
 
