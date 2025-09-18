@@ -2,6 +2,19 @@
  * Utility functions for formatting ad data
  */
 
+// Clean "dirty" values that might be string "null", 0, or actually null/undefined
+export const cleanValue = (value: any): any => {
+  if (
+    value === null ||
+    value === undefined ||
+    value === 'null' ||
+    value === 0
+  ) {
+    return null
+  }
+  return value
+}
+
 // Format price to millions
 export const formatPrice = (price: number | null | undefined): string => {
   if (price === null || price === undefined) return '\u00A0'

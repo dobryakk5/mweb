@@ -67,13 +67,15 @@ export default function AdsTable({
         )
 
       case 'rooms':
-        return ad.rooms?.toString() || '\u00A0'
+        return ad.rooms && ad.rooms > 0 ? ad.rooms.toString() : '\u00A0'
 
       case 'floor':
-        return ad.floor?.toString() || '\u00A0'
+        return ad.floor && ad.floor > 0 ? ad.floor.toString() : '\u00A0'
 
       case 'totalFloors':
-        return ad.totalFloors?.toString() || '\u00A0'
+        return ad.totalFloors && ad.totalFloors > 0
+          ? ad.totalFloors.toString()
+          : '\u00A0'
 
       case 'viewsToday':
         return (
@@ -139,20 +141,31 @@ export default function AdsTable({
       case 'metroTime':
       case 'tags':
       case 'description':
-        return ad[key] || '\u00A0'
+        const value = ad[key]
+        return value && value !== 'null' ? value : '\u00A0'
 
       case 'constructionYear':
-        return ad.constructionYear?.toString() || '\u00A0'
+        return ad.constructionYear && ad.constructionYear > 0
+          ? ad.constructionYear.toString()
+          : '\u00A0'
 
       case 'ceilingHeight':
         return ad.ceilingHeight ? `${ad.ceilingHeight} м` : '\u00A0'
 
       case 'furniture':
-        if (ad.furniture === null || ad.furniture === undefined) return '\u00A0'
+        if (
+          ad.furniture === null ||
+          ad.furniture === undefined ||
+          ad.furniture === 'null'
+        )
+          return '\u00A0'
         return ad.furniture ? 'Есть' : 'Нет'
 
       default:
-        return ad[key]?.toString() || '\u00A0'
+        const defaultValue = ad[key]
+        return defaultValue && defaultValue !== 'null'
+          ? defaultValue.toString()
+          : '\u00A0'
     }
   }
 
