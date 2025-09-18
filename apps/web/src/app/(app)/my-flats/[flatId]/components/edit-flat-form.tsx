@@ -115,7 +115,7 @@ export default function EditFlatFormRefactored({
     if (ads && ads.length > 0) {
       const updatedTodayIds = new Set<number>()
       ads.forEach((ad) => {
-        if (isUpdatedToday(ad.updatedAt || ad.updated)) {
+        if (isUpdatedToday(ad.updatedAt)) {
           updatedTodayIds.add(ad.id)
         }
       })
