@@ -8,8 +8,17 @@ import AdsTable from '../shared/ads-table'
 import { MultiUpdateButtons } from '../shared/update-buttons'
 import AddAdForm from '../add-ad-form'
 import AdChangesHistory from '@/components/ad-changes-history'
-import type { ComparisonAdsBlockProps, ColumnConfig } from '../types/ads-blocks.types'
-import { formatPrice, formatDate, formatViews, formatArea, formatBoolean } from '../utils/ad-formatters'
+import type {
+  ComparisonAdsBlockProps,
+  ColumnConfig,
+} from '../types/ads-blocks.types'
+import {
+  formatPrice,
+  formatDate,
+  formatViews,
+  formatArea,
+  formatBoolean,
+} from '../utils/ad-formatters'
 
 /**
  * Block component for comparison ads (sma = 1)
@@ -24,9 +33,11 @@ export default function ComparisonAdsBlock({
   onUpdate,
   isUpdating,
   onDeleteAd,
+  onUpdateAd,
+  updatingAdIds,
   onExportToExcel,
   showAddAdForm,
-  onToggleAddAdForm
+  onToggleAddAdForm,
 }: ComparisonAdsBlockProps) {
   const getColumns = (): ColumnConfig[] => {
     if (expandedView) {
@@ -51,7 +62,7 @@ export default function ComparisonAdsBlock({
         { key: 'tags', label: 'Теги' },
         { key: 'description', label: 'Описание' },
         { key: 'status', label: 'Статус' },
-        { key: 'viewsToday', label: 'Просмотры на дату' }
+        { key: 'viewsToday', label: 'Просмотры на дату' },
       ]
     } else {
       return [
@@ -59,7 +70,7 @@ export default function ComparisonAdsBlock({
         { key: 'price', label: 'Цена' },
         { key: 'viewsToday', label: 'Просмотры сегодня' },
         { key: 'status', label: 'Статус' },
-        { key: 'updatedAt', label: 'Обновлено' }
+        { key: 'updatedAt', label: 'Обновлено' },
       ]
     }
   }
@@ -91,7 +102,7 @@ export default function ComparisonAdsBlock({
       <MultiUpdateButtons
         onUpdate={onUpdate}
         isUpdating={isUpdating}
-        label="Обновить"
+        label='Обновить'
       />
       <button
         type='button'
@@ -108,7 +119,7 @@ export default function ComparisonAdsBlock({
 
   return (
     <CollapsibleBlock
-      title="Сравнение квартир"
+      title='Сравнение квартир'
       isCollapsed={isCollapsed}
       onToggle={onToggleCollapse}
       headerActions={headerActions}
@@ -132,7 +143,8 @@ export default function ComparisonAdsBlock({
         columns={getColumns()}
         expandedView={expandedView}
         onDeleteAd={onDeleteAd}
-        updatingAdIds={new Set()}
+        onUpdateAd={onUpdateAd}
+        updatingAdIds={updatingAdIds}
         showActions={true}
         showComparison={false} // No comparison toggle in comparison block
       />

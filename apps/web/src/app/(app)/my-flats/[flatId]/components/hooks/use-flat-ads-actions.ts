@@ -1,4 +1,4 @@
-import { useCallback } from 'react'
+import React, { useCallback } from 'react'
 import { toast } from 'sonner'
 import type { UserFlat } from '@acme/db/types'
 import {
@@ -10,8 +10,11 @@ import {
   createAdFromSimilar,
   createAdFromSimilarWithFrom,
   toggleAdComparison,
-  type SimilarAd
+  updateAdStatusSingle,
+  updateAdStatusExtended,
+  type SimilarAd,
 } from '@/domains/ads'
+import { isStatusOld } from '../utils/ad-formatters'
 import { useDeleteAd } from '@/domains/ads/hooks/mutations'
 import { useDeleteFlat } from '@/domains/flats/hooks/mutations'
 
@@ -24,35 +27,49 @@ type AdActionHookProps = {
 /**
  * Hook for ad-related actions
  */
-export const useFlatAdsActions = ({ flat, refetch, refetchNearbyAds }: AdActionHookProps) => {
+export const useFlatAdsActions = ({
+  flat,
+  refetch,
+  refetchNearbyAds,
+}: AdActionHookProps) => {
   const { mutateAsync: deleteAd } = useDeleteAd()
   const { mutateAsync: deleteFlat } = useDeleteFlat(flat?.id || 0)
 
   // Toggle comparison status for an ad
-  const handleToggleComparison = useCallback(async (adId: number, inComparison: boolean) => {
-    try {
-      await toggleAdComparison(adId, inComparison)
-      await refetch()
-      toast.success(inComparison ? 'Объявление добавлено в сравнение' : 'Объявление убрано из сравнения')
-    } catch (error) {
-      console.error('Ошибка при изменении статуса сравнения:', error)
-      toast.error('Ошибка при изменении статуса сравнения')
-    }
-  }, [refetch])
+  const handleToggleComparison = useCallback(
+    async (adId: number, inComparison: boolean) => {
+      try {
+        await toggleAdComparison(adId, inComparison)
+        await refetch()
+        toast.success(
+          inComparison
+            ? 'Объявление добавлено в сравнение'
+            : 'Объявление убрано из сравнения',
+        )
+      } catch (error) {
+        console.error('Ошибка при изменении статуса сравнения:', error)
+        toast.error('Ошибка при изменении статуса сравнения')
+      }
+    },
+    [refetch],
+  )
 
   // Delete an ad
-  const handleDeleteAd = useCallback(async (adId: number) => {
-    if (window.confirm('Вы уверены, что хотите удалить это объявление?')) {
-      try {
-        await deleteAd(adId)
-        await refetch()
-        toast.success('Объявление удалено')
-      } catch (error) {
-        console.error('Ошибка удаления объявления:', error)
-        toast.error('Ошибка при удалении объявления')
+  const handleDeleteAd = useCallback(
+    async (adId: number) => {
+      if (window.confirm('Вы уверены, что хотите удалить это объявление?')) {
+        try {
+          await deleteAd(adId)
+          await refetch()
+          toast.success('Объявление удалено')
+        } catch (error) {
+          console.error('Ошибка удаления объявления:', error)
+          toast.error('Ошибка при удалении объявления')
+        }
       }
-    }
-  }, [deleteAd, refetch])
+    },
+    [deleteAd, refetch],
+  )
 
   // Delete the flat
   const handleDeleteFlat = useCallback(async () => {
@@ -61,7 +78,11 @@ export const useFlatAdsActions = ({ flat, refetch, refetchNearbyAds }: AdActionH
       return
     }
 
-    if (window.confirm('Вы уверены, что хотите удалить эту квартиру? Вся статистика по объявлениям будет удалена безвозвратно.')) {
+    if (
+      window.confirm(
+        'Вы уверены, что хотите удалить эту квартиру? Вся статистика по объявлениям будет удалена безвозвратно.',
+      )
+    ) {
       try {
         await deleteFlat()
       } catch (error) {
@@ -72,135 +93,307 @@ export const useFlatAdsActions = ({ flat, refetch, refetchNearbyAds }: AdActionH
   }, [deleteFlat, flat])
 
   // Add an ad to comparison from nearby ads or other sources
-  const handleAddToComparison = useCallback(async (adData: any) => {
-    if (!flat) {
-      toast.error('Квартира не найдена')
-      return
-    }
-
-    try {
-      // Create ad object for adding to database
-      const adToAdd = {
-        flatId: flat.id,
-        url: adData.url,
-        address: flat.address, // использем адрес квартиры
-        price: adData.price ? parseFloat(adData.price.toString().replace(/[^\d.]/g, '')) : 0,
-        rooms: adData.rooms || flat.rooms, // используем количество комнат из данных или из квартиры
-        from: 2, // добавлено вручную
-        sma: 1 // добавляем в сравнение
+  const handleAddToComparison = useCallback(
+    async (adData: any) => {
+      if (!flat) {
+        toast.error('Квартира не найдена')
+        return
       }
 
-      // Add ad through API
-      await createAd(adToAdd)
+      try {
+        // Create ad object for adding to database
+        const adToAdd = {
+          flatId: flat.id,
+          url: adData.url,
+          address: flat.address, // использем адрес квартиры
+          price: adData.price
+            ? parseFloat(adData.price.toString().replace(/[^\d.]/g, ''))
+            : 0,
+          rooms: adData.rooms || flat.rooms, // используем количество комнат из данных или из квартиры
+          from: 2, // добавлено вручную
+          sma: 1, // добавляем в сравнение
+        }
 
-      // Refresh ad list to reflect changes
-      await refetch()
+        // Add ad through API
+        await createAd(adToAdd)
 
-      toast.success('Объявление добавлено в сравнение')
-    } catch (error) {
-      console.error('Ошибка добавления в сравнение:', error)
-      toast.error('Ошибка при добавлении в сравнение')
-    }
-  }, [flat, refetch])
+        // Refresh ad list to reflect changes
+        await refetch()
+
+        toast.success('Объявление добавлено в сравнение')
+      } catch (error) {
+        console.error('Ошибка добавления в сравнение:', error)
+        toast.error('Ошибка при добавлении в сравнение')
+      }
+    },
+    [flat, refetch],
+  )
 
   // Update single ad from specific source
-  const handleUpdateAdFromSource = useCallback(async (adId: number, source: string) => {
-    try {
-      await forceUpdateAd(adId, { source } as any) // Type assertion for compatibility
-      await refetch()
-      toast.success(`Объявление обновлено из ${source}`)
-    } catch (error) {
-      console.error(`Ошибка обновления объявления из ${source}:`, error)
-      toast.error(`Ошибка при обновлении из ${source}`)
-    }
-  }, [refetch])
+  const handleUpdateAdFromSource = useCallback(
+    async (adId: number, source: string) => {
+      try {
+        await updateAdStatusSingle(adId)
+        await refetch()
+        toast.success(`Объявление обновлено из ${source}`)
+      } catch (error) {
+        console.error(`Ошибка обновления объявления из ${source}:`, error)
+        toast.error(`Ошибка при обновлении из ${source}`)
+      }
+    },
+    [refetch],
+  )
 
   // Find and add similar ads automatically
-  const handleAutoFindSimilar = useCallback(async (ads: any[], setSimilarAds: (ads: SimilarAd[]) => void, setIsLoading: (loading: boolean) => void) => {
-    if (!flat) {
-      toast.error('Квартира не найдена')
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const similar = await findSimilarAdsByFlat(flat.id)
-      setSimilarAds(similar)
-
-      // Filter out already existing ads
-      const existingUrls = new Set(ads.map(ad => ad.url))
-      const newAds = similar.filter(ad => !existingUrls.has(ad.url))
-
-      if (newAds.length === 0) {
-        toast.info('Новых похожих объявлений не найдено')
+  const handleAutoFindSimilar = useCallback(
+    async (
+      ads: any[],
+      setSimilarAds: (ads: SimilarAd[]) => void,
+      setIsLoading: (loading: boolean) => void,
+    ) => {
+      if (!flat) {
+        toast.error('Квартира не найдена')
         return
       }
 
-      // Add new ads to database
-      let addedCount = 0
-      let skippedCount = 0
+      setIsLoading(true)
+      try {
+        const similar = await findSimilarAdsByFlat(flat.id)
+        setSimilarAds(similar)
 
-      for (const similarAd of newAds) {
-        try {
-          await createAdFromSimilar(similarAd, flat.id, flat.address) // Pass flat address
-          addedCount++
-        } catch (error) {
-          console.error('Ошибка добавления похожего объявления:', error)
-          skippedCount++
+        // Filter out already existing ads
+        const existingUrls = new Set(ads.map((ad) => ad.url))
+        const newAds = similar.filter((ad) => !existingUrls.has(ad.url))
+
+        if (newAds.length === 0) {
+          toast.info('Новых похожих объявлений не найдено')
+          return
         }
+
+        // Add new ads to database
+        let addedCount = 0
+        let skippedCount = 0
+
+        for (const similarAd of newAds) {
+          try {
+            await createAdFromSimilar(similarAd, flat.id, flat.address) // Pass flat address
+            addedCount++
+          } catch (error) {
+            console.error('Ошибка добавления похожего объявления:', error)
+            skippedCount++
+          }
+        }
+
+        const message =
+          skippedCount > 0
+            ? `Найдено ${similar.length} похожих объявлений, добавлено ${addedCount}, пропущено ${skippedCount} дубликатов`
+            : `Найдено ${similar.length} похожих объявлений, добавлено ${addedCount} в таблицу`
+
+        toast.success(message)
+
+        // Refresh ads list
+        await refetch()
+      } catch (error) {
+        console.error('Ошибка автопоиска похожих объявлений:', error)
+        toast.error('Ошибка при поиске похожих объявлений')
+      } finally {
+        setIsLoading(false)
       }
-
-      const message = skippedCount > 0
-        ? `Найдено ${similar.length} похожих объявлений, добавлено ${addedCount}, пропущено ${skippedCount} дубликатов`
-        : `Найдено ${similar.length} похожих объявлений, добавлено ${addedCount} в таблицу`
-
-      toast.success(message)
-
-      // Refresh ads list
-      await refetch()
-    } catch (error) {
-      console.error('Ошибка автопоиска похожих объявлений:', error)
-      toast.error('Ошибка при поиске похожих объявлений')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [flat, refetch])
+    },
+    [flat, refetch],
+  )
 
   // Find broader ads by address
-  const handleFindBroaderAds = useCallback(async (setIsLoading: (loading: boolean) => void) => {
-    if (!flat) {
-      toast.error('Квартира не найдена')
-      return
-    }
-
-    setIsLoading(true)
-    try {
-      const broaderAds = await findBroaderAdsByAddress(flat.id)
-
-      if (broaderAds.length === 0) {
-        toast.info('Объявления по адресу не найдены')
+  const handleFindBroaderAds = useCallback(
+    async (setIsLoading: (loading: boolean) => void) => {
+      if (!flat) {
+        toast.error('Квартира не найдена')
         return
       }
 
-      let addedCount = 0
-      for (const broaderAd of broaderAds) {
-        try {
-          await createAdFromSimilar(broaderAd, flat.id, flat.address) // Pass flat address
-          addedCount++
-        } catch (error) {
-          console.error('Ошибка добавления объявления по адресу:', error)
+      setIsLoading(true)
+      try {
+        const broaderAds = await findBroaderAdsByAddress(flat.id)
+
+        if (broaderAds.length === 0) {
+          toast.info('Объявления по адресу не найдены')
+          return
         }
+
+        let addedCount = 0
+        for (const broaderAd of broaderAds) {
+          try {
+            await createAdFromSimilar(broaderAd, flat.id, flat.address) // Pass flat address
+            addedCount++
+          } catch (error) {
+            console.error('Ошибка добавления объявления по адресу:', error)
+          }
+        }
+
+        toast.success(
+          `Найдено ${broaderAds.length} объявлений, добавлено ${addedCount}`,
+        )
+        await refetch()
+      } catch (error) {
+        console.error('Ошибка поиска объявлений по адресу:', error)
+        toast.error('Ошибка при поиске объявлений по адресу')
+      } finally {
+        setIsLoading(false)
+      }
+    },
+    [flat, refetch],
+  )
+
+  // Update all ads with old status (prioritize Cian)
+  const handleUpdateAllOldAds = useCallback(
+    async (
+      ads: any[],
+      setUpdatingIds: React.Dispatch<React.SetStateAction<Set<number>>>,
+    ) => {
+      const oldAds = ads.filter((ad) => isStatusOld(ad.updatedAt || ad.updated))
+
+      if (oldAds.length === 0) {
+        toast.info('Все объявления имеют актуальный статус')
+        return
       }
 
-      toast.success(`Найдено ${broaderAds.length} объявлений, добавлено ${addedCount}`)
-      await refetch()
-    } catch (error) {
-      console.error('Ошибка поиска объявлений по адресу:', error)
-      toast.error('Ошибка при поиске объявлений по адресу')
-    } finally {
-      setIsLoading(false)
-    }
-  }, [flat, refetch])
+      // Sort ads by priority: Cian first, then others
+      const sortedAds = oldAds.sort((a, b) => {
+        const aIsCian = a.url?.includes('cian.ru') || false
+        const bIsCian = b.url?.includes('cian.ru') || false
+        if (aIsCian && !bIsCian) return -1
+        if (!aIsCian && bIsCian) return 1
+        return 0
+      })
+
+      const updatingIds = new Set(sortedAds.map((ad) => ad.id))
+      setUpdatingIds(updatingIds)
+
+      try {
+        let successCount = 0
+        let errorCount = 0
+
+        // Update ads one by one to show individual progress
+        for (const ad of sortedAds) {
+          try {
+            await updateAdStatusSingle(ad.id)
+            successCount++
+
+            // Remove from updating set as each completes
+            setUpdatingIds((prev) => {
+              const newSet = new Set(prev)
+              newSet.delete(ad.id)
+              return newSet
+            })
+
+            // Small delay to show progress
+            await new Promise((resolve) => setTimeout(resolve, 100))
+          } catch (error) {
+            console.error(`Ошибка обновления объявления ${ad.id}:`, error)
+            errorCount++
+          }
+        }
+
+        await refetch()
+
+        if (errorCount === 0) {
+          toast.success(`Обновлено ${successCount} объявлений`)
+        } else {
+          toast.warning(
+            `Обновлено ${successCount} объявлений, ошибок: ${errorCount}`,
+          )
+        }
+      } catch (error) {
+        console.error('Ошибка массового обновления:', error)
+        toast.error('Ошибка при обновлении объявлений')
+      } finally {
+        setUpdatingIds(new Set())
+      }
+    },
+    [refetch],
+  )
+
+  // Update single ad for comparison block (extended endpoint)
+  const handleUpdateAdExtended = useCallback(
+    async (adId: number) => {
+      try {
+        await updateAdStatusExtended(adId)
+        await refetch()
+        toast.success('Объявление обновлено с расширенными данными')
+      } catch (error) {
+        console.error('Ошибка расширенного обновления объявления:', error)
+        toast.error('Ошибка при расширенном обновлении')
+      }
+    },
+    [refetch],
+  )
+
+  // Update all ads in comparison block (single endpoint for bulk)
+  const handleUpdateAllComparisonAds = useCallback(
+    async (
+      ads: any[],
+      setUpdatingIds: React.Dispatch<React.SetStateAction<Set<number>>>,
+    ) => {
+      if (ads.length === 0) {
+        toast.info('Нет объявлений для обновления')
+        return
+      }
+
+      // Sort ads by priority: Cian first, then others
+      const sortedAds = ads.sort((a, b) => {
+        const aIsCian = a.url?.includes('cian.ru') || false
+        const bIsCian = b.url?.includes('cian.ru') || false
+        if (aIsCian && !bIsCian) return -1
+        if (!aIsCian && bIsCian) return 1
+        return 0
+      })
+
+      const updatingIds = new Set(sortedAds.map((ad) => ad.id))
+      setUpdatingIds(updatingIds)
+
+      try {
+        let successCount = 0
+        let errorCount = 0
+
+        // Update ads one by one using single endpoint for bulk update
+        for (const ad of sortedAds) {
+          try {
+            await updateAdStatusSingle(ad.id)
+            successCount++
+
+            // Remove from updating set as each completes
+            setUpdatingIds((prev) => {
+              const newSet = new Set(prev)
+              newSet.delete(ad.id)
+              return newSet
+            })
+
+            // Small delay to show progress
+            await new Promise((resolve) => setTimeout(resolve, 100))
+          } catch (error) {
+            console.error(`Ошибка обновления объявления ${ad.id}:`, error)
+            errorCount++
+          }
+        }
+
+        await refetch()
+
+        if (errorCount === 0) {
+          toast.success(`Обновлено ${successCount} объявлений в сравнении`)
+        } else {
+          toast.warning(
+            `Обновлено ${successCount} объявлений, ошибок: ${errorCount}`,
+          )
+        }
+      } catch (error) {
+        console.error('Ошибка массового обновления сравнения:', error)
+        toast.error('Ошибка при обновлении объявлений сравнения')
+      } finally {
+        setUpdatingIds(new Set())
+      }
+    },
+    [refetch],
+  )
 
   return {
     handleToggleComparison,
@@ -208,7 +401,10 @@ export const useFlatAdsActions = ({ flat, refetch, refetchNearbyAds }: AdActionH
     handleDeleteFlat,
     handleAddToComparison,
     handleUpdateAdFromSource,
+    handleUpdateAdExtended,
     handleAutoFindSimilar,
-    handleFindBroaderAds
+    handleFindBroaderAds,
+    handleUpdateAllOldAds,
+    handleUpdateAllComparisonAds,
   }
 }

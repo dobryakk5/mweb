@@ -60,6 +60,8 @@ export type FlatAdsBlockProps = BaseBlockProps & {
   updatingAdIds: Set<number>
   onFindSimilar: () => Promise<void>
   isLoadingSimilar: boolean
+  onUpdateAllOld: () => Promise<void>
+  isUpdatingAllOld: boolean
 }
 
 // House ads block specific types
@@ -91,6 +93,8 @@ export type ComparisonAdsBlockProps = BaseBlockProps & {
   onUpdate: () => Promise<void>
   isUpdating: boolean
   onDeleteAd: (adId: number) => Promise<void>
+  onUpdateAd: (adId: number) => Promise<void>
+  updatingAdIds: Set<number>
   onExportToExcel: () => void
   showAddAdForm: boolean
   onToggleAddAdForm: () => void
@@ -100,25 +104,25 @@ export type ComparisonAdsBlockProps = BaseBlockProps & {
 export type ExcelExportData = {
   URL: string
   'Цена, млн': string
-  'Комнаты': number
+  Комнаты: number
   'Общая площадь': string
   'Жилая площадь': string
   'Площадь кухни': string
-  'Этаж': string
+  Этаж: string
   'Всего этажей': string
-  'Санузел': string
-  'Балкон': string
-  'Ремонт': string
-  'Мебель': string
+  Санузел: string
+  Балкон: string
+  Ремонт: string
+  Мебель: string
   'Год постройки': string
   'Тип дома': string
   'Высота потолков': string
-  'Метро': string
+  Метро: string
   'Время до метро': string
-  'Теги': string
-  'Описание': string
+  Теги: string
+  Описание: string
   'Просмотры сегодня': string
-  'Обновлено': string
+  Обновлено: string
 }
 
 // Source types for ads

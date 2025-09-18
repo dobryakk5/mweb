@@ -13,7 +13,7 @@ export function UpdateButton({
   children,
   variant = 'outline',
   size = 'sm',
-  disabled = false
+  disabled = false,
 }: UpdateButtonProps) {
   return (
     <button
@@ -25,8 +25,19 @@ export function UpdateButton({
       {isLoading ? (
         <div className='flex items-center gap-2'>
           <svg className='w-4 h-4 animate-spin' fill='none' viewBox='0 0 24 24'>
-            <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4'></circle>
-            <path className='opacity-75' fill='currentColor' d='m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
+            <circle
+              className='opacity-25'
+              cx='12'
+              cy='12'
+              r='10'
+              stroke='currentColor'
+              strokeWidth='4'
+            ></circle>
+            <path
+              className='opacity-75'
+              fill='currentColor'
+              d='m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+            ></path>
           </svg>
           Обновление...
         </div>
@@ -53,7 +64,7 @@ export function MultiUpdateButtons({
   isUpdating,
   disabled = false,
   showRefreshIcon = true,
-  label = 'Обновить'
+  label = 'Обновить',
 }: MultiUpdateButtonsProps) {
   return (
     <UpdateButton
@@ -62,7 +73,9 @@ export function MultiUpdateButtons({
       disabled={disabled}
       variant='default'
     >
-      {showRefreshIcon && !isUpdating && <RefreshCwIcon className='w-4 h-4 mr-2' />}
+      {showRefreshIcon && !isUpdating && (
+        <RefreshCwIcon className='w-4 h-4 mr-2' />
+      )}
       {label}
     </UpdateButton>
   )
@@ -80,7 +93,7 @@ type UpdateAllSourcesButtonProps = {
 export function UpdateAllSourcesButton({
   onUpdateAll,
   isUpdating,
-  disabled = false
+  disabled = false,
 }: UpdateAllSourcesButtonProps) {
   return (
     <UpdateButton
@@ -109,7 +122,7 @@ export function FindSimilarButton({
   onFind,
   isLoading,
   disabled = false,
-  label = 'Автопоиск'
+  label = 'Автопоиск',
 }: FindSimilarButtonProps) {
   return (
     <UpdateButton
@@ -135,7 +148,7 @@ type FindByAddressButtonProps = {
 export function FindByAddressButton({
   onFind,
   isLoading,
-  disabled = false
+  disabled = false,
 }: FindByAddressButtonProps) {
   return (
     <UpdateButton
@@ -161,7 +174,7 @@ type RefreshNearbyButtonProps = {
 export function RefreshNearbyButton({
   onRefresh,
   isLoading,
-  disabled = false
+  disabled = false,
 }: RefreshNearbyButtonProps) {
   return (
     <UpdateButton
@@ -171,6 +184,33 @@ export function RefreshNearbyButton({
       variant='outline'
     >
       {isLoading ? 'Поиск...' : 'Искать еще'}
+    </UpdateButton>
+  )
+}
+
+/**
+ * Update all old ads button
+ */
+type UpdateAllOldAdsButtonProps = {
+  onUpdateAllOld: () => Promise<void>
+  isUpdating: boolean
+  disabled?: boolean
+}
+
+export function UpdateAllOldAdsButton({
+  onUpdateAllOld,
+  isUpdating,
+  disabled = false,
+}: UpdateAllOldAdsButtonProps) {
+  return (
+    <UpdateButton
+      isLoading={isUpdating}
+      onClick={onUpdateAllOld}
+      disabled={disabled}
+      variant='secondary'
+    >
+      {!isUpdating && <RefreshCwIcon className='w-4 h-4 mr-2' />}
+      Обновить старые
     </UpdateButton>
   )
 }

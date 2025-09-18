@@ -9,7 +9,9 @@ export const formatPrice = (price: number | null | undefined): string => {
 }
 
 // Format date to Russian locale
-export const formatDate = (dateStr: string | Date | null | undefined): string => {
+export const formatDate = (
+  dateStr: string | Date | null | undefined,
+): string => {
   if (!dateStr) return '—'
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
   return date.toLocaleDateString('ru-RU')
@@ -22,7 +24,8 @@ export const getDomainFromUrl = (url: string): string => {
 
     if (domain.includes('cian.ru')) return 'cian'
     if (domain.includes('avito.ru')) return 'avito'
-    if (domain.includes('yandex.ru') || domain.includes('realty.yandex.ru')) return 'yandex'
+    if (domain.includes('yandex.ru') || domain.includes('realty.yandex.ru'))
+      return 'yandex'
 
     // Fallback to domain without www
     return domain.replace('www.', '')
@@ -32,7 +35,9 @@ export const getDomainFromUrl = (url: string): string => {
 }
 
 // Format URL for display with proper domain names
-export const formatUrlForDisplay = (url: string): { domain: string; url: string } => {
+export const formatUrlForDisplay = (
+  url: string,
+): { domain: string; url: string } => {
   const domain = getDomainFromUrl(url)
   return { domain, url }
 }
@@ -44,7 +49,10 @@ export const formatViews = (views: number | null | undefined): string => {
 }
 
 // Format floor display
-export const formatFloor = (floor: number | null | undefined, totalFloors?: number | null): string => {
+export const formatFloor = (
+  floor: number | null | undefined,
+  totalFloors?: number | null,
+): string => {
   if (floor === null || floor === undefined) return '—'
   if (totalFloors) {
     return `${floor}/${totalFloors}`
@@ -59,23 +67,34 @@ export const formatArea = (area: number | null | undefined): string => {
 }
 
 // Format boolean fields to readable text
-export const formatBoolean = (value: boolean | null | undefined, trueText = 'Да', falseText = 'Нет'): string => {
+export const formatBoolean = (
+  value: boolean | null | undefined,
+  trueText = 'Да',
+  falseText = 'Нет',
+): string => {
   if (value === null || value === undefined) return '—'
   return value ? trueText : falseText
 }
 
 // Format person type
-export const formatPersonType = (personType: number | null | undefined): string => {
+export const formatPersonType = (
+  personType: number | null | undefined,
+): string => {
   if (personType === null || personType === undefined) return '—'
   switch (personType) {
-    case 3: return 'собственник'
-    case 2: return 'агентство'
-    default: return 'неизвестно'
+    case 3:
+      return 'собственник'
+    case 2:
+      return 'агентство'
+    default:
+      return 'неизвестно'
   }
 }
 
 // Format metro time
-export const formatMetroTime = (time: string | number | null | undefined): string => {
+export const formatMetroTime = (
+  time: string | number | null | undefined,
+): string => {
   if (!time) return '—'
   if (typeof time === 'number') {
     return `${time} мин`
@@ -85,7 +104,10 @@ export const formatMetroTime = (time: string | number | null | undefined): strin
 }
 
 // Truncate text with ellipsis
-export const truncateText = (text: string | null | undefined, maxLength: number): string => {
+export const truncateText = (
+  text: string | null | undefined,
+  maxLength: number,
+): string => {
   if (!text) return '—'
   if (text.length <= maxLength) return text
   return text.substring(0, maxLength) + '...'
@@ -113,13 +135,29 @@ export const formatRooms = (rooms: number | null | undefined): string => {
 }
 
 // Format ceiling height
-export const formatCeilingHeight = (height: number | string | null | undefined): string => {
+export const formatCeilingHeight = (
+  height: number | string | null | undefined,
+): string => {
   if (!height) return '—'
   return `${height} м`
 }
 
 // Format construction year
-export const formatConstructionYear = (year: number | string | null | undefined): string => {
+export const formatConstructionYear = (
+  year: number | string | null | undefined,
+): string => {
   if (!year) return '—'
   return year.toString()
+}
+
+// Check if status is older than 7 days
+export const isStatusOld = (
+  updatedAt: string | Date | null | undefined,
+): boolean => {
+  if (!updatedAt) return true
+  const updated =
+    typeof updatedAt === 'string' ? new Date(updatedAt) : updatedAt
+  const sevenDaysAgo = new Date()
+  sevenDaysAgo.setDate(sevenDaysAgo.getDate() - 7)
+  return updated < sevenDaysAgo
 }

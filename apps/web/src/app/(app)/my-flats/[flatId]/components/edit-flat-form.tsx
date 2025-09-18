@@ -13,7 +13,12 @@ import Page from '@acme/ui/components/page'
 import { ArrowLeftIcon } from '@acme/ui/components/icon'
 
 import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
-import { useAds, useNearbyAdsFromFindAds, useFlatAdsFromFindAds, useBroaderAdsFromFindAds } from '@/domains/ads'
+import {
+  useAds,
+  useNearbyAdsFromFindAds,
+  useFlatAdsFromFindAds,
+  useBroaderAdsFromFindAds,
+} from '@/domains/ads'
 import HookFormDevtool from '@/components/hookform-devtool'
 
 // Import our refactored components
@@ -28,7 +33,11 @@ import { useCollapseState } from './hooks/use-collapse-state'
 import { useFlatAdsState } from './hooks/use-flat-ads-state'
 import { useFlatAdsActions } from './hooks/use-flat-ads-actions'
 import { useExcelExport } from './hooks/use-excel-export'
-import { formSchema, type FormValues, type EditFlatFormProps } from './types/flat-form.types'
+import {
+  formSchema,
+  type FormValues,
+  type EditFlatFormProps,
+} from './types/flat-form.types'
 
 export default function EditFlatFormRefactored({
   flat,
@@ -57,9 +66,15 @@ export default function EditFlatFormRefactored({
 
   // Data fetching hooks
   const { data: ads = [], refetch } = useAds({ flatId: flat?.id })
-  const { data: flatAdsFromFindAds = [], refetch: refetchFlatAds } = useFlatAdsFromFindAds(flat?.id || 0)
-  const { data: broaderAdsFromFindAds = [], refetch: refetchBroaderAds } = useBroaderAdsFromFindAds(flat?.id || 0)
-  const { data: nearbyAdsFromFindAds = [], refetch: refetchNearbyAds, isLoading: isLoadingNearbyAds } = useNearbyAdsFromFindAds(flat?.id || 0)
+  const { data: flatAdsFromFindAds = [], refetch: refetchFlatAds } =
+    useFlatAdsFromFindAds(flat?.id || 0)
+  const { data: broaderAdsFromFindAds = [], refetch: refetchBroaderAds } =
+    useBroaderAdsFromFindAds(flat?.id || 0)
+  const {
+    data: nearbyAdsFromFindAds = [],
+    refetch: refetchNearbyAds,
+    isLoading: isLoadingNearbyAds,
+  } = useNearbyAdsFromFindAds(flat?.id || 0)
 
   // Actions hook
   const actions = useFlatAdsActions({ flat, refetch, refetchNearbyAds })
@@ -91,9 +106,9 @@ export default function EditFlatFormRefactored({
   }, [flat, isLoading, form])
 
   // Separate ads by type
-  const flatAds = ads.filter(ad => ad.from === 1) // По этой квартире (найдено автоматически)
-  const otherAds = ads.filter(ad => ad.from === 2) // Другие объявления (добавлено вручную)
-  const comparisonAds = ads.filter(ad => ad.sma === 1) // Сравнение квартир (отмеченные для сравнения)
+  const flatAds = ads.filter((ad) => ad.from === 1) // По этой квартире (найдено автоматически)
+  const otherAds = ads.filter((ad) => ad.from === 2) // Другие объявления (добавлено вручную)
+  const comparisonAds = ads.filter((ad) => ad.sma === 1) // Сравнение квартир (отмеченные для сравнения)
 
   // Form submission handlers
   const onSubmit = async (data: FormValues) => {
@@ -138,7 +153,10 @@ export default function EditFlatFormRefactored({
   const handleUpdateComparisonAds = async () => {
     state.setComparisonUpdateStates(true, true, true)
     try {
-      // Update logic here
+      await actions.handleUpdateAllComparisonAds(
+        comparisonAds,
+        state.setUpdatingAdIds,
+      )
       await refetch()
     } finally {
       state.setComparisonUpdateStates(false, false, false)
@@ -149,13 +167,27 @@ export default function EditFlatFormRefactored({
     await actions.handleAutoFindSimilar(
       flatAdsFromFindAds,
       state.setSimilarAds,
-      state.setIsLoadingSimilar
+      state.setIsLoadingSimilar,
     )
   }
 
   const handleFindBroaderAds = async () => {
     await actions.handleFindBroaderAds(state.setIsLoadingSimilar)
     await refetchBroaderAds() // Refresh broader ads data after finding new ones
+  }
+
+  const handleUpdateAllOldAds = async () => {
+    state.setIsUpdatingAllOldAds(true)
+    try {
+      await actions.handleUpdateAllOldAds(
+        flatAdsFromFindAds,
+        state.setUpdatingAdIds,
+      )
+      await refetch()
+      await refetchFlatAds()
+    } finally {
+      state.setIsUpdatingAllOldAds(false)
+    }
   }
 
   return (
@@ -189,13 +221,21 @@ export default function EditFlatFormRefactored({
             isCollapsed={isCollapsed('flatAds')}
             onToggleCollapse={() => toggleBlock('flatAds')}
             onUpdate={handleUpdateFlatAds}
-            isUpdating={state.updateStates.flatCian || state.updateStates.flatAvito || state.updateStates.flatYandex}
+            isUpdating={
+              state.updateStates.flatCian ||
+              state.updateStates.flatAvito ||
+              state.updateStates.flatYandex
+            }
             onDeleteAd={actions.handleDeleteAd}
             onToggleComparison={actions.handleToggleComparison}
-            onUpdateAd={(adId) => actions.handleUpdateAdFromSource(adId, 'cian')}
+            onUpdateAd={(adId) =>
+              actions.handleUpdateAdFromSource(adId, 'cian')
+            }
             updatingAdIds={state.updatingAdIds}
             onFindSimilar={handleAutoFindSimilar}
             isLoadingSimilar={state.isLoadingSimilar}
+            onUpdateAllOld={handleUpdateAllOldAds}
+            isUpdatingAllOld={state.isUpdatingAllOldAds}
           />
 
           {/* House Ads Block */}
@@ -205,7 +245,11 @@ export default function EditFlatFormRefactored({
             isCollapsed={isCollapsed('houseAds')}
             onToggleCollapse={() => toggleBlock('houseAds')}
             onUpdate={handleUpdateHouseAds}
-            isUpdating={state.updateStates.houseCian || state.updateStates.houseAvito || state.updateStates.houseYandex}
+            isUpdating={
+              state.updateStates.houseCian ||
+              state.updateStates.houseAvito ||
+              state.updateStates.houseYandex
+            }
             onDeleteAd={actions.handleDeleteAd}
             onToggleComparison={actions.handleToggleComparison}
             onFindSimilar={handleFindBroaderAds}
@@ -218,7 +262,9 @@ export default function EditFlatFormRefactored({
             nearbyAds={nearbyAdsFromFindAds}
             isCollapsed={isCollapsed('nearbyAds')}
             onToggleCollapse={() => toggleBlock('nearbyAds')}
-            onRefetch={async () => { await refetchNearbyAds() }}
+            onRefetch={async () => {
+              await refetchNearbyAds()
+            }}
             isLoading={isLoadingNearbyAds}
             onAddToComparison={actions.handleAddToComparison}
             onToggleComparison={actions.handleToggleComparison}
@@ -230,15 +276,25 @@ export default function EditFlatFormRefactored({
             flat={flat!}
             ads={comparisonAds}
             expandedView={state.expandedView}
-            onToggleExpandedView={() => state.setExpandedView(!state.expandedView)}
+            onToggleExpandedView={() =>
+              state.setExpandedView(!state.expandedView)
+            }
             isCollapsed={isCollapsed('comparison')}
             onToggleCollapse={() => toggleBlock('comparison')}
             onUpdate={handleUpdateComparisonAds}
-            isUpdating={state.updateStates.comparisonCian || state.updateStates.comparisonAvito || state.updateStates.comparisonYandex}
+            isUpdating={
+              state.updateStates.comparisonCian ||
+              state.updateStates.comparisonAvito ||
+              state.updateStates.comparisonYandex
+            }
             onDeleteAd={actions.handleDeleteAd}
+            onUpdateAd={actions.handleUpdateAdExtended}
+            updatingAdIds={state.updatingAdIds}
             onExportToExcel={handleExportComparison}
             showAddAdForm={state.showAddAdForm}
-            onToggleAddAdForm={() => state.setShowAddAdForm(!state.showAddAdForm)}
+            onToggleAddAdForm={() =>
+              state.setShowAddAdForm(!state.showAddAdForm)
+            }
           />
         </Page.Content>
       </Page>

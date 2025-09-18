@@ -2,7 +2,11 @@
 
 import CollapsibleBlock from '../shared/collapsible-block'
 import AdsTable from '../shared/ads-table'
-import { MultiUpdateButtons, FindSimilarButton } from '../shared/update-buttons'
+import {
+  MultiUpdateButtons,
+  FindSimilarButton,
+  UpdateAllOldAdsButton,
+} from '../shared/update-buttons'
 import type { FlatAdsBlockProps, ColumnConfig } from '../types/ads-blocks.types'
 
 /**
@@ -20,7 +24,9 @@ export default function FlatAdsBlock({
   onUpdateAd,
   updatingAdIds,
   onFindSimilar,
-  isLoadingSimilar
+  isLoadingSimilar,
+  onUpdateAllOld,
+  isUpdatingAllOld,
 }: FlatAdsBlockProps) {
   const columns: ColumnConfig[] = [
     { key: 'url', label: 'URL', className: 'w-40' },
@@ -30,7 +36,7 @@ export default function FlatAdsBlock({
     { key: 'area', label: 'Площадь' },
     { key: 'kitchenArea', label: 'Кухня' },
     { key: 'status', label: 'Статус' },
-    { key: 'updatedAt', label: 'Обновлено' }
+    { key: 'updatedAt', label: 'Обновлено' },
   ]
 
   const headerActions = (
@@ -38,19 +44,23 @@ export default function FlatAdsBlock({
       <MultiUpdateButtons
         onUpdate={onUpdate}
         isUpdating={isUpdating}
-        label="Обновить все источники"
+        label='Обновить все источники'
+      />
+      <UpdateAllOldAdsButton
+        onUpdateAllOld={onUpdateAllOld}
+        isUpdating={isUpdatingAllOld}
       />
       <FindSimilarButton
         onFind={onFindSimilar}
         isLoading={isLoadingSimilar}
-        label="Автопоиск"
+        label='Автопоиск'
       />
     </>
   )
 
   return (
     <CollapsibleBlock
-      title="Объявления по этой квартире"
+      title='Объявления по этой квартире'
       isCollapsed={isCollapsed}
       onToggle={onToggleCollapse}
       headerActions={headerActions}

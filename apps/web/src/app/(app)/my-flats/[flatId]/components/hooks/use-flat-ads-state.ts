@@ -29,12 +29,18 @@ export const useFlatAdsState = () => {
   const [isUpdatingHouseYandex, setIsUpdatingHouseYandex] = useState(false)
 
   // Update states for comparison ads
-  const [isUpdatingComparisonCian, setIsUpdatingComparisonCian] = useState(false)
-  const [isUpdatingComparisonAvito, setIsUpdatingComparisonAvito] = useState(false)
-  const [isUpdatingComparisonYandex, setIsUpdatingComparisonYandex] = useState(false)
+  const [isUpdatingComparisonCian, setIsUpdatingComparisonCian] =
+    useState(false)
+  const [isUpdatingComparisonAvito, setIsUpdatingComparisonAvito] =
+    useState(false)
+  const [isUpdatingComparisonYandex, setIsUpdatingComparisonYandex] =
+    useState(false)
 
   // Individual ad update tracking
   const [updatingAdIds, setUpdatingAdIds] = useState(new Set<number>())
+
+  // Bulk update states
+  const [isUpdatingAllOldAds, setIsUpdatingAllOldAds] = useState(false)
 
   // Computed states
   const updateStates: UpdateStates = {
@@ -46,7 +52,7 @@ export const useFlatAdsState = () => {
     houseYandex: isUpdatingHouseYandex,
     comparisonCian: isUpdatingComparisonCian,
     comparisonAvito: isUpdatingComparisonAvito,
-    comparisonYandex: isUpdatingComparisonYandex
+    comparisonYandex: isUpdatingComparisonYandex,
   }
 
   const loadingStates: LoadingStates = {
@@ -54,46 +60,58 @@ export const useFlatAdsState = () => {
     nearbyAds: isLoadingNearbyAds,
     addAdForm: showAddAdForm,
     expandedView,
-    mounted
+    mounted,
   }
 
   // Helper functions for flat ads
-  const setFlatUpdateStates = useCallback((cian: boolean, avito: boolean, yandex: boolean) => {
-    setIsUpdatingFlatCian(cian)
-    setIsUpdatingFlatAvito(avito)
-    setIsUpdatingFlatYandex(yandex)
-  }, [])
+  const setFlatUpdateStates = useCallback(
+    (cian: boolean, avito: boolean, yandex: boolean) => {
+      setIsUpdatingFlatCian(cian)
+      setIsUpdatingFlatAvito(avito)
+      setIsUpdatingFlatYandex(yandex)
+    },
+    [],
+  )
 
   // Helper functions for house ads
-  const setHouseUpdateStates = useCallback((cian: boolean, avito: boolean, yandex: boolean) => {
-    setIsUpdatingHouseCian(cian)
-    setIsUpdatingHouseAvito(avito)
-    setIsUpdatingHouseYandex(yandex)
-  }, [])
+  const setHouseUpdateStates = useCallback(
+    (cian: boolean, avito: boolean, yandex: boolean) => {
+      setIsUpdatingHouseCian(cian)
+      setIsUpdatingHouseAvito(avito)
+      setIsUpdatingHouseYandex(yandex)
+    },
+    [],
+  )
 
   // Helper functions for comparison ads
-  const setComparisonUpdateStates = useCallback((cian: boolean, avito: boolean, yandex: boolean) => {
-    setIsUpdatingComparisonCian(cian)
-    setIsUpdatingComparisonAvito(avito)
-    setIsUpdatingComparisonYandex(yandex)
-  }, [])
+  const setComparisonUpdateStates = useCallback(
+    (cian: boolean, avito: boolean, yandex: boolean) => {
+      setIsUpdatingComparisonCian(cian)
+      setIsUpdatingComparisonAvito(avito)
+      setIsUpdatingComparisonYandex(yandex)
+    },
+    [],
+  )
 
   // Individual ad update tracking
   const startUpdatingAd = useCallback((adId: number) => {
-    setUpdatingAdIds(prev => new Set(prev).add(adId))
+    setUpdatingAdIds((prev) => new Set(prev).add(adId))
   }, [])
 
   const stopUpdatingAd = useCallback((adId: number) => {
-    setUpdatingAdIds(prev => {
+    setUpdatingAdIds((prev) => {
       const newSet = new Set(prev)
       newSet.delete(adId)
       return newSet
     })
   }, [])
 
-  const isUpdatingAd = useCallback((adId: number): boolean => {
-    return updatingAdIds.has(adId)
-  }, [updatingAdIds])
+  const isUpdatingAd = useCallback(
+    (adId: number): boolean => {
+      return updatingAdIds.has(adId)
+    },
+    [updatingAdIds],
+  )
 
   // Check if any updates are in progress
   const isAnyUpdateInProgress = Object.values(updateStates).some(Boolean)
@@ -141,9 +159,14 @@ export const useFlatAdsState = () => {
 
     // Individual ad tracking
     updatingAdIds,
+    setUpdatingAdIds,
     startUpdatingAd,
     stopUpdatingAd,
     isUpdatingAd,
+
+    // Bulk update states
+    isUpdatingAllOldAds,
+    setIsUpdatingAllOldAds,
 
     // Helper functions
     setFlatUpdateStates,
@@ -153,6 +176,6 @@ export const useFlatAdsState = () => {
     // Computed states
     updateStates,
     loadingStates,
-    isAnyUpdateInProgress
+    isAnyUpdateInProgress,
   }
 }

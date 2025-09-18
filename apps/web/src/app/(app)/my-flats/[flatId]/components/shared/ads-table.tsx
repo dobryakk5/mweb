@@ -1,7 +1,12 @@
 'use client'
 
 import { buttonVariants } from '@acme/ui/components/button'
-import { TrashIcon, PlusIcon, MinusIcon, RefreshCwIcon } from '@acme/ui/components/icon'
+import {
+  TrashIcon,
+  PlusIcon,
+  MinusIcon,
+  RefreshCwIcon,
+} from '@acme/ui/components/icon'
 import AdChangesHistory from '@/components/ad-changes-history'
 import type { AdsTableProps, ColumnConfig } from '../types/ads-blocks.types'
 import {
@@ -11,7 +16,8 @@ import {
   formatStatus,
   formatUrlForDisplay,
   formatDistance,
-  formatPersonType
+  formatPersonType,
+  isStatusOld,
 } from '../utils/ad-formatters'
 
 /**
@@ -26,7 +32,7 @@ export default function AdsTable({
   onUpdateAd,
   updatingAdIds = new Set(),
   showActions = true,
-  showComparison = true
+  showComparison = true,
 }: AdsTableProps) {
   const renderCell = (ad: any, column: ColumnConfig) => {
     const { key } = column
@@ -52,8 +58,8 @@ export default function AdsTable({
             <AdChangesHistory
               adId={ad.id}
               currentPrice={ad.price}
-              trigger="click"
-              chartType="price"
+              trigger='click'
+              chartType='price'
             />
           </div>
         )
@@ -74,19 +80,28 @@ export default function AdsTable({
             <AdChangesHistory
               adId={ad.id}
               currentViewsToday={ad.viewsToday}
-              trigger="hover"
-              chartType="views"
+              trigger='hover'
+              chartType='views'
             />
           </div>
         )
 
       case 'status':
+        const statusIsOld = isStatusOld(ad.updatedAt || ad.updated)
         return (
           <div className='flex items-center justify-center'>
             {ad.status ? (
-              <span className='text-green-600 font-semibold'>✓</span>
+              <span
+                className={`text-green-600 font-semibold ${statusIsOld ? 'opacity-30' : ''}`}
+              >
+                ✓
+              </span>
             ) : (
-              <span className='text-red-600 font-bold text-lg'>−</span>
+              <span
+                className={`text-red-600 font-bold text-lg ${statusIsOld ? 'opacity-30' : ''}`}
+              >
+                −
+              </span>
             )}
           </div>
         )
@@ -100,7 +115,9 @@ export default function AdsTable({
         return formatDistance(ad.distance_m || ad.distance)
 
       case 'personType':
-        return ad.person_type || formatPersonType(ad.person_type_id || ad.personType)
+        return (
+          ad.person_type || formatPersonType(ad.person_type_id || ad.personType)
+        )
 
       case 'area':
       case 'totalArea':
@@ -212,10 +229,7 @@ export default function AdsTable({
                   }`}
                 >
                   {columns.map((column) => (
-                    <td
-                      key={column.key}
-                      className='p-2 align-middle text-sm'
-                    >
+                    <td key={column.key} className='p-2 align-middle text-sm'>
                       {renderCell(ad, column)}
                     </td>
                   ))}
@@ -255,9 +269,24 @@ export default function AdsTable({
                         >
                           {isUpdating ? (
                             <div className='flex items-center gap-1'>
-                              <svg className='w-3 h-3 animate-spin' fill='none' viewBox='0 0 24 24'>
-                                <circle className='opacity-25' cx='12' cy='12' r='10' stroke='currentColor' strokeWidth='4'></circle>
-                                <path className='opacity-75' fill='currentColor' d='m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'></path>
+                              <svg
+                                className='w-3 h-3 animate-spin'
+                                fill='none'
+                                viewBox='0 0 24 24'
+                              >
+                                <circle
+                                  className='opacity-25'
+                                  cx='12'
+                                  cy='12'
+                                  r='10'
+                                  stroke='currentColor'
+                                  strokeWidth='4'
+                                ></circle>
+                                <path
+                                  className='opacity-75'
+                                  fill='currentColor'
+                                  d='m4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z'
+                                ></path>
                               </svg>
                             </div>
                           ) : (
