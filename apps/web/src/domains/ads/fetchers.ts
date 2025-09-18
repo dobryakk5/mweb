@@ -257,7 +257,12 @@ export async function updateAdStatusSingle(adId: number): Promise<Ad> {
   console.log(
     `Updating ad status via Python API single endpoint for ad ${adId}`,
   )
-  const response = await api.put<Ad>(`/ads/${adId}/update-single`)
+  // First get the ad to extract URL for Python API call
+  const ad = await fetchAd(adId)
+  const response = await api.put<Ad>(`/ads/${adId}`, {
+    parseUrl: ad.url,
+    parseType: 'single',
+  })
   console.log(`Single update response:`, response.data)
   return response.data
 }
@@ -266,7 +271,12 @@ export async function updateAdStatusExtended(adId: number): Promise<Ad> {
   console.log(
     `Updating ad status via Python API extended endpoint for ad ${adId}`,
   )
-  const response = await api.put<Ad>(`/ads/${adId}/update-extended`)
+  // First get the ad to extract URL for Python API call
+  const ad = await fetchAd(adId)
+  const response = await api.put<Ad>(`/ads/${adId}`, {
+    parseUrl: ad.url,
+    parseType: 'extended',
+  })
   console.log(`Extended update response:`, response.data)
   return response.data
 }

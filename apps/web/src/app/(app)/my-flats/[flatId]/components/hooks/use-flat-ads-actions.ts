@@ -259,10 +259,25 @@ export const useFlatAdsActions = ({
 
       // Sort ads by priority: Cian first, then others
       const sortedAds = oldAds.sort((a, b) => {
-        const aIsCian = a.url?.includes('cian.ru') || false
-        const bIsCian = b.url?.includes('cian.ru') || false
+        const aIsCian = a.url?.includes('cian.ru') || a.source === 4 || false
+        const bIsCian = b.url?.includes('cian.ru') || b.source === 4 || false
         if (aIsCian && !bIsCian) return -1
         if (!aIsCian && bIsCian) return 1
+
+        // Secondary priority: Yandex (including ya.ru)
+        const aIsYandex =
+          a.url?.includes('yandex.ru') ||
+          a.url?.includes('ya.ru') ||
+          a.source === 3 ||
+          false
+        const bIsYandex =
+          b.url?.includes('yandex.ru') ||
+          b.url?.includes('ya.ru') ||
+          b.source === 3 ||
+          false
+        if (aIsYandex && !bIsYandex) return -1
+        if (!aIsYandex && bIsYandex) return 1
+
         return 0
       })
 
@@ -341,10 +356,25 @@ export const useFlatAdsActions = ({
 
       // Sort ads by priority: Cian first, then others
       const sortedAds = ads.sort((a, b) => {
-        const aIsCian = a.url?.includes('cian.ru') || false
-        const bIsCian = b.url?.includes('cian.ru') || false
+        const aIsCian = a.url?.includes('cian.ru') || a.source === 4 || false
+        const bIsCian = b.url?.includes('cian.ru') || b.source === 4 || false
         if (aIsCian && !bIsCian) return -1
         if (!aIsCian && bIsCian) return 1
+
+        // Secondary priority: Yandex (including ya.ru)
+        const aIsYandex =
+          a.url?.includes('yandex.ru') ||
+          a.url?.includes('ya.ru') ||
+          a.source === 3 ||
+          false
+        const bIsYandex =
+          b.url?.includes('yandex.ru') ||
+          b.url?.includes('ya.ru') ||
+          b.source === 3 ||
+          false
+        if (aIsYandex && !bIsYandex) return -1
+        if (!aIsYandex && bIsYandex) return 1
+
         return 0
       })
 

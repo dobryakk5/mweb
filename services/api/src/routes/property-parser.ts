@@ -7,7 +7,7 @@ import { eq } from 'drizzle-orm'
 const parseAndSaveSchema = z.object({
   url: z.string().url(),
   flatId: z.number().optional(),
-  autoSave: z.boolean().default(true)
+  autoSave: z.boolean().default(true),
 })
 
 // Схема для обновления существующего объявления
@@ -25,12 +25,15 @@ class RealtyParserClient {
 
   async parseSingleProperty(url: string) {
     try {
-      const response = await fetch(`${this.baseUrl}/api/parse/single?url=${encodeURIComponent(url)}`, {
-        method: 'GET',
-        headers: {
-          'Content-Type': 'application/json',
+      const response = await fetch(
+        `${this.baseUrl}/api/parse/single?url=${encodeURIComponent(url)}`,
+        {
+          method: 'GET',
+          headers: {
+            'Content-Type': 'application/json',
+          },
         },
-      })
+      )
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -40,7 +43,9 @@ class RealtyParserClient {
       console.log('RealtyParserClient.parseSingleProperty response:', jsonData)
       return jsonData
     } catch (error) {
-      throw new Error(`Failed to parse property: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to parse property: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   }
 
@@ -60,7 +65,9 @@ class RealtyParserClient {
 
       return await response.json()
     } catch (error) {
-      throw new Error(`Failed to parse properties: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to parse properties: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   }
 
@@ -80,16 +87,23 @@ class RealtyParserClient {
 
       return await response.json()
     } catch (error) {
-      throw new Error(`Failed to parse properties from text: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Failed to parse properties from text: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   }
 
   async parseWithRetry(urls: string[], maxRetries: number = 3) {
-    const results: Array<{ url: string; success: boolean; data?: any; error?: string }> = []
-    
+    const results: Array<{
+      url: string
+      success: boolean
+      data?: any
+      error?: string
+    }> = []
+
     for (const url of urls) {
       let lastError: string | undefined
-      
+
       for (let attempt = 1; attempt <= maxRetries; attempt++) {
         try {
           const data = await this.parseSingleProperty(url)
@@ -97,17 +111,19 @@ class RealtyParserClient {
           break
         } catch (error) {
           lastError = error instanceof Error ? error.message : 'Unknown error'
-          
+
           if (attempt === maxRetries) {
             results.push({ url, success: false, error: lastError })
           } else {
             // Ждем перед повторной попыткой (экспоненциальная задержка)
-            await new Promise(resolve => setTimeout(resolve, Math.pow(2, attempt) * 1000))
+            await new Promise((resolve) =>
+              setTimeout(resolve, Math.pow(2, attempt) * 1000),
+            )
           }
         }
       }
     }
-    
+
     return results
   }
 
@@ -126,16 +142,23 @@ class RealtyParserClient {
 
       return await response.json()
     } catch (error) {
-      throw new Error(`Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`)
+      throw new Error(
+        `Health check failed: ${error instanceof Error ? error.message : 'Unknown error'}`,
+      )
     }
   }
 }
 
 // Функция для сохранения/обновления спарсенных данных в БД
-async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url: string, flatId?: number) {
+async function savePropertyToDb(
+  fastify: FastifyInstance,
+  propertyData: any,
+  url: string,
+  flatId?: number,
+) {
   try {
     fastify.log.info('Saving/updating property to database:', propertyData)
-    
+
     // Сначала проверяем, существует ли запись с таким URL
     const existingAd = await db
       .select()
@@ -145,8 +168,11 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
 
     if (existingAd.length > 0) {
       // Запись существует - обновляем только дополнительные поля
-      fastify.log.info('Existing ad found, updating additional fields only:', existingAd[0])
-      
+      fastify.log.info(
+        'Existing ad found, updating additional fields only:',
+        existingAd[0],
+      )
+
       const updateData: any = {}
 
       // Обновляем только дополнительные поля (НЕ id, url, flat_id)
@@ -159,80 +185,130 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
       if (propertyData.rooms !== undefined && propertyData.rooms !== null) {
         updateData.rooms = Number(propertyData.rooms)
       }
-      if (propertyData.total_area !== undefined && propertyData.total_area !== null) {
+      if (
+        propertyData.total_area !== undefined &&
+        propertyData.total_area !== null
+      ) {
         updateData.totalArea = String(propertyData.total_area)
       }
-      if (propertyData.living_area !== undefined && propertyData.living_area !== null) {
+      if (
+        propertyData.living_area !== undefined &&
+        propertyData.living_area !== null
+      ) {
         updateData.livingArea = String(propertyData.living_area)
       }
-      if (propertyData.kitchen_area !== undefined && propertyData.kitchen_area !== null) {
+      if (
+        propertyData.kitchen_area !== undefined &&
+        propertyData.kitchen_area !== null
+      ) {
         updateData.kitchenArea = String(propertyData.kitchen_area)
       }
       if (propertyData.floor !== undefined && propertyData.floor !== null) {
         updateData.floor = Number(propertyData.floor)
       }
-      if (propertyData.total_floors !== undefined && propertyData.total_floors !== null) {
+      if (
+        propertyData.total_floors !== undefined &&
+        propertyData.total_floors !== null
+      ) {
         updateData.totalFloors = Number(propertyData.total_floors)
       }
-      if (propertyData.bathroom !== undefined && propertyData.bathroom !== null) {
+      if (
+        propertyData.bathroom !== undefined &&
+        propertyData.bathroom !== null
+      ) {
         updateData.bathroom = String(propertyData.bathroom)
       }
       if (propertyData.balcony !== undefined && propertyData.balcony !== null) {
         updateData.balcony = String(propertyData.balcony)
       }
-      if (propertyData.renovation !== undefined && propertyData.renovation !== null) {
+      if (
+        propertyData.renovation !== undefined &&
+        propertyData.renovation !== null
+      ) {
         updateData.renovation = String(propertyData.renovation)
       }
-      if (propertyData.furniture !== undefined && propertyData.furniture !== null) {
+      if (
+        propertyData.furniture !== undefined &&
+        propertyData.furniture !== null
+      ) {
         updateData.furniture = String(propertyData.furniture)
       }
-      if (propertyData.construction_year !== undefined && propertyData.construction_year !== null) {
+      if (
+        propertyData.construction_year !== undefined &&
+        propertyData.construction_year !== null
+      ) {
         updateData.constructionYear = Number(propertyData.construction_year)
       }
-      if (propertyData.house_type !== undefined && propertyData.house_type !== null) {
+      if (
+        propertyData.house_type !== undefined &&
+        propertyData.house_type !== null
+      ) {
         updateData.houseType = String(propertyData.house_type)
       }
-      if (propertyData.ceiling_height !== undefined && propertyData.ceiling_height !== null) {
+      if (
+        propertyData.ceiling_height !== undefined &&
+        propertyData.ceiling_height !== null
+      ) {
         updateData.ceilingHeight = String(propertyData.ceiling_height)
       }
-      if (propertyData.metro_station !== undefined && propertyData.metro_station !== null) {
+      if (
+        propertyData.metro_station !== undefined &&
+        propertyData.metro_station !== null
+      ) {
         updateData.metroStation = String(propertyData.metro_station)
       }
-      if (propertyData.metro_time !== undefined && propertyData.metro_time !== null) {
+      if (
+        propertyData.metro_time !== undefined &&
+        propertyData.metro_time !== null
+      ) {
         updateData.metroTime = String(propertyData.metro_time)
       }
       if (propertyData.tags !== undefined && propertyData.tags !== null) {
         updateData.tags = String(propertyData.tags)
       }
-      if (propertyData.description !== undefined && propertyData.description !== null) {
+      if (
+        propertyData.description !== undefined &&
+        propertyData.description !== null
+      ) {
         updateData.description = String(propertyData.description)
       }
-      if (propertyData.photo_urls !== undefined && propertyData.photo_urls !== null) {
+      if (
+        propertyData.photo_urls !== undefined &&
+        propertyData.photo_urls !== null
+      ) {
         if (Array.isArray(propertyData.photo_urls)) {
           updateData.photoUrls = propertyData.photo_urls.map(String)
         } else if (typeof propertyData.photo_urls === 'string') {
-          updateData.photoUrls = propertyData.photo_urls.includes(',') 
-            ? propertyData.photo_urls.split(',').map(s => s.trim())
+          updateData.photoUrls = propertyData.photo_urls.includes(',')
+            ? propertyData.photo_urls.split(',').map((s) => s.trim())
             : [propertyData.photo_urls]
         }
       }
       if (propertyData.source !== undefined && propertyData.source !== null) {
         // Конвертируем строковое значение источника в число
-        if (propertyData.source === 'cian') {
+        if (propertyData.source === 'avito') {
           updateData.source = 1
-        } else if (propertyData.source === 'avito') {
-          updateData.source = 2
+        } else if (propertyData.source === 'yandex') {
+          updateData.source = 3
+        } else if (propertyData.source === 'cian') {
+          updateData.source = 4
         } else {
-          updateData.source = Number(propertyData.source) || 1
+          updateData.source = Number(propertyData.source) || 4
         }
       }
       if (propertyData.status !== undefined && propertyData.status !== null) {
         updateData.status = String(propertyData.status)
       }
-      if (propertyData.views_today !== undefined && propertyData.views_today !== null) {
+      if (
+        propertyData.views_today !== undefined &&
+        propertyData.views_today !== null
+      ) {
         updateData.viewsToday = Number(propertyData.views_today)
       }
-      if (propertyData.total_views !== undefined && propertyData.total_views !== null) {
+      if (
+        propertyData.total_views !== undefined &&
+        propertyData.total_views !== null
+      ) {
         updateData.totalViews = Number(propertyData.total_views)
       }
 
@@ -250,11 +326,10 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
 
       fastify.log.info('Property updated in database:', result[0])
       return result[0]
-
     } else {
       // Записи нет - создаем новую
       fastify.log.info('No existing ad found, creating new one')
-      
+
       const adData: any = {
         // Обязательные поля для новой записи
         url: url,
@@ -266,80 +341,130 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
       }
 
       // Добавляем все дополнительные поля
-      if (propertyData.totalArea !== undefined && propertyData.totalArea !== null) {
+      if (
+        propertyData.totalArea !== undefined &&
+        propertyData.totalArea !== null
+      ) {
         adData.totalArea = String(propertyData.totalArea)
       }
-      if (propertyData.livingArea !== undefined && propertyData.livingArea !== null) {
+      if (
+        propertyData.livingArea !== undefined &&
+        propertyData.livingArea !== null
+      ) {
         adData.livingArea = String(propertyData.livingArea)
       }
-      if (propertyData.kitchenArea !== undefined && propertyData.kitchenArea !== null) {
+      if (
+        propertyData.kitchenArea !== undefined &&
+        propertyData.kitchenArea !== null
+      ) {
         adData.kitchenArea = String(propertyData.kitchenArea)
       }
       if (propertyData.floor !== undefined && propertyData.floor !== null) {
         adData.floor = Number(propertyData.floor)
       }
-      if (propertyData.totalFloors !== undefined && propertyData.totalFloors !== null) {
+      if (
+        propertyData.totalFloors !== undefined &&
+        propertyData.totalFloors !== null
+      ) {
         adData.totalFloors = Number(propertyData.totalFloors)
       }
-      if (propertyData.bathroom !== undefined && propertyData.bathroom !== null) {
+      if (
+        propertyData.bathroom !== undefined &&
+        propertyData.bathroom !== null
+      ) {
         adData.bathroom = String(propertyData.bathroom)
       }
       if (propertyData.balcony !== undefined && propertyData.balcony !== null) {
         adData.balcony = String(propertyData.balcony)
       }
-      if (propertyData.renovation !== undefined && propertyData.renovation !== null) {
+      if (
+        propertyData.renovation !== undefined &&
+        propertyData.renovation !== null
+      ) {
         adData.renovation = String(propertyData.renovation)
       }
-      if (propertyData.furniture !== undefined && propertyData.furniture !== null) {
+      if (
+        propertyData.furniture !== undefined &&
+        propertyData.furniture !== null
+      ) {
         adData.furniture = String(propertyData.furniture)
       }
-      if (propertyData.constructionYear !== undefined && propertyData.constructionYear !== null) {
+      if (
+        propertyData.constructionYear !== undefined &&
+        propertyData.constructionYear !== null
+      ) {
         adData.constructionYear = Number(propertyData.constructionYear)
       }
-      if (propertyData.houseType !== undefined && propertyData.houseType !== null) {
+      if (
+        propertyData.houseType !== undefined &&
+        propertyData.houseType !== null
+      ) {
         adData.houseType = String(propertyData.houseType)
       }
-      if (propertyData.ceilingHeight !== undefined && propertyData.ceilingHeight !== null) {
+      if (
+        propertyData.ceilingHeight !== undefined &&
+        propertyData.ceilingHeight !== null
+      ) {
         adData.ceilingHeight = String(propertyData.ceilingHeight)
       }
-      if (propertyData.metroStation !== undefined && propertyData.metroStation !== null) {
+      if (
+        propertyData.metroStation !== undefined &&
+        propertyData.metroStation !== null
+      ) {
         adData.metroStation = String(propertyData.metroStation)
       }
-      if (propertyData.metroTime !== undefined && propertyData.metroTime !== null) {
+      if (
+        propertyData.metroTime !== undefined &&
+        propertyData.metroTime !== null
+      ) {
         adData.metroTime = String(propertyData.metroTime)
       }
       if (propertyData.tags !== undefined && propertyData.tags !== null) {
         adData.tags = String(propertyData.tags)
       }
-      if (propertyData.description !== undefined && propertyData.description !== null) {
+      if (
+        propertyData.description !== undefined &&
+        propertyData.description !== null
+      ) {
         adData.description = String(propertyData.description)
       }
-      if (propertyData.photoUrls !== undefined && propertyData.photoUrls !== null) {
+      if (
+        propertyData.photoUrls !== undefined &&
+        propertyData.photoUrls !== null
+      ) {
         if (Array.isArray(propertyData.photoUrls)) {
           adData.photoUrls = propertyData.photoUrls.map(String)
         } else if (typeof propertyData.photoUrls === 'string') {
-          adData.photoUrls = propertyData.photoUrls.includes(',') 
-            ? propertyData.photoUrls.split(',').map(s => s.trim())
+          adData.photoUrls = propertyData.photoUrls.includes(',')
+            ? propertyData.photoUrls.split(',').map((s) => s.trim())
             : [propertyData.photoUrls]
         }
       }
       if (propertyData.source !== undefined && propertyData.source !== null) {
         // Конвертируем строковое значение источника в число
-        if (propertyData.source === 'cian') {
+        if (propertyData.source === 'avito') {
           adData.source = 1
-        } else if (propertyData.source === 'avito') {
-          adData.source = 2
+        } else if (propertyData.source === 'yandex') {
+          adData.source = 3
+        } else if (propertyData.source === 'cian') {
+          adData.source = 4
         } else {
-          adData.source = Number(propertyData.source) || 1
+          adData.source = Number(propertyData.source) || 4
         }
       }
       if (propertyData.status !== undefined && propertyData.status !== null) {
         adData.status = String(propertyData.status)
       }
-      if (propertyData.viewsToday !== undefined && propertyData.viewsToday !== null) {
+      if (
+        propertyData.viewsToday !== undefined &&
+        propertyData.viewsToday !== null
+      ) {
         adData.viewsToday = Number(propertyData.viewsToday)
       }
-      if (propertyData.totalViews !== undefined && propertyData.totalViews !== null) {
+      if (
+        propertyData.totalViews !== undefined &&
+        propertyData.totalViews !== null
+      ) {
         adData.totalViews = Number(propertyData.totalViews)
       }
 
@@ -347,7 +472,7 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
 
       // Создаем новую запись
       const result = await db.insert(ads).values(adData).returning()
-      
+
       fastify.log.info('Property created in database:', result[0])
       return result[0]
     }
@@ -358,7 +483,9 @@ async function savePropertyToDb(fastify: FastifyInstance, propertyData: any, url
 }
 
 // Создаем клиент для работы с Python API
-const realtyClient = new RealtyParserClient(process.env.PYTHON_API_URL || 'http://localhost:8008')
+const realtyClient = new RealtyParserClient(
+  process.env.PYTHON_API_URL || 'http://localhost:8008',
+)
 
 export default async function propertyParserRoutes(fastify: FastifyInstance) {
   // Парсинг одного объявления (обновленный с автосохранением)
@@ -369,43 +496,53 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
         properties: {
           url: { type: 'string', format: 'uri' },
           flatId: { type: 'number' },
-          autoSave: { type: 'boolean', default: true }
+          autoSave: { type: 'boolean', default: true },
         },
-        required: ['url']
-      }
+        required: ['url'],
+      },
     },
     handler: async (request, reply) => {
-      const { url, flatId, autoSave = true } = parseAndSaveSchema.parse(request.body)
-      
+      const {
+        url,
+        flatId,
+        autoSave = true,
+      } = parseAndSaveSchema.parse(request.body)
+
       try {
         fastify.log.info(`Parsing and saving property from URL: ${url}`)
-        
+
         // Парсим данные
         const result = await realtyClient.parseSingleProperty(url)
-        
+
         if (!result.success) {
           return reply.code(400).send({
             success: false,
             error: 'Failed to parse property',
-            message: result.message
+            message: result.message,
           })
         }
 
         let savedAd = null
-        
+
         // Если автосохранение включено, сохраняем в БД
         if (autoSave) {
           try {
             savedAd = await savePropertyToDb(fastify, result.data, url, flatId)
           } catch (saveError) {
-            fastify.log.error('Failed to save to database, but parsing was successful:', saveError)
+            fastify.log.error(
+              'Failed to save to database, but parsing was successful:',
+              saveError,
+            )
             // Возвращаем данные парсинга, даже если не удалось сохранить
             return reply.send({
               success: true,
               data: result.data,
               message: result.message,
               warning: 'Property parsed but not saved to database',
-              saveError: saveError instanceof Error ? saveError.message : 'Unknown save error'
+              saveError:
+                saveError instanceof Error
+                  ? saveError.message
+                  : 'Unknown save error',
             })
           }
         }
@@ -414,13 +551,17 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
           success: true,
           data: result.data,
           savedAd, // Данные сохраненного объявления
-          message: autoSave ? 'Property parsed and saved successfully' : 'Property parsed successfully (not saved)'
+          message: autoSave
+            ? 'Property parsed and saved successfully'
+            : 'Property parsed successfully (not saved)',
         })
       } catch (error) {
-        fastify.log.error(`Property parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        return reply.code(500).send({ 
+        fastify.log.error(
+          `Property parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+        return reply.code(500).send({
           error: 'Failed to parse property',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: error instanceof Error ? error.message : 'Unknown error',
         })
       }
     },
@@ -429,76 +570,90 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
   // Пакетный парсинг с автосохранением
   fastify.post('/property-parser/parse-and-save-batch', {
     handler: async (request, reply) => {
-      const { urls, flatId, autoSave = true } = request.body as { 
-        urls: string[], 
-        flatId?: number,
-        autoSave?: boolean 
+      const {
+        urls,
+        flatId,
+        autoSave = true,
+      } = request.body as {
+        urls: string[]
+        flatId?: number
+        autoSave?: boolean
       }
-      
+
       if (!urls || !Array.isArray(urls) || urls.length === 0) {
         return reply.code(400).send({ error: 'URLs array is required' })
       }
-      
+
       try {
         const results = []
-        
+
         for (const url of urls) {
           try {
             fastify.log.info(`Processing URL: ${url}`)
-            
+
             // Парсим данные
             const parseResult = await realtyClient.parseSingleProperty(url)
-            
+
             let savedAd = null
             let saveError = null
-            
+
             if (parseResult.success && autoSave) {
               try {
-                savedAd = await savePropertyToDb(fastify, parseResult.data, url, flatId)
+                savedAd = await savePropertyToDb(
+                  fastify,
+                  parseResult.data,
+                  url,
+                  flatId,
+                )
               } catch (error) {
-                saveError = error instanceof Error ? error.message : 'Unknown save error'
-                fastify.log.error(`Failed to save property for URL ${url}:`, error)
+                saveError =
+                  error instanceof Error ? error.message : 'Unknown save error'
+                fastify.log.error(
+                  `Failed to save property for URL ${url}:`,
+                  error,
+                )
               }
             }
-            
+
             results.push({
               url,
               success: parseResult.success,
               data: parseResult.success ? parseResult.data : null,
               savedAd,
               saveError,
-              message: parseResult.message
+              message: parseResult.message,
             })
-            
           } catch (error) {
             results.push({
               url,
               success: false,
               error: error instanceof Error ? error.message : 'Unknown error',
               data: null,
-              savedAd: null
+              savedAd: null,
             })
           }
         }
-        
-        const successCount = results.filter(r => r.success).length
-        const savedCount = results.filter(r => r.savedAd).length
-        
-        return reply.send({ 
-          success: true, 
+
+        const successCount = results.filter((r) => r.success).length
+        const savedCount = results.filter((r) => r.savedAd).length
+
+        return reply.send({
+          success: true,
           data: results,
           summary: {
             total: urls.length,
             parsed: successCount,
             saved: savedCount,
-            failed: urls.length - successCount
-          }
+            failed: urls.length - successCount,
+          },
         })
       } catch (error) {
-        fastify.log.error(`Batch parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        return reply.code(500).send({ 
+        fastify.log.error(
+          `Batch parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+        return reply.code(500).send({
           error: 'Failed to parse properties',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: error instanceof Error ? error.message : 'Unknown error',
         })
       }
     },
@@ -510,28 +665,30 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
       querystring: {
         type: 'object',
         properties: {
-          url: { type: 'string', format: 'uri' }
+          url: { type: 'string', format: 'uri' },
         },
-        required: ['url']
-      }
+        required: ['url'],
+      },
     },
     handler: async (request, reply) => {
       const { url } = request.query as { url: string }
-      
+
       try {
         fastify.log.info(`Parsing property from URL: ${url}`)
         const result = await realtyClient.parseSingleProperty(url)
-        
+
         return reply.send({
           success: result.success,
           data: result.data,
-          message: result.message
+          message: result.message,
         })
       } catch (error) {
-        fastify.log.error(`Property parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        return reply.code(500).send({ 
+        fastify.log.error(
+          `Property parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+        return reply.code(500).send({
           error: 'Failed to parse property',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: error instanceof Error ? error.message : 'Unknown error',
         })
       }
     },
@@ -541,19 +698,21 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
   fastify.post('/property-parser/parse-urls', {
     handler: async (request, reply) => {
       const { urls } = request.body as { urls: string[] }
-      
+
       if (!urls || !Array.isArray(urls) || urls.length === 0) {
         return reply.code(400).send({ error: 'URLs array is required' })
       }
-      
+
       try {
         const result = await realtyClient.parsePropertiesByUrls(urls)
         return { success: true, data: result }
       } catch (error) {
-        fastify.log.error(`Batch parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        return reply.code(500).send({ 
+        fastify.log.error(
+          `Batch parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+        return reply.code(500).send({
           error: 'Failed to parse properties',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: error instanceof Error ? error.message : 'Unknown error',
         })
       }
     },
@@ -563,19 +722,21 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
   fastify.post('/property-parser/parse-text', {
     handler: async (request, reply) => {
       const { text } = request.body as { text: string }
-      
+
       if (!text || typeof text !== 'string') {
         return reply.code(400).send({ error: 'Text parameter is required' })
       }
-      
+
       try {
         const result = await realtyClient.parsePropertiesFromText(text)
         return { success: true, data: result }
       } catch (error) {
-        fastify.log.error(`Text parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        return reply.code(500).send({ 
+        fastify.log.error(
+          `Text parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+        return reply.code(500).send({
           error: 'Failed to parse properties from text',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: error instanceof Error ? error.message : 'Unknown error',
         })
       }
     },
@@ -584,20 +745,25 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
   // Парсинг с retry логикой
   fastify.post('/property-parser/parse-with-retry', {
     handler: async (request, reply) => {
-      const { urls, maxRetries = 3 } = request.body as { urls: string[]; maxRetries?: number }
-      
+      const { urls, maxRetries = 3 } = request.body as {
+        urls: string[]
+        maxRetries?: number
+      }
+
       if (!urls || !Array.isArray(urls) || urls.length === 0) {
         return reply.code(400).send({ error: 'URLs array is required' })
       }
-      
+
       try {
         const result = await realtyClient.parseWithRetry(urls, maxRetries)
         return { success: true, data: result }
       } catch (error) {
-        fastify.log.error(`Retry parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        return reply.code(500).send({ 
+        fastify.log.error(
+          `Retry parsing error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+        return reply.code(500).send({
           error: 'Failed to parse properties after retries',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: error instanceof Error ? error.message : 'Unknown error',
         })
       }
     },
@@ -610,10 +776,12 @@ export default async function propertyParserRoutes(fastify: FastifyInstance) {
         const health = await realtyClient.healthCheck()
         return { success: true, data: health }
       } catch (error) {
-        fastify.log.error(`Health check error: ${error instanceof Error ? error.message : 'Unknown error'}`)
-        return reply.code(503).send({ 
+        fastify.log.error(
+          `Health check error: ${error instanceof Error ? error.message : 'Unknown error'}`,
+        )
+        return reply.code(503).send({
           error: 'Python API is not available',
-          details: error instanceof Error ? error.message : 'Unknown error'
+          details: error instanceof Error ? error.message : 'Unknown error',
         })
       }
     },

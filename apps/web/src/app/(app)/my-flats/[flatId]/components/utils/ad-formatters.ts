@@ -22,10 +22,14 @@ export const getDomainFromUrl = (url: string): string => {
   try {
     const domain = new URL(url).hostname.toLowerCase()
 
-    if (domain.includes('cian.ru')) return 'cian'
     if (domain.includes('avito.ru')) return 'avito'
-    if (domain.includes('yandex.ru') || domain.includes('realty.yandex.ru'))
+    if (
+      domain.includes('yandex.ru') ||
+      domain.includes('realty.yandex.ru') ||
+      domain.includes('ya.ru')
+    )
       return 'yandex'
+    if (domain.includes('cian.ru')) return 'cian'
 
     // Fallback to domain without www
     return domain.replace('www.', '')
@@ -88,6 +92,23 @@ export const formatPersonType = (
       return 'агентство'
     default:
       return 'неизвестно'
+  }
+}
+
+// Format source type
+export const formatSourceType = (
+  sourceType: number | null | undefined,
+): string => {
+  if (sourceType === null || sourceType === undefined) return '—'
+  switch (sourceType) {
+    case 1:
+      return 'Avito'
+    case 3:
+      return 'Яндекс'
+    case 4:
+      return 'Cian'
+    default:
+      return 'Неизвестно'
   }
 }
 
