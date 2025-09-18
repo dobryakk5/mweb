@@ -16,7 +16,6 @@ import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
 import {
   useAds,
   useNearbyAdsFromFindAds,
-  useFlatAdsFromFindAds,
   useBroaderAdsFromFindAds,
 } from '@/domains/ads'
 import HookFormDevtool from '@/components/hookform-devtool'
@@ -66,8 +65,6 @@ export default function EditFlatFormRefactored({
 
   // Data fetching hooks
   const { data: ads = [], refetch } = useAds({ flatId: flat?.id })
-  const { data: flatAdsFromFindAds = [], refetch: refetchFlatAds } =
-    useFlatAdsFromFindAds(flat?.id || 0)
   const { data: broaderAdsFromFindAds = [], refetch: refetchBroaderAds } =
     useBroaderAdsFromFindAds(flat?.id || 0)
   const {
@@ -133,7 +130,7 @@ export default function EditFlatFormRefactored({
     try {
       // Update logic here
       await refetch()
-      await refetchFlatAds() // Refresh find_ads data
+      // Data will be refreshed automatically through useAds
     } finally {
       state.setFlatUpdateStates(false, false, false)
     }
@@ -165,7 +162,7 @@ export default function EditFlatFormRefactored({
 
   const handleAutoFindSimilar = async () => {
     await actions.handleAutoFindSimilar(
-      flatAdsFromFindAds,
+      flatAds,
       state.setSimilarAds,
       state.setIsLoadingSimilar,
     )
@@ -179,12 +176,8 @@ export default function EditFlatFormRefactored({
   const handleUpdateAllOldAds = async () => {
     state.setIsUpdatingAllOldAds(true)
     try {
-      await actions.handleUpdateAllOldAds(
-        flatAdsFromFindAds,
-        state.setUpdatingAdIds,
-      )
+      await actions.handleUpdateAllOldAds(flatAds, state.setUpdatingAdIds)
       await refetch()
-      await refetchFlatAds()
     } finally {
       state.setIsUpdatingAllOldAds(false)
     }
@@ -217,7 +210,7 @@ export default function EditFlatFormRefactored({
           {/* Flat Ads Block */}
           <FlatAdsBlock
             flat={flat!}
-            ads={flatAdsFromFindAds}
+            ads={flatAds}
             isCollapsed={isCollapsed('flatAds')}
             onToggleCollapse={() => toggleBlock('flatAds')}
             onUpdate={handleUpdateFlatAds}

@@ -162,11 +162,16 @@ export default async function adsRoutes(fastify: FastifyInstance) {
   fastify.get('/ads/:id/history', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
+      const adId = parseInt(id)
+
+      if (isNaN(adId)) {
+        return reply.status(400).send({ error: 'Invalid ad ID' })
+      }
 
       const history = await db
         .select()
         .from(adHistory)
-        .where(eq(adHistory.adId, parseInt(id)))
+        .where(eq(adHistory.adId, adId))
         .orderBy(sql`${adHistory.recordedAt} DESC`)
         .limit(20) // Последние 20 записей
 
@@ -181,12 +186,17 @@ export default async function adsRoutes(fastify: FastifyInstance) {
   fastify.get('/ads/:id/price-changes', async (request, reply) => {
     try {
       const { id } = request.params as { id: string }
+      const adId = parseInt(id)
+
+      if (isNaN(adId)) {
+        return reply.status(400).send({ error: 'Invalid ad ID' })
+      }
 
       // Сначала получаем URL объявления
       const ad = await db
         .select({ url: ads.url })
         .from(ads)
-        .where(eq(ads.id, parseInt(id)))
+        .where(eq(ads.id, adId))
         .limit(1)
 
       if (ad.length === 0) {
@@ -366,10 +376,16 @@ export default async function adsRoutes(fastify: FastifyInstance) {
   fastify.get('/ads/:id', async (request, reply) => {
     try {
       const { id } = z.object({ id: z.string() }).parse(request.params)
+      const adId = parseInt(id)
+
+      if (isNaN(adId)) {
+        return reply.status(400).send({ error: 'Invalid ad ID' })
+      }
+
       const result = await db
         .select()
         .from(ads)
-        .where(eq(ads.id, parseInt(id)))
+        .where(eq(ads.id, adId))
         .limit(1)
 
       if (result.length === 0) {
@@ -417,6 +433,11 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       id = params.id
       const body = updateAdSchema.parse(request.body)
 
+      const adId = parseInt(id)
+      if (isNaN(adId)) {
+        return reply.status(400).send({ error: 'Invalid ad ID' })
+      }
+
       fastify.log.info(`Updating ad ${id} with data:`, body)
 
       // Логируем каждое поле отдельно
@@ -428,13 +449,13 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const currentAd = await db
         .select()
         .from(ads)
-        .where(eq(ads.id, parseInt(id)))
+        .where(eq(ads.id, adId))
         .limit(1)
       if (currentAd.length > 0) {
         fastify.log.info(`Current ad data before update:`, currentAd[0])
 
         // Записываем изменения в историю перед обновлением
-        await recordAdChanges(parseInt(id), currentAd[0], body, fastify)
+        await recordAdChanges(adId, currentAd[0], body, fastify)
       }
 
       // Подготавливаем данные для обновления
@@ -480,7 +501,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
           ...updateData,
           updatedAt: new Date(),
         })
-        .where(eq(ads.id, parseInt(id)))
+        .where(eq(ads.id, adId))
         .returning()
 
       fastify.log.info(`Update result:`, result)
@@ -489,7 +510,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const updatedAd = await db
         .select()
         .from(ads)
-        .where(eq(ads.id, parseInt(id)))
+        .where(eq(ads.id, adId))
         .limit(1)
       if (updatedAd.length > 0) {
         fastify.log.info(`Updated ad data after update:`, updatedAd[0])
@@ -514,13 +535,18 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       adId = params.id
       const body = updateAdSchema.parse(request.body)
 
+      const adIdNum = adIdNum
+      if (isNaN(adIdNum)) {
+        return reply.status(400).send({ error: 'Invalid ad ID' })
+      }
+
       fastify.log.info(`Force updating ad ${adId} with data:`, body)
 
       // Получаем текущие данные объявления
       const currentAd = await db
         .select()
         .from(ads)
-        .where(eq(ads.id, parseInt(adId)))
+        .where(eq(ads.id, adIdNum))
         .limit(1)
       if (currentAd.length === 0) {
         return reply.status(404).send({ error: 'Ad not found' })
@@ -632,12 +658,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       delete forceUpdateData.parseType
 
       // Записываем изменения в историю
-      await recordAdChanges(
-        parseInt(adId),
-        currentAd[0],
-        forceUpdateData,
-        fastify,
-      )
+      await recordAdChanges(adIdNum, currentAd[0], forceUpdateData, fastify)
 
       // Конвертируем числовые поля в строки для decimal полей БД
       if (
@@ -680,7 +701,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
           ...forceUpdateData,
           updatedAt: new Date(),
         })
-        .where(eq(ads.id, parseInt(adId)))
+        .where(eq(ads.id, adIdNum))
         .returning()
 
       fastify.log.info(`Force update result:`, result)
@@ -689,7 +710,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const updatedAd = await db
         .select()
         .from(ads)
-        .where(eq(ads.id, parseInt(adId)))
+        .where(eq(ads.id, adIdNum))
         .limit(1)
       if (updatedAd.length > 0) {
         fastify.log.info(`Updated ad data after force update:`, updatedAd[0])
@@ -829,13 +850,14 @@ export default async function adsRoutes(fastify: FastifyInstance) {
     try {
       const params = z.object({ id: z.string() }).parse(request.params)
       id = params.id
+      const adId = parseInt(id)
+
+      if (isNaN(adId)) {
+        return reply.status(400).send({ error: 'Invalid ad ID' })
+      }
 
       // Получаем данные объявления для поиска похожих
-      const ad = await db
-        .select()
-        .from(ads)
-        .where(eq(ads.id, parseInt(id)))
-        .limit(1)
+      const ad = await db.select().from(ads).where(eq(ads.id, adId)).limit(1)
 
       if (ad.length === 0) {
         return reply.status(404).send({ error: 'Ad not found' })
@@ -876,11 +898,13 @@ export default async function adsRoutes(fastify: FastifyInstance) {
   fastify.delete('/ads/:id', async (request, reply) => {
     try {
       const { id } = z.object({ id: z.string() }).parse(request.params)
+      const adId = parseInt(id)
 
-      const result = await db
-        .delete(ads)
-        .where(eq(ads.id, parseInt(id)))
-        .returning()
+      if (isNaN(adId)) {
+        return reply.status(400).send({ error: 'Invalid ad ID' })
+      }
+
+      const result = await db.delete(ads).where(eq(ads.id, adId)).returning()
 
       if (result.length === 0) {
         return reply.status(404).send({ error: 'Ad not found' })
