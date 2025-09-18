@@ -535,7 +535,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       adId = params.id
       const body = updateAdSchema.parse(request.body)
 
-      const adIdNum = adIdNum
+      const adIdNum = parseInt(adId)
       if (isNaN(adIdNum)) {
         return reply.status(400).send({ error: 'Invalid ad ID' })
       }
