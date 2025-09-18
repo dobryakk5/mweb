@@ -4,7 +4,7 @@
 
 // Format price to millions
 export const formatPrice = (price: number | null | undefined): string => {
-  if (price === null || price === undefined) return '—'
+  if (price === null || price === undefined) return '\u00A0'
   return (price / 1_000_000).toFixed(2)
 }
 
@@ -12,7 +12,7 @@ export const formatPrice = (price: number | null | undefined): string => {
 export const formatDate = (
   dateStr: string | Date | null | undefined,
 ): string => {
-  if (!dateStr) return '—'
+  if (!dateStr) return '\u00A0'
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
   return date.toLocaleDateString('ru-RU')
 }
@@ -49,7 +49,7 @@ export const formatUrlForDisplay = (
 
 // Format views count
 export const formatViews = (views: number | null | undefined): string => {
-  if (views === null || views === undefined) return '—'
+  if (views === null || views === undefined) return '\u00A0'
   return views.toString()
 }
 
@@ -58,7 +58,7 @@ export const formatFloor = (
   floor: number | null | undefined,
   totalFloors?: number | null,
 ): string => {
-  if (floor === null || floor === undefined) return '—'
+  if (floor === null || floor === undefined) return '\u00A0'
   if (totalFloors) {
     return `${floor}/${totalFloors}`
   }
@@ -67,7 +67,7 @@ export const formatFloor = (
 
 // Format area (square meters)
 export const formatArea = (area: number | null | undefined): string => {
-  if (area === null || area === undefined) return '—'
+  if (area === null || area === undefined) return '\u00A0'
   return `${area} м²`
 }
 
@@ -77,7 +77,7 @@ export const formatBoolean = (
   trueText = 'Да',
   falseText = 'Нет',
 ): string => {
-  if (value === null || value === undefined) return '—'
+  if (value === null || value === undefined) return '\u00A0'
   return value ? trueText : falseText
 }
 
@@ -85,7 +85,7 @@ export const formatBoolean = (
 export const formatPersonType = (
   personType: number | null | undefined,
 ): string => {
-  if (personType === null || personType === undefined) return '—'
+  if (personType === null || personType === undefined) return '\u00A0'
   switch (personType) {
     case 3:
       return 'собственник'
@@ -100,7 +100,7 @@ export const formatPersonType = (
 export const formatSourceType = (
   sourceType: number | null | undefined,
 ): string => {
-  if (sourceType === null || sourceType === undefined) return '—'
+  if (sourceType === null || sourceType === undefined) return '\u00A0'
   switch (sourceType) {
     case 1:
       return 'Avito'
@@ -117,7 +117,7 @@ export const formatSourceType = (
 export const formatMetroTime = (
   time: string | number | null | undefined,
 ): string => {
-  if (!time) return '—'
+  if (!time) return '\u00A0'
   if (typeof time === 'number') {
     return `${time} мин`
   }
@@ -130,20 +130,20 @@ export const truncateText = (
   text: string | null | undefined,
   maxLength: number,
 ): string => {
-  if (!text) return '—'
+  if (!text) return '\u00A0'
   if (text.length <= maxLength) return text
   return text.substring(0, maxLength) + '...'
 }
 
 // Format status with checkmark or dash
 export const formatStatus = (status: boolean | null | undefined): string => {
-  if (status === null || status === undefined) return '—'
-  return status ? '✓' : '—'
+  if (status === null || status === undefined) return '\u00A0'
+  return status ? '✓' : '−'
 }
 
 // Format distance in meters
 export const formatDistance = (distance: number | null | undefined): string => {
-  if (distance === null || distance === undefined) return '—'
+  if (distance === null || distance === undefined) return '\u00A0'
   if (distance < 1000) {
     return `${distance} м`
   }
@@ -152,7 +152,7 @@ export const formatDistance = (distance: number | null | undefined): string => {
 
 // Clean and format room count
 export const formatRooms = (rooms: number | null | undefined): string => {
-  if (rooms === null || rooms === undefined) return '—'
+  if (rooms === null || rooms === undefined) return '\u00A0'
   return rooms.toString()
 }
 
@@ -160,7 +160,7 @@ export const formatRooms = (rooms: number | null | undefined): string => {
 export const formatCeilingHeight = (
   height: number | string | null | undefined,
 ): string => {
-  if (!height) return '—'
+  if (!height) return '\u00A0'
   return `${height} м`
 }
 
@@ -168,7 +168,7 @@ export const formatCeilingHeight = (
 export const formatConstructionYear = (
   year: number | string | null | undefined,
 ): string => {
-  if (!year) return '—'
+  if (!year) return '\u00A0'
   return year.toString()
 }
 

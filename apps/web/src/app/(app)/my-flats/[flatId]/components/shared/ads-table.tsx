@@ -67,13 +67,13 @@ export default function AdsTable({
         )
 
       case 'rooms':
-        return ad.rooms?.toString() || '—'
+        return ad.rooms?.toString() || '\u00A0'
 
       case 'floor':
-        return ad.floor?.toString() || '—'
+        return ad.floor?.toString() || '\u00A0'
 
       case 'totalFloors':
-        return ad.totalFloors?.toString() || '—'
+        return ad.totalFloors?.toString() || '\u00A0'
 
       case 'viewsToday':
         return (
@@ -89,7 +89,7 @@ export default function AdsTable({
         )
 
       case 'status':
-        const statusIsOld = isStatusOld(ad.updatedAt || ad.updated)
+        const statusIsOld = isStatusOld(ad.updatedAt)
         return (
           <div className='flex items-center justify-center'>
             {ad.status ? (
@@ -111,7 +111,7 @@ export default function AdsTable({
       case 'createdAt':
         return formatDate(ad.createdAt || ad.created)
       case 'updatedAt':
-        return formatDate(ad.updatedAt || ad.updated)
+        return formatDate(ad.updatedAt)
 
       case 'distance':
         return formatDistance(ad.distance_m || ad.distance)
@@ -125,11 +125,11 @@ export default function AdsTable({
       case 'totalArea':
       case 'livingArea':
         const area = ad[key]
-        return area ? area.toString() : '—'
+        return area ? area.toString() : '\u00A0'
 
       case 'kitchenArea':
         const kitchenArea = ad.kitchenArea || ad.kitchen_area
-        return kitchenArea ? kitchenArea.toString() : '—'
+        return kitchenArea ? kitchenArea.toString() : '\u00A0'
 
       case 'bathroom':
       case 'balcony':
@@ -139,19 +139,20 @@ export default function AdsTable({
       case 'metroTime':
       case 'tags':
       case 'description':
-        return ad[key] || '—'
+        return ad[key] || '\u00A0'
 
       case 'constructionYear':
-        return ad.constructionYear?.toString() || '—'
+        return ad.constructionYear?.toString() || '\u00A0'
 
       case 'ceilingHeight':
-        return ad.ceilingHeight ? `${ad.ceilingHeight} м` : '—'
+        return ad.ceilingHeight ? `${ad.ceilingHeight} м` : '\u00A0'
 
       case 'furniture':
+        if (ad.furniture === null || ad.furniture === undefined) return '\u00A0'
         return ad.furniture ? 'Есть' : 'Нет'
 
       default:
-        return ad[key]?.toString() || '—'
+        return ad[key]?.toString() || '\u00A0'
     }
   }
 

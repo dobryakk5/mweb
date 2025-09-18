@@ -263,7 +263,7 @@ export const useFlatAdsActions = ({
     ) => {
       // Filter ads that haven't been updated today
       const adsToUpdate = ads.filter((ad) => {
-        const lastUpdate = ad.updatedAt || ad.updated
+        const lastUpdate = ad.updatedAt
         return !isUpdatedToday(lastUpdate)
       })
 
@@ -380,7 +380,7 @@ export const useFlatAdsActions = ({
 
       // Filter ads that haven't been updated today
       const adsToUpdate = ads.filter((ad) => {
-        const lastUpdate = ad.updatedAt || ad.updated
+        const lastUpdate = ad.updatedAt
         return !isUpdatedToday(lastUpdate)
       })
 
