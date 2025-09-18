@@ -579,11 +579,11 @@ export default async function adsRoutes(fastify: FastifyInstance) {
               parsedData.status = Boolean(data.status)
             if (data.views_today !== undefined)
               parsedData.viewsToday = Number(data.views_today)
-            if (data.total_area !== undefined)
+            if (data.total_area !== undefined && data.total_area !== null)
               parsedData.totalArea = String(data.total_area)
-            if (data.living_area !== undefined)
+            if (data.living_area !== undefined && data.living_area !== null)
               parsedData.livingArea = String(data.living_area)
-            if (data.kitchen_area !== undefined)
+            if (data.kitchen_area !== undefined && data.kitchen_area !== null)
               parsedData.kitchenArea = String(data.kitchen_area)
             if (data.floor !== undefined) parsedData.floor = Number(data.floor)
             if (data.total_floors !== undefined)
@@ -600,11 +600,14 @@ export default async function adsRoutes(fastify: FastifyInstance) {
               parsedData.constructionYear = Number(data.construction_year)
             if (data.house_type !== undefined)
               parsedData.houseType = String(data.house_type)
-            if (data.ceiling_height !== undefined)
+            if (
+              data.ceiling_height !== undefined &&
+              data.ceiling_height !== null
+            )
               parsedData.ceilingHeight = String(data.ceiling_height)
             if (data.metro_station !== undefined)
               parsedData.metroStation = String(data.metro_station)
-            if (data.metro_time !== undefined)
+            if (data.metro_time !== undefined && data.metro_time !== null)
               parsedData.metroTime = String(data.metro_time)
             if (data.tags !== undefined) parsedData.tags = String(data.tags)
             if (data.description !== undefined)
@@ -656,6 +659,22 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       // Удаляем служебные поля, которые не должны сохраняться в БД
       delete forceUpdateData.parseUrl
       delete forceUpdateData.parseType
+
+      // Очищаем строки "null" - заменяем на null для numeric полей
+      Object.keys(forceUpdateData).forEach((key) => {
+        if (forceUpdateData[key] === 'null') {
+          const numericFields = [
+            'totalArea',
+            'livingArea',
+            'kitchenArea',
+            'ceilingHeight',
+            'metroTime',
+          ]
+          if (numericFields.includes(key)) {
+            forceUpdateData[key] = null
+          }
+        }
+      })
 
       // Записываем изменения в историю
       await recordAdChanges(adIdNum, currentAd[0], forceUpdateData, fastify)
