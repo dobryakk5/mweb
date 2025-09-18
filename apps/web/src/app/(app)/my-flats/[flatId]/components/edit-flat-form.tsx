@@ -243,99 +243,107 @@ export default function EditFlatFormRefactored({
           />
 
           {/* Flat Ads Block */}
-          <FlatAdsBlock
-            flat={flat!}
-            ads={flatAds}
-            isCollapsed={isCollapsed('flatAds')}
-            onToggleCollapse={() => toggleBlock('flatAds')}
-            onUpdate={handleUpdateFlatAds}
-            isUpdating={
-              state.updateStates.flatCian ||
-              state.updateStates.flatAvito ||
-              state.updateStates.flatYandex
-            }
-            onDeleteAd={actions.handleDeleteAd}
-            onToggleComparison={actions.handleToggleComparison}
-            onUpdateAd={(adId) =>
-              actions.handleUpdateAdFromSource(adId, 'cian')
-            }
-            updatingAdIds={state.updatingAdIds}
-            onFindSimilar={handleAutoFindSimilar}
-            isLoadingSimilar={state.isLoadingSimilar}
-            onUpdateAllOld={handleUpdateAllOldAds}
-            isUpdatingAllOld={state.isUpdatingAllOldAds}
-            updatedTodayAdIds={state.updatedTodayAdIds}
-          />
+          {flat && (
+            <FlatAdsBlock
+              flat={flat}
+              ads={flatAds}
+              isCollapsed={isCollapsed('flatAds')}
+              onToggleCollapse={() => toggleBlock('flatAds')}
+              onUpdate={handleUpdateFlatAds}
+              isUpdating={
+                state.updateStates.flatCian ||
+                state.updateStates.flatAvito ||
+                state.updateStates.flatYandex
+              }
+              onDeleteAd={actions.handleDeleteAd}
+              onToggleComparison={actions.handleToggleComparison}
+              onUpdateAd={(adId) =>
+                actions.handleUpdateAdFromSource(adId, 'cian')
+              }
+              updatingAdIds={state.updatingAdIds}
+              onFindSimilar={handleAutoFindSimilar}
+              isLoadingSimilar={state.isLoadingSimilar}
+              onUpdateAllOld={handleUpdateAllOldAds}
+              isUpdatingAllOld={state.isUpdatingAllOldAds}
+              updatedTodayAdIds={state.updatedTodayAdIds}
+            />
+          )}
 
           {/* House Ads Block */}
-          <HouseAdsBlock
-            flat={flat!}
-            ads={broaderAdsFromFindAds}
-            isCollapsed={isCollapsed('houseAds')}
-            onToggleCollapse={() => toggleBlock('houseAds')}
-            onUpdate={handleUpdateHouseAds}
-            isUpdating={
-              state.updateStates.houseCian ||
-              state.updateStates.houseAvito ||
-              state.updateStates.houseYandex
-            }
-            onDeleteAd={actions.handleDeleteAd}
-            onToggleComparison={actions.handleToggleComparison}
-            onUpdateAd={(adId) =>
-              actions.handleUpdateAdFromSource(adId, 'house')
-            }
-            updatingAdIds={state.updatingAdIds}
-            onFindSimilar={handleFindBroaderAds}
-            isLoadingSimilar={state.isLoadingSimilar}
-            updatedTodayAdIds={state.updatedTodayAdIds}
-            onUpdateStatuses={handleUpdateHouseStatuses}
-            isUpdatingStatuses={state.isUpdatingHouseStatuses}
-          />
+          {flat && (
+            <HouseAdsBlock
+              flat={flat}
+              ads={broaderAdsFromFindAds}
+              isCollapsed={isCollapsed('houseAds')}
+              onToggleCollapse={() => toggleBlock('houseAds')}
+              onUpdate={handleUpdateHouseAds}
+              isUpdating={
+                state.updateStates.houseCian ||
+                state.updateStates.houseAvito ||
+                state.updateStates.houseYandex
+              }
+              onDeleteAd={actions.handleDeleteAd}
+              onToggleComparison={actions.handleToggleComparison}
+              onUpdateAd={(adId) =>
+                actions.handleUpdateAdFromSource(adId, 'house')
+              }
+              updatingAdIds={state.updatingAdIds}
+              onFindSimilar={handleFindBroaderAds}
+              isLoadingSimilar={state.isLoadingSimilar}
+              updatedTodayAdIds={state.updatedTodayAdIds}
+              onUpdateStatuses={handleUpdateHouseStatuses}
+              isUpdatingStatuses={state.isUpdatingHouseStatuses}
+            />
+          )}
 
           {/* Nearby Ads Block */}
-          <NearbyAdsBlock
-            flat={flat!}
-            nearbyAds={nearbyAdsFromFindAds}
-            isCollapsed={isCollapsed('nearbyAds')}
-            onToggleCollapse={() => toggleBlock('nearbyAds')}
-            onRefetch={async () => {
-              await refetchNearbyAds()
-            }}
-            isLoading={isLoadingNearbyAds}
-            onAddToComparison={actions.handleAddToComparison}
-            onToggleComparison={actions.handleToggleComparison}
-            onUpdateAd={(adId) =>
-              actions.handleUpdateAdFromSource(adId, 'nearby')
-            }
-            updatingAdIds={state.updatingAdIds}
-            comparisonAds={comparisonAds}
-          />
+          {flat && (
+            <NearbyAdsBlock
+              flat={flat}
+              nearbyAds={nearbyAdsFromFindAds}
+              isCollapsed={isCollapsed('nearbyAds')}
+              onToggleCollapse={() => toggleBlock('nearbyAds')}
+              onRefetch={async () => {
+                await refetchNearbyAds()
+              }}
+              isLoading={isLoadingNearbyAds}
+              onAddToComparison={actions.handleAddToComparison}
+              onToggleComparison={actions.handleToggleComparison}
+              onUpdateAd={(adId) =>
+                actions.handleUpdateAdFromSource(adId, 'nearby')
+              }
+              updatingAdIds={state.updatingAdIds}
+              comparisonAds={comparisonAds}
+            />
+          )}
 
           {/* Comparison Ads Block */}
-          <ComparisonAdsBlock
-            flat={flat!}
-            ads={comparisonAds}
-            expandedView={state.expandedView}
-            onToggleExpandedView={() =>
-              state.setExpandedView(!state.expandedView)
-            }
-            isCollapsed={isCollapsed('comparison')}
-            onToggleCollapse={() => toggleBlock('comparison')}
-            onUpdate={handleUpdateComparisonAds}
-            isUpdating={
-              state.updateStates.comparisonCian ||
-              state.updateStates.comparisonAvito ||
-              state.updateStates.comparisonYandex
-            }
-            onDeleteAd={actions.handleDeleteAd}
-            onUpdateAd={actions.handleUpdateAdExtended}
-            updatingAdIds={state.updatingAdIds}
-            onExportToExcel={handleExportComparison}
-            showAddAdForm={state.showAddAdForm}
-            onToggleAddAdForm={() =>
-              state.setShowAddAdForm(!state.showAddAdForm)
-            }
-          />
+          {flat && (
+            <ComparisonAdsBlock
+              flat={flat}
+              ads={comparisonAds}
+              expandedView={state.expandedView}
+              onToggleExpandedView={() =>
+                state.setExpandedView(!state.expandedView)
+              }
+              isCollapsed={isCollapsed('comparison')}
+              onToggleCollapse={() => toggleBlock('comparison')}
+              onUpdate={handleUpdateComparisonAds}
+              isUpdating={
+                state.updateStates.comparisonCian ||
+                state.updateStates.comparisonAvito ||
+                state.updateStates.comparisonYandex
+              }
+              onDeleteAd={actions.handleDeleteAd}
+              onUpdateAd={actions.handleUpdateAdExtended}
+              updatingAdIds={state.updatingAdIds}
+              onExportToExcel={handleExportComparison}
+              showAddAdForm={state.showAddAdForm}
+              onToggleAddAdForm={() =>
+                state.setShowAddAdForm(!state.showAddAdForm)
+              }
+            />
+          )}
         </Page.Content>
       </Page>
 

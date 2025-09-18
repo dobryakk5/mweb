@@ -52,12 +52,12 @@ export default function FlatAdsBlock({
       headerActions={headerActions}
     >
       <AdsTable
-        ads={ads}
+        ads={ads || []}
         columns={columns}
         onDeleteAd={onDeleteAd}
         onToggleComparison={onToggleComparison}
         onUpdateAd={onUpdateAd}
-        updatingAdIds={updatingAdIds}
+        updatingAdIds={updatingAdIds || new Set()}
         showActions={true}
         showComparison={true}
         isBulkUpdating={isUpdatingAllOld}
