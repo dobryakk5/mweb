@@ -109,6 +109,7 @@ const createAdSchema = z.object({
   rooms: z.number().positive(),
   from: z.number().int().min(1).max(2).default(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma: z.number().int().min(0).max(1).default(0).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
+  updatedAt: z.string().optional(), // Время обновления из источника
 })
 
 // Схема для обновления объявления с данными от API парсинга
@@ -415,6 +416,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
           views: 0, // Добавляем views по умолчанию
           from: body.from || 2, // По умолчанию - добавлено вручную
           sma: body.sma || 0, // По умолчанию - обычное объявление
+          updatedAt: body.updatedAt ? new Date(body.updatedAt) : new Date(), // Время из источника или текущее
         })
         .returning()
 

@@ -3,7 +3,10 @@
 import CollapsibleBlock from '../shared/collapsible-block'
 import AdsTable from '../shared/ads-table'
 import { RefreshNearbyButton } from '../shared/update-buttons'
-import type { NearbyAdsBlockProps, ColumnConfig } from '../types/ads-blocks.types'
+import type {
+  NearbyAdsBlockProps,
+  ColumnConfig,
+} from '../types/ads-blocks.types'
 
 /**
  * Block component for nearby ads within 500m radius
@@ -17,7 +20,9 @@ export default function NearbyAdsBlock({
   isLoading,
   onAddToComparison,
   onToggleComparison,
-  comparisonAds
+  onUpdateAd,
+  updatingAdIds,
+  comparisonAds,
 }: NearbyAdsBlockProps) {
   const columns: ColumnConfig[] = [
     { key: 'url', label: 'URL', className: 'w-40' },
@@ -29,19 +34,16 @@ export default function NearbyAdsBlock({
     { key: 'distance', label: 'Расстояние, м' },
     { key: 'createdAt', label: 'Создано' },
     { key: 'updatedAt', label: 'Обновлено' },
-    { key: 'personType', label: 'Автор' }
+    { key: 'personType', label: 'Автор' },
   ]
 
   const headerActions = (
-    <RefreshNearbyButton
-      onRefresh={onRefetch}
-      isLoading={isLoading}
-    />
+    <RefreshNearbyButton onRefresh={onRefetch} isLoading={isLoading} />
   )
 
   return (
     <CollapsibleBlock
-      title="Объявления в радиусе 500м и дешевле"
+      title='Объявления в радиусе 500м и дешевле'
       isCollapsed={isCollapsed}
       onToggle={onToggleCollapse}
       headerActions={headerActions}
@@ -50,8 +52,9 @@ export default function NearbyAdsBlock({
         ads={nearbyAds}
         columns={columns}
         onToggleComparison={onToggleComparison}
-        updatingAdIds={new Set()}
-        showActions={false}
+        onUpdateAd={onUpdateAd}
+        updatingAdIds={updatingAdIds || new Set()}
+        showActions={true}
         showComparison={true}
       />
     </CollapsibleBlock>

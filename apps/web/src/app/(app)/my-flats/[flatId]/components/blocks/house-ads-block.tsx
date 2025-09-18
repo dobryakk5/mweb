@@ -2,8 +2,14 @@
 
 import CollapsibleBlock from '../shared/collapsible-block'
 import AdsTable from '../shared/ads-table'
-import { MultiUpdateButtons, FindByAddressButton } from '../shared/update-buttons'
-import type { HouseAdsBlockProps, ColumnConfig } from '../types/ads-blocks.types'
+import {
+  MultiUpdateButtons,
+  FindByAddressButton,
+} from '../shared/update-buttons'
+import type {
+  HouseAdsBlockProps,
+  ColumnConfig,
+} from '../types/ads-blocks.types'
 
 /**
  * Block component for house-specific ads (from = 2)
@@ -17,8 +23,10 @@ export default function HouseAdsBlock({
   isUpdating,
   onDeleteAd,
   onToggleComparison,
+  onUpdateAd,
+  updatingAdIds,
   onFindSimilar,
-  isLoadingSimilar
+  isLoadingSimilar,
 }: HouseAdsBlockProps) {
   const columns: ColumnConfig[] = [
     { key: 'url', label: 'URL', className: 'w-40' },
@@ -28,7 +36,7 @@ export default function HouseAdsBlock({
     { key: 'area', label: 'Площадь' },
     { key: 'kitchenArea', label: 'Кухня' },
     { key: 'status', label: 'Статус' },
-    { key: 'updatedAt', label: 'Обновлено' }
+    { key: 'updatedAt', label: 'Обновлено' },
   ]
 
   const headerActions = (
@@ -36,7 +44,7 @@ export default function HouseAdsBlock({
       <MultiUpdateButtons
         onUpdate={onUpdate}
         isUpdating={isUpdating}
-        label="Обновить"
+        label='Обновить'
       />
       <FindByAddressButton
         onFind={onFindSimilar}
@@ -47,7 +55,7 @@ export default function HouseAdsBlock({
 
   return (
     <CollapsibleBlock
-      title="Объявления по этому дому"
+      title='Объявления по этому дому'
       isCollapsed={isCollapsed}
       onToggle={onToggleCollapse}
       headerActions={headerActions}
@@ -57,8 +65,9 @@ export default function HouseAdsBlock({
         columns={columns}
         onDeleteAd={onDeleteAd}
         onToggleComparison={onToggleComparison}
-        updatingAdIds={new Set()}
-        showActions={false}
+        onUpdateAd={onUpdateAd}
+        updatingAdIds={updatingAdIds || new Set()}
+        showActions={true}
         showComparison={true}
       />
     </CollapsibleBlock>

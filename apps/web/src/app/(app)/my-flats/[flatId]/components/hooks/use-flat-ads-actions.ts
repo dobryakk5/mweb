@@ -22,6 +22,8 @@ type AdActionHookProps = {
   flat?: UserFlat
   refetch: () => Promise<any>
   refetchNearbyAds?: () => Promise<any>
+  startUpdatingAd?: (adId: number) => void
+  stopUpdatingAd?: (adId: number) => void
 }
 
 /**
@@ -31,6 +33,8 @@ export const useFlatAdsActions = ({
   flat,
   refetch,
   refetchNearbyAds,
+  startUpdatingAd,
+  stopUpdatingAd,
 }: AdActionHookProps) => {
   const { mutateAsync: deleteAd } = useDeleteAd()
   const { mutateAsync: deleteFlat } = useDeleteFlat(flat?.id || 0)
@@ -132,16 +136,20 @@ export const useFlatAdsActions = ({
   // Update single ad from specific source
   const handleUpdateAdFromSource = useCallback(
     async (adId: number, source: string) => {
+      if (startUpdatingAd) startUpdatingAd(adId)
+
       try {
         await updateAdStatusSingle(adId)
         await refetch()
-        toast.success(`Объявление обновлено из ${source}`)
+        toast.success('Объявление обновлено')
       } catch (error) {
         console.error(`Ошибка обновления объявления из ${source}:`, error)
         toast.error(`Ошибка при обновлении из ${source}`)
+      } finally {
+        if (stopUpdatingAd) stopUpdatingAd(adId)
       }
     },
-    [refetch],
+    [refetch, startUpdatingAd, stopUpdatingAd],
   )
 
   // Find and add similar ads automatically
@@ -331,6 +339,8 @@ export const useFlatAdsActions = ({
   // Update single ad for comparison block (extended endpoint)
   const handleUpdateAdExtended = useCallback(
     async (adId: number) => {
+      if (startUpdatingAd) startUpdatingAd(adId)
+
       try {
         await updateAdStatusExtended(adId)
         await refetch()
@@ -338,9 +348,11 @@ export const useFlatAdsActions = ({
       } catch (error) {
         console.error('Ошибка расширенного обновления объявления:', error)
         toast.error('Ошибка при расширенном обновлении')
+      } finally {
+        if (stopUpdatingAd) stopUpdatingAd(adId)
       }
     },
-    [refetch],
+    [refetch, startUpdatingAd, stopUpdatingAd],
   )
 
   // Update all ads in comparison block (single endpoint for bulk)

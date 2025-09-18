@@ -74,7 +74,13 @@ export default function EditFlatFormRefactored({
   } = useNearbyAdsFromFindAds(flat?.id || 0)
 
   // Actions hook
-  const actions = useFlatAdsActions({ flat, refetch, refetchNearbyAds })
+  const actions = useFlatAdsActions({
+    flat,
+    refetch,
+    refetchNearbyAds,
+    startUpdatingAd: state.startUpdatingAd,
+    stopUpdatingAd: state.stopUpdatingAd,
+  })
 
   // Set mounted state
   useEffect(() => {
@@ -245,6 +251,10 @@ export default function EditFlatFormRefactored({
             }
             onDeleteAd={actions.handleDeleteAd}
             onToggleComparison={actions.handleToggleComparison}
+            onUpdateAd={(adId) =>
+              actions.handleUpdateAdFromSource(adId, 'house')
+            }
+            updatingAdIds={state.updatingAdIds}
             onFindSimilar={handleFindBroaderAds}
             isLoadingSimilar={state.isLoadingSimilar}
           />
@@ -261,6 +271,10 @@ export default function EditFlatFormRefactored({
             isLoading={isLoadingNearbyAds}
             onAddToComparison={actions.handleAddToComparison}
             onToggleComparison={actions.handleToggleComparison}
+            onUpdateAd={(adId) =>
+              actions.handleUpdateAdFromSource(adId, 'nearby')
+            }
+            updatingAdIds={state.updatingAdIds}
             comparisonAds={comparisonAds}
           />
 

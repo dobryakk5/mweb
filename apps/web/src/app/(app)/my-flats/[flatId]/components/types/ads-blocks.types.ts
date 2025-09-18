@@ -71,6 +71,8 @@ export type HouseAdsBlockProps = BaseBlockProps & {
   isUpdating: boolean
   onDeleteAd: (adId: number) => Promise<void>
   onToggleComparison: (adId: number, inComparison: boolean) => Promise<void>
+  onUpdateAd?: (adId: number) => Promise<void>
+  updatingAdIds?: Set<number>
   onFindSimilar: () => Promise<void>
   isLoadingSimilar: boolean
 }
@@ -83,6 +85,8 @@ export type NearbyAdsBlockProps = BaseBlockProps & {
   onAddToComparison: (adData: any) => Promise<void>
   onToggleComparison: (adId: number, inComparison: boolean) => Promise<void>
   comparisonAds: any[]
+  onUpdateAd?: (adId: number) => Promise<void>
+  updatingAdIds?: Set<number>
 }
 
 // Comparison ads block specific types
