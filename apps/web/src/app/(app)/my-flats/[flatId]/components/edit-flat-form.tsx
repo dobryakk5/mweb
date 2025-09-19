@@ -163,6 +163,19 @@ export default function EditFlatFormRefactored({
 
   const handleSendToTelegram = async () => {
     try {
+      // Get user data from localStorage
+      const userData = localStorage.getItem('telegram_user')
+      if (!userData) {
+        alert('Пользователь не найден. Попробуйте войти заново.')
+        return
+      }
+
+      const user = JSON.parse(userData)
+      if (!user.tgUserId) {
+        alert('ID пользователя не найден. Попробуйте войти заново.')
+        return
+      }
+
       // Generate Excel file data
       const XLSX = await import('xlsx')
       const { convertAdsToExcelData } = await import('./utils/excel-export')
@@ -180,31 +193,33 @@ export default function EditFlatFormRefactored({
         type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       })
 
-      // Create file object
+      // Create file name
       const fileName = `сравнение-квартир-${flat?.address || 'квартира'}-${new Date().toLocaleDateString('ru-RU')}.xlsx`
-      const file = new File([blob], fileName, {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+
+      // Create FormData for API request
+      const formData = new FormData()
+      formData.append('user_id', user.tgUserId.toString())
+      formData.append('document', blob, fileName)
+      formData.append(
+        'caption',
+        `📊 Сравнение квартир по адресу: ${flat?.address || 'адрес не указан'}\nКоличество объявлений: ${comparisonAds.length}`,
+      )
+
+      // Send to our API
+      const response = await fetch('/api/send-to-telegram', {
+        method: 'POST',
+        body: formData,
       })
 
-      // Use Telegram Web Apps API to send document
-      if (window.Telegram?.WebApp) {
-        // Create form data
-        const formData = new FormData()
-        formData.append('document', file)
-
-        // Send to Telegram
-        window.Telegram.WebApp.sendData(
-          JSON.stringify({
-            type: 'document',
-            fileName: fileName,
-            fileData: await blob.arrayBuffer(),
-          }),
-        )
-
-        // Show success message
-        window.Telegram.WebApp.showAlert('Файл отправлен в Telegram!')
+      if (response.ok) {
+        const result = await response.json()
+        alert('✅ Файл отправлен в Telegram!')
+        console.log('Telegram send result:', result)
       } else {
-        // Fallback: create download link and copy text to share
+        const errorData = await response.json()
+        console.error('API error:', errorData)
+
+        // Fallback: download file
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
@@ -214,19 +229,42 @@ export default function EditFlatFormRefactored({
         document.body.removeChild(link)
         URL.revokeObjectURL(url)
 
-        // Copy share text to clipboard
-        const shareText = `Сравнение квартир по адресу: ${flat?.address || 'адрес не указан'}\nКоличество объявлений: ${comparisonAds.length}\nДата: ${new Date().toLocaleDateString('ru-RU')}`
-
-        if (navigator.clipboard) {
-          await navigator.clipboard.writeText(shareText)
-          alert('Файл скачан и текст для отправки скопирован в буфер обмена!')
-        } else {
-          alert('Файл скачан! Вы можете отправить его в Telegram вручную.')
-        }
+        alert(
+          `❌ Не удалось отправить в Telegram: ${errorData.error || 'Unknown error'}\n\nФайл скачан на устройство.`,
+        )
       }
     } catch (error) {
       console.error('Error sending to Telegram:', error)
-      alert('Произошла ошибка при отправке в Telegram')
+
+      // Fallback: download file
+      try {
+        const XLSX = await import('xlsx')
+        const { convertAdsToExcelData } = await import('./utils/excel-export')
+        const exportData = convertAdsToExcelData(comparisonAds)
+        const ws = XLSX.utils.json_to_sheet(exportData)
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Сравнение квартир')
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+        const blob = new Blob([excelBuffer], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+
+        const fileName = `сравнение-квартир-${flat?.address || 'квартира'}-${new Date().toLocaleDateString('ru-RU')}.xlsx`
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+      } catch (fallbackError) {
+        console.error('Fallback download failed:', fallbackError)
+      }
+
+      alert(
+        '❌ Произошла ошибка при отправке в Telegram. Файл скачан на устройство.',
+      )
     }
   }
 
