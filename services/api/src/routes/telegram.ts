@@ -1,31 +1,38 @@
 import type { FastifyInstance, FastifyRequest, FastifyReply } from 'fastify'
+import { z } from 'zod'
+
+const sendToTelegramSchema = z.object({
+  user_id: z.string(),
+  caption: z.string(),
+  filename: z.string(),
+  excelData: z.array(z.record(z.any())), // Array of Excel row objects
+})
 
 export default async function telegramRoutes(fastify: FastifyInstance) {
-  // Send document to Telegram via Python bot
+  // Send Excel document to Telegram via Python bot
   fastify.post(
     '/send-to-telegram',
     async (request: FastifyRequest, reply: FastifyReply) => {
       try {
+        // Parse and validate request body
+        const body = sendToTelegramSchema.parse(request.body)
+
         // Get Python API URL from environment
         const pythonApiUrl =
           process.env.PYTHON_API_URL || 'http://localhost:8008'
 
-        // Read the raw request body as a buffer
-        const chunks: Buffer[] = []
-        for await (const chunk of request.raw) {
-          chunks.push(chunk)
-        }
-        const bodyBuffer = Buffer.concat(chunks)
-
-        // Forward the buffer to Python API
-        const response = await fetch(`${pythonApiUrl}/api/send-document`, {
+        // Send JSON data to Python API
+        const response = await fetch(`${pythonApiUrl}/send-excel-document`, {
           method: 'POST',
-          body: bodyBuffer,
           headers: {
-            'content-type':
-              request.headers['content-type'] || 'multipart/form-data',
-            'content-length': bodyBuffer.length.toString(),
+            'Content-Type': 'application/json',
           },
+          body: JSON.stringify({
+            user_id: body.user_id,
+            caption: body.caption,
+            filename: body.filename,
+            excel_data: body.excelData,
+          }),
         })
 
         if (!response.ok) {

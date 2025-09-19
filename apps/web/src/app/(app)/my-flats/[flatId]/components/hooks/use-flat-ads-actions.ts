@@ -22,6 +22,7 @@ type AdActionHookProps = {
   flat?: UserFlat
   refetch: () => Promise<any>
   refetchNearbyAds?: () => Promise<any>
+  refetchBroaderAds?: () => Promise<any>
   startUpdatingAd?: (adId: number) => void
   stopUpdatingAd?: (adId: number) => void
   markAdAsUpdatedToday?: (adId: number) => void
@@ -34,6 +35,7 @@ export const useFlatAdsActions = ({
   flat,
   refetch,
   refetchNearbyAds,
+  refetchBroaderAds,
   startUpdatingAd,
   stopUpdatingAd,
   markAdAsUpdatedToday,
@@ -164,6 +166,14 @@ export const useFlatAdsActions = ({
       try {
         await updateAdStatusSingle(adId)
         await refetch()
+
+        // Also refresh specific data sources based on the source
+        if (source === 'house' && refetchBroaderAds) {
+          await refetchBroaderAds()
+        } else if (source === 'nearby' && refetchNearbyAds) {
+          await refetchNearbyAds()
+        }
+
         if (markAdAsUpdatedToday) markAdAsUpdatedToday(adId)
         toast.success('Объявление обновлено')
       } catch (error) {
@@ -173,7 +183,14 @@ export const useFlatAdsActions = ({
         if (stopUpdatingAd) stopUpdatingAd(adId)
       }
     },
-    [refetch, startUpdatingAd, stopUpdatingAd],
+    [
+      refetch,
+      refetchBroaderAds,
+      refetchNearbyAds,
+      startUpdatingAd,
+      stopUpdatingAd,
+      markAdAsUpdatedToday,
+    ],
   )
 
   // Find and add similar ads automatically
@@ -245,26 +262,29 @@ export const useFlatAdsActions = ({
 
       setIsLoading(true)
       try {
-        const broaderAds = await findBroaderAdsByAddress(flat.id)
+        // Используем новый эндпоинт для сохранения объявлений по дому
+        const response = await fetch(`/api/ads/save-house-ads/${flat.id}`, {
+          method: 'POST',
+        })
 
-        if (broaderAds.length === 0) {
+        if (!response.ok) {
+          throw new Error(`HTTP error! status: ${response.status}`)
+        }
+
+        const result = await response.json()
+
+        if (result.savedCount > 0) {
+          toast.success(
+            `Найдено ${result.totalFound} объявлений, сохранено ${result.savedCount} новых`,
+          )
+        } else if (result.totalFound > 0) {
+          toast.info(
+            `Найдено ${result.totalFound} объявлений, все уже существуют`,
+          )
+        } else {
           toast.info('Объявления по адресу не найдены')
-          return
         }
 
-        let addedCount = 0
-        for (const broaderAd of broaderAds) {
-          try {
-            await createAdFromSimilar(broaderAd, flat.id, flat.address) // Pass flat address
-            addedCount++
-          } catch (error) {
-            console.error('Ошибка добавления объявления по адресу:', error)
-          }
-        }
-
-        toast.success(
-          `Найдено ${broaderAds.length} объявлений, добавлено ${addedCount}`,
-        )
         await refetch()
       } catch (error) {
         console.error('Ошибка поиска объявлений по адресу:', error)
@@ -528,6 +548,10 @@ export const useFlatAdsActions = ({
         }
 
         await refetch()
+        // Also refetch broader ads to refresh the house block data
+        if (refetchBroaderAds) {
+          await refetchBroaderAds()
+        }
 
         if (errorCount === 0) {
           toast.success(`Обновлено ${successCount} объявлений`)
@@ -541,7 +565,7 @@ export const useFlatAdsActions = ({
         toast.error('Ошибка при обновлении объявлений дома')
       }
     },
-    [refetch, markAdAsUpdatedToday],
+    [refetch, refetchBroaderAds, markAdAsUpdatedToday],
   )
 
   // Update all ads in comparison block (single endpoint for bulk)

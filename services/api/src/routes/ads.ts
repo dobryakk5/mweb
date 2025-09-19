@@ -1063,4 +1063,227 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         .send({ error: 'Internal server error', details: errorMessage })
     }
   })
+
+  // POST /ads/update-flats-history-status - обновить статус записей в public.flats_history по URL
+  fastify.post('/ads/update-flats-history-status', async (request, reply) => {
+    try {
+      const body = z
+        .object({
+          urls: z.array(z.string().url()).min(1).max(50), // Массив URL для обновления
+        })
+        .parse(request.body)
+
+      fastify.log.info(
+        `Updating flats_history status for ${body.urls.length} URLs`,
+      )
+
+      const results = []
+      let successCount = 0
+      let errorCount = 0
+
+      for (const url of body.urls) {
+        try {
+          // Парсим актуальные данные для каждого URL через Python API
+          const parseResult = await pythonApiClient.parseSingle(url)
+
+          if (parseResult && parseResult.success && parseResult.data) {
+            const data = parseResult.data
+
+            // Извлекаем avitoid из URL
+            const avitoidMatch = url.match(/(\d+)\/?$/)
+            if (!avitoidMatch) {
+              throw new Error(`Cannot extract avitoid from URL: ${url}`)
+            }
+            const avitoid = parseInt(avitoidMatch[1])
+
+            // Определяем source_id по URL
+            let sourceId: number
+            if (url.includes('cian.ru')) {
+              sourceId = 4
+            } else if (url.includes('avito.ru')) {
+              sourceId = 1
+            } else if (
+              url.includes('realty.yandex.ru') ||
+              url.includes('realty.ya.ru')
+            ) {
+              sourceId = 3
+            } else {
+              sourceId = 2
+            }
+
+            // Обновляем запись в public.flats_history
+            const updateResult = await db.transaction(async (tx) => {
+              await tx.execute(sql`SET search_path TO users, public`)
+              return await tx.execute(sql`
+                UPDATE public.flats_history
+                SET
+                  price = ${data.price || 0},
+                  is_actual = ${data.status ? 1 : 0},
+                  time_source_updated = NOW()
+                WHERE avitoid = ${avitoid} AND source_id = ${sourceId}
+              `)
+            })
+
+            const rowsAffected = Array.isArray(updateResult)
+              ? updateResult.length
+              : (updateResult as any).rowCount || 0
+
+            results.push({
+              url,
+              success: true,
+              avitoid,
+              sourceId,
+              price: data.price,
+              status: data.status,
+              rowsAffected,
+            })
+
+            successCount++
+            fastify.log.info(
+              `Updated flats_history for ${url}: price=${data.price}, status=${data.status}, rows=${rowsAffected}`,
+            )
+          } else {
+            throw new Error(
+              `Parse failed for ${url}: ${JSON.stringify(parseResult)}`,
+            )
+          }
+        } catch (urlError) {
+          const errorMessage =
+            urlError instanceof Error ? urlError.message : String(urlError)
+          fastify.log.error(`Error updating ${url}: ${errorMessage}`)
+
+          results.push({
+            url,
+            success: false,
+            error: errorMessage,
+          })
+
+          errorCount++
+        }
+
+        // Небольшая задержка между запросами
+        await new Promise((resolve) => setTimeout(resolve, 100))
+      }
+
+      const message =
+        errorCount === 0
+          ? `Successfully updated ${successCount} records`
+          : `Updated ${successCount} records, ${errorCount} errors`
+
+      return reply.send({
+        success: errorCount === 0,
+        message,
+        successCount,
+        errorCount,
+        results,
+      })
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error updating flats_history status: ${errorMessage}`)
+      return reply.status(500).send({
+        error: 'Internal server error',
+        details: errorMessage,
+      })
+    }
+  })
+
+  // POST /ads/save-house-ads/:flatId - сохранить объявления по дому в users.ads
+  fastify.post('/ads/save-house-ads/:flatId', async (request, reply) => {
+    let flatId: string | undefined
+    try {
+      const params = z.object({ flatId: z.string() }).parse(request.params)
+      flatId = params.flatId
+
+      // Получаем данные квартиры
+      const flats = await db
+        .select()
+        .from(userFlats)
+        .where(eq(userFlats.id, parseInt(flatId)))
+        .limit(1)
+
+      if (flats.length === 0) {
+        return reply.status(404).send({ error: 'Flat not found' })
+      }
+
+      const currentFlat = flats[0]
+
+      // Получаем объявления по дому из public.find_ads
+      const houseAdsResult = await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users,public`)
+        return await tx.execute(
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
+              FROM public.find_ads(${currentFlat.address}, null, null)
+              WHERE NOT (floor = ${currentFlat.floor} AND rooms = ${currentFlat.rooms})`,
+        )
+      })
+
+      const houseAds = Array.isArray(houseAdsResult)
+        ? houseAdsResult
+        : (houseAdsResult as any).rows || []
+
+      if (houseAds.length === 0) {
+        return reply.send({ message: 'No house ads found', savedCount: 0 })
+      }
+
+      // Проверяем какие объявления уже есть в users.ads по URL
+      const existingUrls = await db
+        .select({ url: ads.url })
+        .from(ads)
+        .where(eq(ads.flatId, parseInt(flatId)))
+
+      const existingUrlSet = new Set(existingUrls.map((ad) => ad.url))
+
+      // Фильтруем новые объявления
+      const newAds = houseAds.filter((ad) => !existingUrlSet.has(ad.url))
+
+      if (newAds.length === 0) {
+        return reply.send({
+          message: 'All house ads already exist',
+          savedCount: 0,
+        })
+      }
+
+      // Сохраняем новые объявления в users.ads
+      const adsToInsert = newAds.map((ad) => ({
+        flatId: parseInt(flatId!),
+        url: ad.url,
+        address: currentFlat.address,
+        price: parseInt(ad.price) || 0,
+        rooms: parseInt(ad.rooms) || 1,
+        totalArea: ad.area ? String(ad.area) : null,
+        kitchenArea: ad.kitchen_area ? String(ad.kitchen_area) : null,
+        floor: ad.floor ? parseInt(ad.floor) : null,
+        from: 2, // 2 = добавлено вручную (из объявлений по дому)
+        sma: 0, // 0 = обычное объявление
+        status: ad.is_active || false,
+      }))
+
+      const insertResult = await db
+        .insert(ads)
+        .values(adsToInsert)
+        .returning({ id: ads.id })
+
+      fastify.log.info(
+        `Saved ${insertResult.length} house ads for flat ${flatId} (${houseAds.length} total found, ${existingUrls.length} already existed)`,
+      )
+
+      return reply.send({
+        message: `Saved ${insertResult.length} new house ads`,
+        savedCount: insertResult.length,
+        totalFound: houseAds.length,
+        alreadyExisted: existingUrls.length,
+      })
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      fastify.log.error(
+        `Error saving house ads for flat ${flatId || 'unknown'}: ${errorMessage}`,
+      )
+      return reply.status(500).send({
+        error: 'Internal server error',
+        details: errorMessage,
+      })
+    }
+  })
 }

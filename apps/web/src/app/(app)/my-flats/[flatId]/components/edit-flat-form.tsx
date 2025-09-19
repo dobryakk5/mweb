@@ -91,6 +91,7 @@ export default function EditFlatFormRefactored({
     flat,
     refetch,
     refetchNearbyAds,
+    refetchBroaderAds,
     startUpdatingAd: state.startUpdatingAd,
     stopUpdatingAd: state.stopUpdatingAd,
     markAdAsUpdatedToday: state.markAdAsUpdatedToday,
@@ -176,39 +177,25 @@ export default function EditFlatFormRefactored({
         return
       }
 
-      // Generate Excel file data
-      const XLSX = await import('xlsx')
+      // Generate Excel data
       const { convertAdsToExcelData } = await import('./utils/excel-export')
-
       const exportData = convertAdsToExcelData(comparisonAds)
-
-      // Create workbook and worksheet
-      const ws = XLSX.utils.json_to_sheet(exportData)
-      const wb = XLSX.utils.book_new()
-      XLSX.utils.book_append_sheet(wb, ws, 'Сравнение квартир')
-
-      // Generate file as blob
-      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-      const blob = new Blob([excelBuffer], {
-        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-      })
 
       // Create file name
       const fileName = `сравнение-квартир-${flat?.address || 'квартира'}-${new Date().toLocaleDateString('ru-RU')}.xlsx`
 
-      // Create FormData for API request
-      const formData = new FormData()
-      formData.append('user_id', user.tgUserId.toString())
-      formData.append('document', blob, fileName)
-      formData.append(
-        'caption',
-        `📊 Сравнение квартир по адресу: ${flat?.address || 'адрес не указан'}\nКоличество объявлений: ${comparisonAds.length}`,
-      )
-
-      // Send to our API
+      // Send JSON data to our API
       const response = await fetch('/api/send-to-telegram', {
         method: 'POST',
-        body: formData,
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          user_id: user.tgUserId.toString(),
+          caption: `📊 Сравнение квартир по адресу: ${flat?.address || 'адрес не указан'}\nКоличество объявлений: ${comparisonAds.length}`,
+          filename: fileName,
+          excelData: exportData,
+        }),
       })
 
       if (response.ok) {
@@ -220,6 +207,15 @@ export default function EditFlatFormRefactored({
         console.error('API error:', errorData)
 
         // Fallback: download file
+        const XLSX = await import('xlsx')
+        const ws = XLSX.utils.json_to_sheet(exportData)
+        const wb = XLSX.utils.book_new()
+        XLSX.utils.book_append_sheet(wb, ws, 'Сравнение квартир')
+        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+        const blob = new Blob([excelBuffer], {
+          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+        })
+
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
@@ -239,8 +235,6 @@ export default function EditFlatFormRefactored({
       // Fallback: download file
       try {
         const XLSX = await import('xlsx')
-        const { convertAdsToExcelData } = await import('./utils/excel-export')
-        const exportData = convertAdsToExcelData(comparisonAds)
         const ws = XLSX.utils.json_to_sheet(exportData)
         const wb = XLSX.utils.book_new()
         XLSX.utils.book_append_sheet(wb, ws, 'Сравнение квартир')
@@ -249,7 +243,6 @@ export default function EditFlatFormRefactored({
           type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
         })
 
-        const fileName = `сравнение-квартир-${flat?.address || 'квартира'}-${new Date().toLocaleDateString('ru-RU')}.xlsx`
         const url = URL.createObjectURL(blob)
         const link = document.createElement('a')
         link.href = url
