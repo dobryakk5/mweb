@@ -111,7 +111,7 @@ export default function ComparisonAdsBlock({
               size: 'sm',
               className: `
                 transition-all duration-200
-                ${isSendingToTelegram ? 'relative overflow-hidden bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite,pulse-glow_1s_ease-in-out_infinite] text-white border-blue-400' : ''}
+                ${isSendingToTelegram ? 'animate-[pulse-glow_2s_ease-in-out_infinite]' : ''}
                 ${telegramSendSuccess ? '!bg-green-500 hover:!bg-green-600 !text-white !border-green-500 animate-none' : ''}
               `,
             })}

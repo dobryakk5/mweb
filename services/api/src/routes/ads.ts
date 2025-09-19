@@ -2,7 +2,7 @@ import { type FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { db, ads, userFlats, adHistory } from '@acme/db'
-import { eq, sql, inArray } from 'drizzle-orm'
+import { eq, sql, inArray, and } from 'drizzle-orm'
 
 // Python API client class
 class PythonApiClient {
@@ -1226,16 +1226,21 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         return reply.send({ message: 'No house ads found', savedCount: 0 })
       }
 
-      // Проверяем какие объявления уже есть в users.ads по URL
-      const existingUrls = await db
-        .select({ url: ads.url })
+      // Проверяем какие объявления уже есть в users.ads по комбинации (price, rooms, floor)
+      const existingAds = await db
+        .select({ price: ads.price, rooms: ads.rooms, floor: ads.floor })
         .from(ads)
-        .where(eq(ads.flatId, parseInt(flatId)))
+        .where(and(eq(ads.flatId, parseInt(flatId)), eq(ads.from, 2))) // только объявления по дому
 
-      const existingUrlSet = new Set(existingUrls.map((ad) => ad.url))
+      const existingKeys = new Set(
+        existingAds.map((ad) => `${ad.price}-${ad.rooms}-${ad.floor}`),
+      )
 
-      // Фильтруем новые объявления
-      const newAds = houseAds.filter((ad) => !existingUrlSet.has(ad.url))
+      // Фильтруем новые объявления по комбинации (price, rooms, floor)
+      const newAds = houseAds.filter((ad) => {
+        const key = `${parseInt(ad.price) || 0}-${parseInt(ad.rooms) || 1}-${parseInt(ad.floor) || 0}`
+        return !existingKeys.has(key)
+      })
 
       if (newAds.length === 0) {
         return reply.send({
@@ -1265,7 +1270,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         .returning({ id: ads.id })
 
       fastify.log.info(
-        `Saved ${insertResult.length} house ads for flat ${flatId} (${houseAds.length} total found, ${existingUrls.length} already existed)`,
+        `Saved ${insertResult.length} house ads for flat ${flatId} (${houseAds.length} total found, ${existingAds.length} already existed)`,
       )
 
       return reply.send({

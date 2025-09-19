@@ -380,8 +380,21 @@ export default function AdsTable({
         const statusIsOld = isStatusOld(ad.updatedAt)
         const status = ad.status ?? ad.is_active
         const statusUpdateDate = formatDateShort(ad.updatedAt || ad.updated_at)
+
+        // Проверяем возраст объявления для красного кружка
+        const adCreatedDate = ad.createdAt || ad.created
+        const now = new Date()
+        const created = new Date(adCreatedDate)
+        const daysDiff = Math.floor(
+          (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24),
+        )
+        const isRecentAd = daysDiff <= 7 && adCreatedDate
+
         return (
           <div className='flex items-center justify-center gap-1'>
+            {isRecentAd && (
+              <div className='w-2 h-2 bg-red-500 rounded-full flex-shrink-0'></div>
+            )}
             {status ? (
               <span
                 className={`text-green-600 font-semibold ${statusIsOld ? 'opacity-30' : ''}`}
