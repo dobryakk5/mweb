@@ -22,18 +22,21 @@ export default async function telegramRoutes(fastify: FastifyInstance) {
           process.env.PYTHON_API_URL || 'http://localhost:8008'
 
         // Send JSON data to Python API
-        const response = await fetch(`${pythonApiUrl}/send-excel-document`, {
-          method: 'POST',
-          headers: {
-            'Content-Type': 'application/json',
+        const response = await fetch(
+          `${pythonApiUrl}/api/send-excel-document`,
+          {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              user_id: body.user_id,
+              caption: body.caption,
+              filename: body.filename,
+              excel_data: body.excelData,
+            }),
           },
-          body: JSON.stringify({
-            user_id: body.user_id,
-            caption: body.caption,
-            filename: body.filename,
-            excel_data: body.excelData,
-          }),
-        })
+        )
 
         if (!response.ok) {
           const errorText = await response.text()
