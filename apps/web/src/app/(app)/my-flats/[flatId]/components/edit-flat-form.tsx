@@ -234,6 +234,9 @@ export default function EditFlatFormRefactored({
 
       // Fallback: download file
       try {
+        const { convertAdsToExcelData } = await import('./utils/excel-export')
+        const exportData = convertAdsToExcelData(comparisonAds)
+
         const XLSX = await import('xlsx')
         const ws = XLSX.utils.json_to_sheet(exportData)
         const wb = XLSX.utils.book_new()
