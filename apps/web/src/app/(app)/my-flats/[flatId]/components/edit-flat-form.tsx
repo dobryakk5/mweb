@@ -1,6 +1,18 @@
 'use client'
 
 import { type HTMLAttributes, type JSX, useEffect } from 'react'
+
+// Telegram Web App types
+declare global {
+  interface Window {
+    Telegram?: {
+      WebApp: {
+        sendData: (data: string) => void
+        showAlert: (message: string) => void
+      }
+    }
+  }
+}
 import { useSearchParams } from 'next/navigation'
 import Link from 'next/link'
 
@@ -147,6 +159,75 @@ export default function EditFlatFormRefactored({
 
   const handleExportComparison = () => {
     exportComparison(comparisonAds)
+  }
+
+  const handleSendToTelegram = async () => {
+    try {
+      // Generate Excel file data
+      const XLSX = await import('xlsx')
+      const { convertAdsToExcelData } = await import('./utils/excel-export')
+
+      const exportData = convertAdsToExcelData(comparisonAds)
+
+      // Create workbook and worksheet
+      const ws = XLSX.utils.json_to_sheet(exportData)
+      const wb = XLSX.utils.book_new()
+      XLSX.utils.book_append_sheet(wb, ws, 'Сравнение квартир')
+
+      // Generate file as blob
+      const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
+      const blob = new Blob([excelBuffer], {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+
+      // Create file object
+      const fileName = `сравнение-квартир-${flat?.address || 'квартира'}-${new Date().toLocaleDateString('ru-RU')}.xlsx`
+      const file = new File([blob], fileName, {
+        type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+      })
+
+      // Use Telegram Web Apps API to send document
+      if (window.Telegram?.WebApp) {
+        // Create form data
+        const formData = new FormData()
+        formData.append('document', file)
+
+        // Send to Telegram
+        window.Telegram.WebApp.sendData(
+          JSON.stringify({
+            type: 'document',
+            fileName: fileName,
+            fileData: await blob.arrayBuffer(),
+          }),
+        )
+
+        // Show success message
+        window.Telegram.WebApp.showAlert('Файл отправлен в Telegram!')
+      } else {
+        // Fallback: create download link and copy text to share
+        const url = URL.createObjectURL(blob)
+        const link = document.createElement('a')
+        link.href = url
+        link.download = fileName
+        document.body.appendChild(link)
+        link.click()
+        document.body.removeChild(link)
+        URL.revokeObjectURL(url)
+
+        // Copy share text to clipboard
+        const shareText = `Сравнение квартир по адресу: ${flat?.address || 'адрес не указан'}\nКоличество объявлений: ${comparisonAds.length}\nДата: ${new Date().toLocaleDateString('ru-RU')}`
+
+        if (navigator.clipboard) {
+          await navigator.clipboard.writeText(shareText)
+          alert('Файл скачан и текст для отправки скопирован в буфер обмена!')
+        } else {
+          alert('Файл скачан! Вы можете отправить его в Telegram вручную.')
+        }
+      }
+    } catch (error) {
+      console.error('Error sending to Telegram:', error)
+      alert('Произошла ошибка при отправке в Telegram')
+    }
   }
 
   // Update handlers for different blocks
@@ -343,6 +424,7 @@ export default function EditFlatFormRefactored({
               onUpdateAd={actions.handleUpdateAdExtended}
               updatingAdIds={state.updatingAdIds}
               onExportToExcel={handleExportComparison}
+              onSendToTelegram={handleSendToTelegram}
               showAddAdForm={state.showAddAdForm}
               onToggleAddAdForm={() =>
                 state.setShowAddAdForm(!state.showAddAdForm)

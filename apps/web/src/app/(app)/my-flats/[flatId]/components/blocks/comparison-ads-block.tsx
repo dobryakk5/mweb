@@ -2,7 +2,7 @@
 
 import { useState } from 'react'
 import { buttonVariants } from '@acme/ui/components/button'
-import { DownloadIcon } from '@acme/ui/components/icon'
+import { DownloadIcon, SendIcon } from '@acme/ui/components/icon'
 import CollapsibleBlock from '../shared/collapsible-block'
 import AdsTable from '../shared/ads-table'
 import { MultiUpdateButtons } from '../shared/update-buttons'
@@ -36,6 +36,7 @@ export default function ComparisonAdsBlock({
   onUpdateAd,
   updatingAdIds,
   onExportToExcel,
+  onSendToTelegram,
   showAddAdForm,
   onToggleAddAdForm,
 }: ComparisonAdsBlockProps) {
@@ -87,18 +88,34 @@ export default function ComparisonAdsBlock({
       >
         {expandedView ? 'Компактный вид' : 'Расширенный вид'}
       </button>
-      <button
-        type='button'
-        className={buttonVariants({
-          variant: 'outline',
-          size: 'sm',
-        })}
-        onClick={onExportToExcel}
-        disabled={ads.length === 0}
-      >
-        <DownloadIcon className='h-4 w-4 mr-2' />
-        Экспорт Excel
-      </button>
+      <div className='flex gap-1'>
+        <button
+          type='button'
+          className={buttonVariants({
+            variant: 'outline',
+            size: 'sm',
+          })}
+          onClick={onExportToExcel}
+          disabled={ads.length === 0}
+        >
+          <DownloadIcon className='h-4 w-4 mr-2' />
+          Экспорт Excel
+        </button>
+        {onSendToTelegram && (
+          <button
+            type='button'
+            className={buttonVariants({
+              variant: 'outline',
+              size: 'sm',
+            })}
+            onClick={onSendToTelegram}
+            disabled={ads.length === 0}
+            title='Отправить в Telegram'
+          >
+            <SendIcon className='h-4 w-4' />
+          </button>
+        )}
+      </div>
       <MultiUpdateButtons
         onUpdate={onUpdate}
         isUpdating={isUpdating}

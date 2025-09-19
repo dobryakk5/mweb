@@ -52,16 +52,16 @@ export default function MyFlatsPage(): JSX.Element {
 
   if (isLoading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Загрузка...</div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-lg'>Загрузка...</div>
       </div>
     )
   }
 
   if (!user) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
-        <div className="text-lg">Пользователь не найден</div>
+      <div className='min-h-screen flex items-center justify-center'>
+        <div className='text-lg'>Пользователь не найден</div>
       </div>
     )
   }
@@ -69,34 +69,17 @@ export default function MyFlatsPage(): JSX.Element {
   return (
     <Page>
       <Page.Header>
-        <Page.Title>Мои квартиры</Page.Title>
+        <Page.Title>Квартиры</Page.Title>
 
-        <div className="flex items-center gap-4 ml-auto">
-          <div className="flex items-center gap-2">
-            <span className="text-sm text-gray-600">
-              {user.firstName} {user.lastName}
-            </span>
-          </div>
-
-          <Link
-            className={buttonVariants({
-              className: 'ml-auto',
-              variant: 'secondary',
-            })}
-            href='/my-flats/add'
-          >
-            Добавить квартиру
-          </Link>
-
-          <button
-            onClick={handleLogout}
-            className={buttonVariants({
-              variant: 'outline',
-            })}
-          >
-            Выйти
-          </button>
-        </div>
+        <Link
+          className={buttonVariants({
+            className: 'ml-auto',
+            variant: 'secondary',
+          })}
+          href='/my-flats/add'
+        >
+          Добавить квартиру
+        </Link>
       </Page.Header>
 
       <Page.Content>

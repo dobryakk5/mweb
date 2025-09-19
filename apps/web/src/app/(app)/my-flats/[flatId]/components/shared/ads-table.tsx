@@ -467,13 +467,13 @@ export default function AdsTable({
                 {columns.map((column) => (
                   <th
                     key={column.key}
-                    className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${column.className || ''}`}
+                    className={`h-10 sm:h-12 px-1 sm:px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${column.className || ''}`}
                   >
                     {column.label}
                   </th>
                 ))}
                 {showActions && (
-                  <th className='h-12 px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-32'>
+                  <th className='h-10 sm:h-12 px-2 sm:px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-20 sm:w-32'>
                     Действия
                   </th>
                 )}
@@ -485,10 +485,16 @@ export default function AdsTable({
                 className='border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted'
               >
                 <td
-                  className='p-4 align-middle [&:has([role=checkbox])]:pr-0'
-                  colSpan={columns.length + (showActions ? 1 : 0)}
+                  className='p-2 sm:p-4 align-middle [&:has([role=checkbox])]:pr-0'
+                  colSpan={
+                    columns.length +
+                    (showComparison ? 1 : 0) +
+                    (showActions ? 1 : 0)
+                  }
                 >
-                  <div className='text-sm text-center'>Нет объявлений</div>
+                  <div className='text-xs sm:text-sm text-center'>
+                    Нет объявлений
+                  </div>
                 </td>
               </tr>
             </tbody>
@@ -507,11 +513,11 @@ export default function AdsTable({
               {columns.map((column) => (
                 <th
                   key={column.key}
-                  className={`h-12 px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${column.className || ''} relative`}
+                  className={`h-10 sm:h-12 px-1 sm:px-4 text-left align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 ${column.className || ''} relative`}
                 >
                   <div className='flex items-center gap-1'>
                     <div
-                      className={`flex items-center gap-1 ${column.sortable ? 'cursor-pointer hover:text-foreground select-none' : ''}`}
+                      className={`flex items-center gap-1 text-xs sm:text-sm ${column.sortable ? 'cursor-pointer hover:text-foreground select-none' : ''}`}
                       onClick={() => column.sortable && handleSort(column.key)}
                     >
                       {column.label}
@@ -549,12 +555,13 @@ export default function AdsTable({
                 </th>
               ))}
               {showComparison && (
-                <th className='h-12 px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-12'>
-                  Сравнить
+                <th className='h-12 px-2 sm:px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-8 sm:w-12'>
+                  <span className='hidden sm:inline'>Сравнить</span>
+                  <span className='sm:hidden'>Сравн.</span>
                 </th>
               )}
               {showActions && (
-                <th className='h-12 px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-32'>
+                <th className='h-12 px-2 sm:px-4 text-center align-middle font-medium text-muted-foreground [&:has([role=checkbox])]:pr-0 w-20 sm:w-32'>
                   Действия
                 </th>
               )}
@@ -573,13 +580,16 @@ export default function AdsTable({
                   }`}
                 >
                   {columns.map((column) => (
-                    <td key={column.key} className='p-2 align-middle text-sm'>
+                    <td
+                      key={column.key}
+                      className='p-1 sm:p-2 align-middle text-xs sm:text-sm'
+                    >
                       {renderCell(ad, column)}
                     </td>
                   ))}
 
                   {showComparison && (
-                    <td className='p-2 align-middle text-sm'>
+                    <td className='p-1 sm:p-2 align-middle text-xs sm:text-sm'>
                       <div className='flex items-center justify-center'>
                         <button
                           type='button'
@@ -608,7 +618,7 @@ export default function AdsTable({
                   )}
 
                   {showActions && (
-                    <td className='p-2 align-middle text-sm'>
+                    <td className='p-1 sm:p-2 align-middle text-xs sm:text-sm'>
                       <div className='flex gap-2'>
                         {/* Update button - hide during bulk update or show checkmark if updated today */}
                         {!isBulkUpdating && (

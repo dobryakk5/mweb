@@ -28,13 +28,14 @@ export default function FlatAdsBlock({
     {
       key: 'url',
       label: 'URL',
-      className: 'w-40',
+      className: 'w-20 sm:w-32 lg:w-40',
       filterable: true,
       filterType: 'text',
     },
     {
       key: 'price',
       label: 'Цена, млн',
+      className: 'w-16 sm:w-20',
       sortable: true,
       filterable: true,
       filterType: 'number',
@@ -42,6 +43,7 @@ export default function FlatAdsBlock({
     {
       key: 'rooms',
       label: 'Комнат',
+      className: 'w-12 sm:w-16',
       sortable: true,
       filterable: true,
       filterType: 'number',
@@ -49,6 +51,7 @@ export default function FlatAdsBlock({
     {
       key: 'floor',
       label: 'Этаж',
+      className: 'w-12 sm:w-16',
       sortable: true,
       filterable: true,
       filterType: 'number',
@@ -56,6 +59,7 @@ export default function FlatAdsBlock({
     {
       key: 'totalArea',
       label: 'Площадь',
+      className: 'w-16 sm:w-20',
       sortable: true,
       filterable: true,
       filterType: 'number',
@@ -63,14 +67,22 @@ export default function FlatAdsBlock({
     {
       key: 'kitchenArea',
       label: 'Кухня',
+      className: 'w-16 sm:w-20',
       sortable: true,
       filterable: true,
       filterType: 'number',
     },
-    { key: 'status', label: 'Статус', filterable: true, filterType: 'boolean' },
+    {
+      key: 'status',
+      label: 'Статус',
+      className: 'w-16 sm:w-20',
+      filterable: true,
+      filterType: 'boolean',
+    },
     {
       key: 'updatedAt',
       label: 'Обновлено',
+      className: 'w-20 sm:w-24',
       sortable: true,
       filterable: true,
       filterType: 'date',

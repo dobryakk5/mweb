@@ -120,6 +120,7 @@ export type ComparisonAdsBlockProps = BaseBlockProps & {
   onUpdateAd: (adId: number) => Promise<void>
   updatingAdIds: Set<number>
   onExportToExcel: () => void
+  onSendToTelegram?: () => void
   showAddAdForm: boolean
   onToggleAddAdForm: () => void
 }
