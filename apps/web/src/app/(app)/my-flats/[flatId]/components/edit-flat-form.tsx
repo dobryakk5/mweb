@@ -163,17 +163,23 @@ export default function EditFlatFormRefactored({
   }
 
   const handleSendToTelegram = async () => {
+    // Reset success state when starting new send
+    state.setTelegramSendSuccess(false)
+    state.setIsSendingToTelegram(true)
+
     try {
       // Get user data from localStorage
       const userData = localStorage.getItem('telegram_user')
       if (!userData) {
         alert('Пользователь не найден. Попробуйте войти заново.')
+        state.setIsSendingToTelegram(false)
         return
       }
 
       const user = JSON.parse(userData)
       if (!user.tgUserId) {
         alert('ID пользователя не найден. Попробуйте войти заново.')
+        state.setIsSendingToTelegram(false)
         return
       }
 
@@ -200,8 +206,13 @@ export default function EditFlatFormRefactored({
 
       if (response.ok) {
         const result = await response.json()
-        alert('✅ Файл отправлен в Telegram!')
         console.log('Telegram send result:', result)
+        state.setTelegramSendSuccess(true)
+
+        // Reset success state after 3 seconds
+        setTimeout(() => {
+          state.setTelegramSendSuccess(false)
+        }, 3000)
       } else {
         const errorData = await response.json()
         console.error('API error:', errorData)
@@ -214,6 +225,8 @@ export default function EditFlatFormRefactored({
       console.error('Error sending to Telegram:', error)
 
       alert('❌ Произошла ошибка при отправке в Telegram.')
+    } finally {
+      state.setIsSendingToTelegram(false)
     }
   }
 
@@ -412,6 +425,8 @@ export default function EditFlatFormRefactored({
               updatingAdIds={state.updatingAdIds}
               onExportToExcel={handleExportComparison}
               onSendToTelegram={handleSendToTelegram}
+              isSendingToTelegram={state.isSendingToTelegram}
+              telegramSendSuccess={state.telegramSendSuccess}
               showAddAdForm={state.showAddAdForm}
               onToggleAddAdForm={() =>
                 state.setShowAddAdForm(!state.showAddAdForm)

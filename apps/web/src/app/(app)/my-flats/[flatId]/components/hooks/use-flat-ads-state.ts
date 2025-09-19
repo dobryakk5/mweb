@@ -48,6 +48,10 @@ export const useFlatAdsState = () => {
   // Bulk update states
   const [isUpdatingAllOldAds, setIsUpdatingAllOldAds] = useState(false)
 
+  // Telegram send states
+  const [isSendingToTelegram, setIsSendingToTelegram] = useState(false)
+  const [telegramSendSuccess, setTelegramSendSuccess] = useState(false)
+
   // Computed states
   const updateStates: UpdateStates = {
     flatCian: isUpdatingFlatCian,
@@ -186,6 +190,12 @@ export const useFlatAdsState = () => {
     // Bulk update states
     isUpdatingAllOldAds,
     setIsUpdatingAllOldAds,
+
+    // Telegram send states
+    isSendingToTelegram,
+    setIsSendingToTelegram,
+    telegramSendSuccess,
+    setTelegramSendSuccess,
 
     // Helper functions
     setFlatUpdateStates,
