@@ -206,61 +206,14 @@ export default function EditFlatFormRefactored({
         const errorData = await response.json()
         console.error('API error:', errorData)
 
-        // Fallback: download file
-        const XLSX = await import('xlsx')
-        const ws = XLSX.utils.json_to_sheet(exportData)
-        const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Сравнение квартир')
-        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-        const blob = new Blob([excelBuffer], {
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        })
-
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-
         alert(
-          `❌ Не удалось отправить в Telegram: ${errorData.error || 'Unknown error'}\n\nФайл скачан на устройство.`,
+          `❌ Не удалось отправить в Telegram: ${errorData.error || 'Unknown error'}`,
         )
       }
     } catch (error) {
       console.error('Error sending to Telegram:', error)
 
-      // Fallback: download file
-      try {
-        const { convertAdsToExcelData } = await import('./utils/excel-export')
-        const exportData = convertAdsToExcelData(comparisonAds)
-
-        const XLSX = await import('xlsx')
-        const ws = XLSX.utils.json_to_sheet(exportData)
-        const wb = XLSX.utils.book_new()
-        XLSX.utils.book_append_sheet(wb, ws, 'Сравнение квартир')
-        const excelBuffer = XLSX.write(wb, { bookType: 'xlsx', type: 'array' })
-        const blob = new Blob([excelBuffer], {
-          type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
-        })
-
-        const url = URL.createObjectURL(blob)
-        const link = document.createElement('a')
-        link.href = url
-        link.download = fileName
-        document.body.appendChild(link)
-        link.click()
-        document.body.removeChild(link)
-        URL.revokeObjectURL(url)
-      } catch (fallbackError) {
-        console.error('Fallback download failed:', fallbackError)
-      }
-
-      alert(
-        '❌ Произошла ошибка при отправке в Telegram. Файл скачан на устройство.',
-      )
+      alert('❌ Произошла ошибка при отправке в Telegram.')
     }
   }
 
