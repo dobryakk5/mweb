@@ -20,6 +20,7 @@ export default function HouseAdsBlock({
   isUpdating,
   onDeleteAd,
   onToggleComparison,
+  onAddToComparison,
   onUpdateAd,
   updatingAdIds,
   onFindSimilar,
@@ -29,14 +30,63 @@ export default function HouseAdsBlock({
   isUpdatingStatuses,
 }: HouseAdsBlockProps) {
   const columns: ColumnConfig[] = [
-    { key: 'url', label: 'URL', className: 'w-40' },
-    { key: 'price', label: 'Цена, млн' },
-    { key: 'rooms', label: 'Комнат' },
-    { key: 'floor', label: 'Этаж' },
-    { key: 'area', label: 'Площадь' },
-    { key: 'kitchenArea', label: 'Кухня' },
-    { key: 'status', label: 'Статус' },
-    { key: 'updatedAt', label: 'Обновлено' },
+    {
+      key: 'url',
+      label: 'URL',
+      className: 'w-40',
+      filterable: true,
+      filterType: 'text',
+    },
+    {
+      key: 'price',
+      label: 'Цена, млн',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'rooms',
+      label: 'Комнат',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'floor',
+      label: 'Этаж',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'area',
+      label: 'Площадь',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'kitchenArea',
+      label: 'Кухня',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    { key: 'status', label: 'Статус', filterable: true, filterType: 'boolean' },
+    {
+      key: 'createdAt',
+      label: 'Создано',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+    },
+    {
+      key: 'updatedAt',
+      label: 'Обновлено',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+    },
   ]
 
   const headerActions = (
@@ -66,6 +116,7 @@ export default function HouseAdsBlock({
         columns={columns}
         onDeleteAd={onDeleteAd}
         onToggleComparison={onToggleComparison}
+        onAddToComparison={onAddToComparison}
         onUpdateAd={onUpdateAd}
         updatingAdIds={updatingAdIds || new Set()}
         showActions={true}

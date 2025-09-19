@@ -123,10 +123,16 @@ export default function EditFlatFormRefactored({
     }
   }, [ads, state])
 
-  // Separate ads by type
-  const flatAds = ads.filter((ad) => ad.from === 1) // По этой квартире (найдено автоматически)
-  const otherAds = ads.filter((ad) => ad.from === 2) // Другие объявления (добавлено вручную)
-  const comparisonAds = ads.filter((ad) => ad.sma === 1) // Сравнение квартир (отмеченные для сравнения)
+  // Separate ads by type - with safety checks
+  const flatAds = ads.filter((ad) => ad && ad.id && ad.from === 1) // По этой квартире (найдено автоматически)
+  const otherAds = ads.filter((ad) => ad && ad.id && ad.from === 2) // Другие объявления (добавлено вручную)
+  const comparisonAds = ads.filter((ad) => ad && ad.id && ad.sma === 1) // Сравнение квартир (отмеченные для сравнения)
+
+  // Log if any ads are filtered out
+  const invalidAds = ads.filter((ad) => !ad || !ad.id)
+  if (invalidAds.length > 0) {
+    console.warn('Found ads with invalid/missing IDs:', invalidAds)
+  }
 
   // Form submission handlers
   const onSubmit = async (data: FormValues) => {
@@ -284,6 +290,7 @@ export default function EditFlatFormRefactored({
               }
               onDeleteAd={actions.handleDeleteAd}
               onToggleComparison={actions.handleToggleComparison}
+              onAddToComparison={actions.handleAddToComparison}
               onUpdateAd={(adId) =>
                 actions.handleUpdateAdFromSource(adId, 'house')
               }

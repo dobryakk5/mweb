@@ -14,6 +14,9 @@ export type ColumnConfig = {
   label: string
   className?: string
   sortable?: boolean
+  filterable?: boolean
+  filterType?: 'text' | 'number' | 'date' | 'boolean' | 'select'
+  filterOptions?: string[] // Для select типа
 }
 
 // Update button props
@@ -36,6 +39,17 @@ export type CollapsibleBlockProps = {
   className?: string
 }
 
+// Sorting configuration
+export type SortConfig = {
+  key: string
+  direction: 'asc' | 'desc'
+} | null
+
+// Filter configuration
+export type FilterConfig = {
+  [key: string]: any
+}
+
 // Ads table props
 export type AdsTableProps = {
   ads: any[]
@@ -43,6 +57,7 @@ export type AdsTableProps = {
   expandedView?: boolean
   onDeleteAd?: (adId: number) => Promise<void>
   onToggleComparison?: (adId: number, inComparison: boolean) => Promise<void>
+  onAddToComparison?: (adData: any) => Promise<void>
   onUpdateAd?: (adId: number) => Promise<void>
   updatingAdIds?: Set<number>
   showActions?: boolean
@@ -74,6 +89,7 @@ export type HouseAdsBlockProps = BaseBlockProps & {
   isUpdating: boolean
   onDeleteAd: (adId: number) => Promise<void>
   onToggleComparison: (adId: number, inComparison: boolean) => Promise<void>
+  onAddToComparison: (adData: any) => Promise<void>
   onUpdateAd?: (adId: number) => Promise<void>
   updatingAdIds?: Set<number>
   onFindSimilar: () => Promise<void>

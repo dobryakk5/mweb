@@ -25,16 +25,76 @@ export default function NearbyAdsBlock({
   comparisonAds,
 }: NearbyAdsBlockProps) {
   const columns: ColumnConfig[] = [
-    { key: 'url', label: 'URL', className: 'w-40' },
-    { key: 'price', label: 'Цена, млн' },
-    { key: 'rooms', label: 'Комнат' },
-    { key: 'floor', label: 'Этаж' },
-    { key: 'area', label: 'Площадь' },
-    { key: 'kitchenArea', label: 'Кухня' },
-    { key: 'distance', label: 'Расстояние, м' },
-    { key: 'createdAt', label: 'Создано' },
-    { key: 'updatedAt', label: 'Обновлено' },
-    { key: 'personType', label: 'Автор' },
+    {
+      key: 'url',
+      label: 'URL',
+      className: 'w-40',
+      filterable: true,
+      filterType: 'text',
+    },
+    {
+      key: 'price',
+      label: 'Цена, млн',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'rooms',
+      label: 'Комнат',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'floor',
+      label: 'Этаж',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'area',
+      label: 'Площадь',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'kitchenArea',
+      label: 'Кухня',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'distance',
+      label: 'Расстояние, м',
+      sortable: true,
+      filterable: true,
+      filterType: 'number',
+    },
+    {
+      key: 'createdAt',
+      label: 'Создано',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+    },
+    {
+      key: 'updatedAt',
+      label: 'Обновлено',
+      sortable: true,
+      filterable: true,
+      filterType: 'date',
+    },
+    {
+      key: 'personType',
+      label: 'Автор',
+      filterable: true,
+      filterType: 'select',
+      filterOptions: ['собственник', 'агентство', 'неизвестно'],
+    },
   ]
 
   const headerActions = (
@@ -52,6 +112,7 @@ export default function NearbyAdsBlock({
         ads={nearbyAds}
         columns={columns}
         onToggleComparison={onToggleComparison}
+        onAddToComparison={onAddToComparison}
         onUpdateAd={onUpdateAd}
         updatingAdIds={updatingAdIds || new Set()}
         showActions={true}

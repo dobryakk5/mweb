@@ -44,6 +44,24 @@ export const useFlatAdsActions = ({
   // Toggle comparison status for an ad
   const handleToggleComparison = useCallback(
     async (adId: number, inComparison: boolean) => {
+      console.log('handleToggleComparison called with:', {
+        adId,
+        inComparison,
+        typeof_adId: typeof adId,
+      })
+
+      // Валидация adId
+      if (
+        !adId ||
+        adId === undefined ||
+        adId === null ||
+        typeof adId !== 'number'
+      ) {
+        console.error('Invalid adId in handleToggleComparison:', adId)
+        toast.error('Ошибка: неверный ID объявления')
+        return
+      }
+
       try {
         await toggleAdComparison(adId, inComparison)
         await refetch()
@@ -54,6 +72,7 @@ export const useFlatAdsActions = ({
         )
       } catch (error) {
         console.error('Ошибка при изменении статуса сравнения:', error)
+        console.error('Error details:', { adId, inComparison, error })
         toast.error('Ошибка при изменении статуса сравнения')
       }
     },
