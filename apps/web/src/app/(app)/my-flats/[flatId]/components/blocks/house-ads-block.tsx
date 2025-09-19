@@ -119,6 +119,7 @@ export default function HouseAdsBlock({
         updatingAdIds={updatingAdIds || new Set()}
         showActions={true}
         showComparison={true}
+        showDelete={false}
         isBulkUpdating={isUpdatingStatuses}
         updatedTodayAdIds={updatedTodayAdIds}
       />

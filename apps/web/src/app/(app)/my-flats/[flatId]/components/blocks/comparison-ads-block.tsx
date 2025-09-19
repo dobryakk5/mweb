@@ -164,6 +164,7 @@ export default function ComparisonAdsBlock({
         updatingAdIds={updatingAdIds}
         showActions={true}
         showComparison={false} // No comparison toggle in comparison block
+        showDelete={true} // Only comparison block has delete buttons
       />
     </CollapsibleBlock>
   )

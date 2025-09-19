@@ -10,12 +10,21 @@ export default async function telegramRoutes(fastify: FastifyInstance) {
         const pythonApiUrl =
           process.env.PYTHON_API_URL || 'http://localhost:8008'
 
-        // Forward the multipart form data directly to Python API
+        // Read the raw request body as a buffer
+        const chunks: Buffer[] = []
+        for await (const chunk of request.raw) {
+          chunks.push(chunk)
+        }
+        const bodyBuffer = Buffer.concat(chunks)
+
+        // Forward the buffer to Python API
         const response = await fetch(`${pythonApiUrl}/api/send-document`, {
           method: 'POST',
-          body: request.body as any,
+          body: bodyBuffer,
           headers: {
-            'content-type': request.headers['content-type'],
+            'content-type':
+              request.headers['content-type'] || 'multipart/form-data',
+            'content-length': bodyBuffer.length.toString(),
           },
         })
 

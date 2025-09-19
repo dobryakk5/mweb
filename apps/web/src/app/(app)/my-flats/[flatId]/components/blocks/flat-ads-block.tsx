@@ -119,6 +119,7 @@ export default function FlatAdsBlock({
         updatingAdIds={updatingAdIds || new Set()}
         showActions={true}
         showComparison={true}
+        showDelete={false}
         isBulkUpdating={isUpdatingAllOld}
         updatedTodayAdIds={updatedTodayAdIds}
       />

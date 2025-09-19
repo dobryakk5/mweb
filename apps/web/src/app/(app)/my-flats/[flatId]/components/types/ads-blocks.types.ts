@@ -62,6 +62,7 @@ export type AdsTableProps = {
   updatingAdIds?: Set<number>
   showActions?: boolean
   showComparison?: boolean
+  showDelete?: boolean
   isBulkUpdating?: boolean
   updatedTodayAdIds?: Set<number>
 }

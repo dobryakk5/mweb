@@ -117,6 +117,7 @@ export default function NearbyAdsBlock({
         updatingAdIds={updatingAdIds || new Set()}
         showActions={true}
         showComparison={true}
+        showDelete={false}
       />
     </CollapsibleBlock>
   )

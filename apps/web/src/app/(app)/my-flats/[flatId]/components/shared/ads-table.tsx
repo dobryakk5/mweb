@@ -45,6 +45,7 @@ export default function AdsTable({
   updatingAdIds = new Set(),
   showActions = true,
   showComparison = true,
+  showDelete = false,
   isBulkUpdating = false,
   updatedTodayAdIds = new Set(),
 }: AdsTableProps) {
@@ -133,6 +134,18 @@ export default function AdsTable({
         return sortConfig.direction === 'asc'
           ? aPrice - bPrice
           : bPrice - aPrice
+      }
+
+      // Обработка площадей (numeric sorting)
+      if (
+        sortConfig.key === 'area' ||
+        sortConfig.key === 'totalArea' ||
+        sortConfig.key === 'livingArea' ||
+        sortConfig.key === 'kitchenArea'
+      ) {
+        const aArea = parseFloat(String(aValue).replace(/[^\d.]/g, '')) || 0
+        const bArea = parseFloat(String(bValue).replace(/[^\d.]/g, '')) || 0
+        return sortConfig.direction === 'asc' ? aArea - bArea : bArea - aArea
       }
 
       // Обработка дат
@@ -710,16 +723,18 @@ export default function AdsTable({
                           </div>
                         )}
 
-                        <button
-                          type='button'
-                          className={buttonVariants({
-                            variant: 'outline',
-                            size: 'sm',
-                          })}
-                          onClick={() => onDeleteAd?.(ad.id)}
-                        >
-                          <TrashIcon className='h-4 w-4' />
-                        </button>
+                        {showDelete && (
+                          <button
+                            type='button'
+                            className={buttonVariants({
+                              variant: 'outline',
+                              size: 'sm',
+                            })}
+                            onClick={() => onDeleteAd?.(ad.id)}
+                          >
+                            <TrashIcon className='h-4 w-4' />
+                          </button>
+                        )}
                       </div>
                     </td>
                   )}
