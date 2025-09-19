@@ -30,6 +30,16 @@ export const formatDate = (
   return date.toLocaleDateString('ru-RU')
 }
 
+// Format date to short format (dd.mm)
+export const formatDateShort = (
+  dateStr: string | Date | null | undefined,
+): string => {
+  if (!dateStr) return ''
+  const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
+  if (isNaN(date.getTime())) return ''
+  return date.toLocaleDateString('ru-RU', { day: '2-digit', month: '2-digit' })
+}
+
 // Extract domain from URL
 export const getDomainFromUrl = (url: string): string => {
   try {

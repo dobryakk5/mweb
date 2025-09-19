@@ -2,7 +2,7 @@
 
 import CollapsibleBlock from '../shared/collapsible-block'
 import AdsTable from '../shared/ads-table'
-import { MultiUpdateButtons, FindSimilarButton } from '../shared/update-buttons'
+import { MultiUpdateButtons } from '../shared/update-buttons'
 import type { FlatAdsBlockProps, ColumnConfig } from '../types/ads-blocks.types'
 
 /**
@@ -79,9 +79,9 @@ export default function FlatAdsBlock({
 
   const headerActions = (
     <div className='flex gap-2'>
-      <FindSimilarButton
-        onFind={onFindSimilar}
-        isLoading={isLoadingSimilar}
+      <MultiUpdateButtons
+        onUpdate={onFindSimilar}
+        isUpdating={isLoadingSimilar}
         label='Искать объявления'
       />
       <MultiUpdateButtons

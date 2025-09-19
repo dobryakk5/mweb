@@ -109,7 +109,9 @@ export const useFlatAdsActions = ({
       )
     ) {
       try {
+        console.log('Starting flat deletion...')
         await deleteFlat()
+        console.log('Flat deletion completed successfully')
       } catch (error) {
         console.error('Ошибка удаления квартиры:', error)
         toast.error('Ошибка при удалении квартиры')

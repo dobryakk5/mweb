@@ -49,12 +49,15 @@ export const useCreateFlat: () => UseMutationResult<
 
 export const useUpdateFlat: (
   id: number,
-) => UseMutationResult<AxiosResponse, AxiosError, Partial<CreateFlatData>> = (id) => {
+) => UseMutationResult<AxiosResponse, AxiosError, Partial<CreateFlatData>> = (
+  id,
+) => {
   const queryClient = useQueryClient()
 
   return useMutation<AxiosResponse, AxiosError, Partial<CreateFlatData>>({
     mutationKey: flatKeys.updateFlat(id),
-    mutationFn: (values: Partial<CreateFlatData>) => api.patch(`/user-flats/${id}`, values),
+    mutationFn: (values: Partial<CreateFlatData>) =>
+      api.patch(`/user-flats/${id}`, values),
     onError() {
       toast.error(
         'Обновление квартиры временно недоступно. Попробуйте позже. 🙁',
@@ -92,9 +95,7 @@ export const useDeleteFlat: (
     mutationKey: flatKeys.deleteFlat(id),
     mutationFn: () => api.delete(`/user-flats/${id}`),
     onError() {
-      toast.error(
-        'Удаление квартиры временно недоступно. Попробуйте позже. 🙁',
-      )
+      toast.error('Удаление квартиры временно недоступно. Попробуйте позже. 🙁')
     },
     onSuccess: async () => {
       // Удаляем кеш конкретной квартиры
@@ -108,6 +109,7 @@ export const useDeleteFlat: (
       })
 
       // Перенаправляем на список квартир
+      console.log('Redirecting to /my-flats...')
       push('/my-flats')
 
       toast.success('Квартира удалена')

@@ -22,6 +22,7 @@ import type {
 import {
   formatPrice,
   formatDate,
+  formatDateShort,
   formatViews,
   formatStatus,
   formatUrlForDisplay,
@@ -364,9 +365,11 @@ export default function AdsTable({
 
       case 'status':
         const statusIsOld = isStatusOld(ad.updatedAt)
+        const status = ad.status ?? ad.is_active
+        const statusUpdateDate = formatDateShort(ad.updatedAt || ad.updated_at)
         return (
-          <div className='flex items-center justify-center'>
-            {ad.status ? (
+          <div className='flex items-center justify-center gap-1'>
+            {status ? (
               <span
                 className={`text-green-600 font-semibold ${statusIsOld ? 'opacity-30' : ''}`}
               >
@@ -379,23 +382,26 @@ export default function AdsTable({
                 −
               </span>
             )}
+            {statusUpdateDate && (
+              <span className='text-xs text-muted-foreground'>
+                {statusUpdateDate}
+              </span>
+            )}
           </div>
         )
 
       case 'createdAt':
         return formatDate(ad.createdAt || ad.created)
       case 'updatedAt':
-        // Попробуем разные варианты полей для updatedAt
-        const updatedValue =
-          ad.updatedAt || ad.updated || ad.time_source_updated
-        console.log('updatedAt debug:', {
+        // Показываем только дату обновления от источника, исключаем updated_at из пользовательской таблицы
+        const sourceUpdatedValue = ad.updated || ad.time_source_updated
+        console.log('updatedAt debug (source only):', {
           adId: ad.id,
-          updatedAt: ad.updatedAt,
           updated: ad.updated,
           time_source_updated: ad.time_source_updated,
-          finalValue: updatedValue,
+          finalValue: sourceUpdatedValue,
         })
-        return formatDate(updatedValue)
+        return formatDate(sourceUpdatedValue)
 
       case 'distance':
         return formatDistance(ad.distance_m || ad.distance)
@@ -408,12 +414,12 @@ export default function AdsTable({
       case 'area':
       case 'totalArea':
       case 'livingArea':
-        const area = ad[key]
-        return area ? area.toString() : '\u00A0'
+        const area = ad.area || ad.totalArea || ad.livingArea || ad[key]
+        return area ? Number(area).toFixed(1) : '\u00A0'
 
       case 'kitchenArea':
         const kitchenArea = ad.kitchenArea || ad.kitchen_area
-        return kitchenArea ? kitchenArea.toString() : '\u00A0'
+        return kitchenArea ? Number(kitchenArea).toFixed(1) : '\u00A0'
 
       case 'bathroom':
       case 'balcony':
