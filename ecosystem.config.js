@@ -39,9 +39,8 @@ module.exports = {
     },
     {
       name: 'scheduler',
-      script: 'index.ts',
+      script: 'dist/index.js',
       cwd: './services/scheduler',
-      interpreter: 'tsx',
       instances: 1,
       exec_mode: 'fork',
       env: {

@@ -11,6 +11,11 @@ import Providers from './providers'
 export const metadata: Metadata = {
   title: 'Сравнение квартир',
   description: 'Личный кабинет для аналитики к боту mrealty_bot',
+  icons: {
+    icon: '/favicon.svg',
+    shortcut: '/favicon.svg',
+    apple: '/favicon.svg',
+  },
 }
 
 interface RootLayoutProps {
