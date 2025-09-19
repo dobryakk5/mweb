@@ -292,6 +292,7 @@ export const useFlatAdsActions = ({
           id: ad?.id,
           typeof_id: typeof ad?.id,
           from: ad?.from,
+          updatedAt: ad?.updatedAt,
           url: ad?.url?.substring(0, 50) + '...',
         })),
       )
@@ -308,8 +309,18 @@ export const useFlatAdsActions = ({
           return false
         }
 
-        const lastUpdate = ad.updatedAt
-        return !isUpdatedToday(lastUpdate)
+        const lastUpdate = ad.updatedAt || ad.updated || ad.time_source_updated
+        const isToday = isUpdatedToday(lastUpdate)
+        console.log('Ad update check:', {
+          id: ad.id,
+          updatedAt: ad.updatedAt,
+          updated: ad.updated,
+          time_source_updated: ad.time_source_updated,
+          finalUpdate: lastUpdate,
+          isUpdatedToday: isToday,
+          willUpdate: !isToday,
+        })
+        return !isToday
       })
 
       if (adsToUpdate.length === 0) {
@@ -442,7 +453,7 @@ export const useFlatAdsActions = ({
           return false
         }
 
-        const lastUpdate = ad.updatedAt
+        const lastUpdate = ad.updatedAt || ad.updated || ad.time_source_updated
         return !isUpdatedToday(lastUpdate)
       })
 

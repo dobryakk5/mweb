@@ -385,7 +385,17 @@ export default function AdsTable({
       case 'createdAt':
         return formatDate(ad.createdAt || ad.created)
       case 'updatedAt':
-        return formatDate(ad.updatedAt)
+        // Попробуем разные варианты полей для updatedAt
+        const updatedValue =
+          ad.updatedAt || ad.updated || ad.time_source_updated
+        console.log('updatedAt debug:', {
+          adId: ad.id,
+          updatedAt: ad.updatedAt,
+          updated: ad.updated,
+          time_source_updated: ad.time_source_updated,
+          finalValue: updatedValue,
+        })
+        return formatDate(updatedValue)
 
       case 'distance':
         return formatDistance(ad.distance_m || ad.distance)
