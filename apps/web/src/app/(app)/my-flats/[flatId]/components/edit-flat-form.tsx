@@ -261,7 +261,6 @@ export default function EditFlatFormRefactored({
                 state.updateStates.flatAvito ||
                 state.updateStates.flatYandex
               }
-              onDeleteAd={actions.handleDeleteAd}
               onToggleComparison={actions.handleToggleComparison}
               onUpdateAd={(adId) =>
                 actions.handleUpdateAdFromSource(adId, 'cian')
@@ -288,7 +287,6 @@ export default function EditFlatFormRefactored({
                 state.updateStates.houseAvito ||
                 state.updateStates.houseYandex
               }
-              onDeleteAd={actions.handleDeleteAd}
               onToggleComparison={actions.handleToggleComparison}
               onAddToComparison={actions.handleAddToComparison}
               onUpdateAd={(adId) =>

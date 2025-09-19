@@ -71,7 +71,6 @@ export type FlatAdsBlockProps = BaseBlockProps & {
   ads: any[]
   onUpdate: () => Promise<void>
   isUpdating: boolean
-  onDeleteAd: (adId: number) => Promise<void>
   onToggleComparison: (adId: number, inComparison: boolean) => Promise<void>
   onUpdateAd: (adId: number) => Promise<void>
   updatingAdIds: Set<number>
@@ -87,7 +86,6 @@ export type HouseAdsBlockProps = BaseBlockProps & {
   ads: any[]
   onUpdate: () => Promise<void>
   isUpdating: boolean
-  onDeleteAd: (adId: number) => Promise<void>
   onToggleComparison: (adId: number, inComparison: boolean) => Promise<void>
   onAddToComparison: (adData: any) => Promise<void>
   onUpdateAd?: (adId: number) => Promise<void>

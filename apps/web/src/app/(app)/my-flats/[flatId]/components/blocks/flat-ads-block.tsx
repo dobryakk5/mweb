@@ -2,7 +2,7 @@
 
 import CollapsibleBlock from '../shared/collapsible-block'
 import AdsTable from '../shared/ads-table'
-import { MultiUpdateButtons } from '../shared/update-buttons'
+import { MultiUpdateButtons, FindSimilarButton } from '../shared/update-buttons'
 import type { FlatAdsBlockProps, ColumnConfig } from '../types/ads-blocks.types'
 
 /**
@@ -15,7 +15,6 @@ export default function FlatAdsBlock({
   onToggleCollapse,
   onUpdate,
   isUpdating,
-  onDeleteAd,
   onToggleComparison,
   onUpdateAd,
   updatingAdIds,
@@ -79,11 +78,18 @@ export default function FlatAdsBlock({
   ]
 
   const headerActions = (
-    <MultiUpdateButtons
-      onUpdate={onUpdateAllOld}
-      isUpdating={isUpdatingAllOld}
-      label='Обновить статусы'
-    />
+    <div className='flex gap-2'>
+      <FindSimilarButton
+        onFind={onFindSimilar}
+        isLoading={isLoadingSimilar}
+        label='Искать объявления'
+      />
+      <MultiUpdateButtons
+        onUpdate={onUpdateAllOld}
+        isUpdating={isUpdatingAllOld}
+        label='Обновить статусы'
+      />
+    </div>
   )
 
   return (
@@ -96,7 +102,6 @@ export default function FlatAdsBlock({
       <AdsTable
         ads={ads || []}
         columns={columns}
-        onDeleteAd={onDeleteAd}
         onToggleComparison={onToggleComparison}
         onUpdateAd={onUpdateAd}
         updatingAdIds={updatingAdIds || new Set()}

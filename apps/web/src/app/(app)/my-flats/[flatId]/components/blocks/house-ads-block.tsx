@@ -18,7 +18,6 @@ export default function HouseAdsBlock({
   onToggleCollapse,
   onUpdate,
   isUpdating,
-  onDeleteAd,
   onToggleComparison,
   onAddToComparison,
   onUpdateAd,
@@ -114,7 +113,6 @@ export default function HouseAdsBlock({
       <AdsTable
         ads={ads}
         columns={columns}
-        onDeleteAd={onDeleteAd}
         onToggleComparison={onToggleComparison}
         onAddToComparison={onAddToComparison}
         onUpdateAd={onUpdateAd}
