@@ -4,7 +4,7 @@ module.exports = {
       name: 'acme-api',
       script: 'index.ts',
       cwd: './services/api',
-      interpreter: './node_modules/.bin/tsx',
+      interpreter: 'tsx',
       instances: 1,
       exec_mode: 'cluster',
       env: {
@@ -39,15 +39,17 @@ module.exports = {
     },
     {
       name: 'scheduler',
-      script: './services/scheduler/dist/index.js',
+      script: 'index.ts',
+      cwd: './services/scheduler',
+      interpreter: 'tsx',
       instances: 1,
       exec_mode: 'fork',
       env: {
         NODE_ENV: 'production'
       },
-      error_file: './logs/scheduler-error.log',
-      out_file: './logs/scheduler-out.log',
-      log_file: './logs/scheduler-combined.log',
+      error_file: '../../logs/scheduler-error.log',
+      out_file: '../../logs/scheduler-out.log',
+      log_file: '../../logs/scheduler-combined.log',
       time: true,
       watch: false
     }
