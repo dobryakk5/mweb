@@ -1254,7 +1254,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         totalArea: ad.area ? String(ad.area) : null,
         kitchenArea: ad.kitchen_area ? String(ad.kitchen_area) : null,
         floor: ad.floor ? parseInt(ad.floor) : null,
-        from: 2, // 2 = добавлено вручную (из объявлений по дому)
+        from: 2, // 2 = объявления по дому
         sma: 0, // 0 = обычное объявление
         status: ad.is_active || false,
       }))

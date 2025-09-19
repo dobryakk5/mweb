@@ -164,7 +164,16 @@ export const useFlatAdsActions = ({
       if (startUpdatingAd) startUpdatingAd(adId)
 
       try {
-        await updateAdStatusSingle(adId)
+        // For nearby sources, we still need to use flats_history update
+        if (source === 'nearby') {
+          throw new Error(
+            'Индивидуальное обновление соседних объявлений временно недоступно.',
+          )
+        } else {
+          // For all other sources (including 'house' now), use users.ads method
+          await updateAdStatusSingle(adId)
+        }
+
         await refetch()
 
         // Also refresh specific data sources based on the source
@@ -509,56 +518,88 @@ export const useFlatAdsActions = ({
         return 0
       })
 
-      const updatingIds = new Set(sortedAds.map((ad) => ad.id))
-      setUpdatingIds(updatingIds)
-
       try {
-        let successCount = 0
-        let errorCount = 0
+        // Check if ads have id property (users.ads) or just url (flats_history)
+        const hasIds = sortedAds.some(
+          (ad) => ad.id && typeof ad.id === 'number',
+        )
 
-        // Update ads one by one to show individual progress
-        for (const ad of sortedAds) {
-          try {
-            // Double-check ad.id before API call
-            if (!ad.id || ad.id === undefined || ad.id === null) {
-              console.warn('Skipping ad with invalid id:', ad)
+        if (hasIds) {
+          // Update ads from users.ads using individual ID updates
+          let successCount = 0
+          let errorCount = 0
+
+          for (const ad of sortedAds) {
+            try {
+              if (!ad.id || ad.id === undefined || ad.id === null) {
+                console.warn('Skipping ad with invalid id:', ad)
+                errorCount++
+                continue
+              }
+
+              await updateAdStatusSingle(ad.id)
+              successCount++
+
+              // Mark as updated today
+              if (markAdAsUpdatedToday) markAdAsUpdatedToday(ad.id)
+
+              // Small delay to show progress
+              await new Promise((resolve) => setTimeout(resolve, 100))
+            } catch (error) {
+              console.error(`Ошибка обновления объявления ${ad.id}:`, error)
               errorCount++
-              continue
             }
-
-            await updateAdStatusSingle(ad.id)
-            successCount++
-
-            // Mark as updated today
-            if (markAdAsUpdatedToday) markAdAsUpdatedToday(ad.id)
-
-            // Remove from updating set as each completes
-            setUpdatingIds((prev) => {
-              const newSet = new Set(prev)
-              newSet.delete(ad.id)
-              return newSet
-            })
-
-            // Small delay to show progress
-            await new Promise((resolve) => setTimeout(resolve, 100))
-          } catch (error) {
-            console.error(`Ошибка обновления объявления ${ad.id}:`, error)
-            errorCount++
           }
-        }
 
-        await refetch()
-        // Also refetch broader ads to refresh the house block data
-        if (refetchBroaderAds) {
-          await refetchBroaderAds()
-        }
+          await refetch()
 
-        if (errorCount === 0) {
-          toast.success(`Обновлено ${successCount} объявлений`)
+          if (errorCount === 0) {
+            toast.success(`Обновлено ${successCount} объявлений`)
+          } else {
+            toast.warning(
+              `Обновлено ${successCount} из ${sortedAds.length} объявлений. ${errorCount} ошибок.`,
+            )
+          }
         } else {
-          toast.warning(
-            `Обновлено ${successCount} из ${sortedAds.length} объявлений. ${errorCount} ошибок.`,
-          )
+          // Use the flats_history status update endpoint for ads without IDs
+          const urls = sortedAds
+            .map((ad) => ad.url)
+            .filter((url) => url && typeof url === 'string')
+
+          if (urls.length === 0) {
+            toast.info('Нет валидных URL для обновления')
+            return
+          }
+
+          const response = await fetch('/api/ads/update-flats-history-status', {
+            method: 'POST',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({ urls }),
+          })
+
+          if (!response.ok) {
+            throw new Error(`HTTP error! status: ${response.status}`)
+          }
+
+          const result = await response.json()
+
+          // Refresh data after update
+          await refetch()
+          if (refetchBroaderAds) {
+            await refetchBroaderAds()
+          }
+
+          if (result.success) {
+            toast.success(
+              `Обновлено ${result.successCount} из ${urls.length} объявлений`,
+            )
+          } else {
+            toast.warning(
+              `Обновлено ${result.successCount} из ${urls.length} объявлений. Ошибок: ${result.errorCount}`,
+            )
+          }
         }
       } catch (error) {
         console.error('Ошибка массового обновления дома:', error)

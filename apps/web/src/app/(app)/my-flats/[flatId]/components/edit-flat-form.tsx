@@ -136,9 +136,40 @@ export default function EditFlatFormRefactored({
     }
   }, [ads, state])
 
+  // Auto-save house ads to users.ads when broaderAdsFromFindAds loads
+  useEffect(() => {
+    const autoSaveHouseAds = async () => {
+      if (
+        broaderAdsFromFindAds &&
+        broaderAdsFromFindAds.length > 0 &&
+        flat?.id
+      ) {
+        try {
+          const response = await fetch(`/api/ads/save-house-ads/${flat.id}`, {
+            method: 'POST',
+          })
+
+          if (response.ok) {
+            const result = await response.json()
+            console.log(`Auto-saved ${result.savedCount} house ads`)
+
+            // Refresh ads data to include newly saved ads
+            if (result.savedCount > 0) {
+              await refetch()
+            }
+          }
+        } catch (error) {
+          console.error('Error auto-saving house ads:', error)
+        }
+      }
+    }
+
+    autoSaveHouseAds()
+  }, [broaderAdsFromFindAds, flat?.id, refetch])
+
   // Separate ads by type - with safety checks
   const flatAds = ads.filter((ad) => ad && ad.id && ad.from === 1) // По этой квартире (найдено автоматически)
-  const otherAds = ads.filter((ad) => ad && ad.id && ad.from === 2) // Другие объявления (добавлено вручную)
+  const houseAds = ads.filter((ad) => ad && ad.id && ad.from === 2) // Объявления по дому
   const comparisonAds = ads.filter((ad) => ad && ad.id && ad.sma === 1) // Сравнение квартир (отмеченные для сравнения)
 
   // Log if any ads are filtered out
@@ -258,12 +289,8 @@ export default function EditFlatFormRefactored({
   const handleUpdateHouseStatuses = async () => {
     state.setIsUpdatingHouseStatuses(true)
     try {
-      await actions.handleUpdateHouseStatuses(
-        broaderAdsFromFindAds,
-        state.setUpdatingAdIds,
-      )
+      await actions.handleUpdateHouseStatuses(houseAds, state.setUpdatingAdIds)
       await refetch()
-      await refetchBroaderAds()
     } finally {
       state.setIsUpdatingHouseStatuses(false)
     }
@@ -359,7 +386,7 @@ export default function EditFlatFormRefactored({
           {flat && (
             <HouseAdsBlock
               flat={flat}
-              ads={broaderAdsFromFindAds}
+              ads={houseAds}
               isCollapsed={isCollapsed('houseAds')}
               onToggleCollapse={() => toggleBlock('houseAds')}
               onUpdate={handleUpdateHouseAds}

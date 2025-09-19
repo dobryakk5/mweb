@@ -107,12 +107,12 @@ export default function ComparisonAdsBlock({
           <button
             type='button'
             className={buttonVariants({
-              variant: telegramSendSuccess ? 'default' : 'outline',
+              variant: 'outline',
               size: 'sm',
               className: `
                 transition-all duration-200
-                ${isSendingToTelegram ? 'animate-pulse bg-gradient-to-r from-blue-500 via-purple-500 to-blue-500 bg-[length:200%_100%] animate-[shimmer_1.5s_ease-in-out_infinite]' : ''}
-                ${telegramSendSuccess ? 'bg-green-500 hover:bg-green-600 text-white border-green-500' : ''}
+                ${isSendingToTelegram ? 'relative overflow-hidden bg-gradient-to-r from-blue-400 via-purple-500 to-blue-400 bg-[length:200%_100%] animate-[shimmer_2s_linear_infinite,pulse-glow_1s_ease-in-out_infinite] text-white border-blue-400' : ''}
+                ${telegramSendSuccess ? '!bg-green-500 hover:!bg-green-600 !text-white !border-green-500 animate-none' : ''}
               `,
             })}
             onClick={onSendToTelegram}
@@ -125,9 +125,7 @@ export default function ComparisonAdsBlock({
                   : 'Отправить в Telegram'
             }
           >
-            <SendIcon
-              className={`h-4 w-4 ${isSendingToTelegram ? 'animate-spin' : ''}`}
-            />
+            <SendIcon className='h-4 w-4' />
           </button>
         )}
       </div>
