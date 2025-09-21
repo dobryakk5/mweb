@@ -382,13 +382,14 @@ export default function AdsTable({
         const statusUpdateDate = formatDateShort(ad.updatedAt || ad.updated_at)
 
         // Проверяем возраст объявления для красного кружка
-        const adCreatedDate = ad.createdAt || ad.created
+        // Используем дату создания на источнике объявления (не в нашей таблице ads)
+        const sourceCreatedDate = ad.created || ad.time_source_created
         const now = new Date()
-        const created = new Date(adCreatedDate)
+        const created = new Date(sourceCreatedDate)
         const daysDiff = Math.floor(
           (now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24),
         )
-        const isRecentAd = daysDiff <= 7 && adCreatedDate
+        const isRecentAd = daysDiff <= 7 && sourceCreatedDate
 
         return (
           <div className='flex items-center justify-center gap-1'>
@@ -419,14 +420,10 @@ export default function AdsTable({
       case 'createdAt':
         return formatDate(ad.createdAt || ad.created)
       case 'updatedAt':
-        // Показываем только дату обновления от источника, исключаем updated_at из пользовательской таблицы
-        const sourceUpdatedValue = ad.updated || ad.time_source_updated
-        console.log('updatedAt debug (source only):', {
-          adId: ad.id,
-          updated: ad.updated,
-          time_source_updated: ad.time_source_updated,
-          finalValue: sourceUpdatedValue,
-        })
+        // Для объявлений из таблицы ads (sma=1, from=2) используем updatedAt
+        // Для объявлений из flats_history используем time_source_updated
+        const sourceUpdatedValue =
+          ad.updated || ad.time_source_updated || ad.updatedAt
         return formatDate(sourceUpdatedValue)
 
       case 'distance':
@@ -594,13 +591,18 @@ export default function AdsTable({
             </tr>
           </thead>
           <tbody className='[&_tr:last-child]:border-0'>
-            {sortedAds.map((ad) => {
+            {sortedAds.map((ad, index) => {
               const isUpdating = updatingAdIds.has(ad.id)
               const isUpdatedToday = updatedTodayAdIds.has(ad.id)
 
+              // Create unique key combining id, url and index to handle duplicates
+              const uniqueKey = ad.id
+                ? `${ad.id}-${ad.url || ''}-${index}`
+                : `no-id-${ad.url || ''}-${index}`
+
               return (
                 <tr
-                  key={ad.id}
+                  key={uniqueKey}
                   className={`border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted ${
                     !ad.status ? 'opacity-50' : ''
                   }`}

@@ -106,15 +106,10 @@ export default function ComparisonAdsBlock({
         {onSendToTelegram && (
           <button
             type='button'
-            className={buttonVariants({
+            className={`${buttonVariants({
               variant: 'outline',
               size: 'sm',
-              className: `
-                transition-all duration-200
-                ${isSendingToTelegram ? 'animate-[pulse-glow_2s_ease-in-out_infinite]' : ''}
-                ${telegramSendSuccess ? '!bg-green-500 hover:!bg-green-600 !text-white !border-green-500 animate-none' : ''}
-              `,
-            })}
+            })} transition-all duration-200 ${isSendingToTelegram ? 'shiny-button' : ''} ${telegramSendSuccess ? '!bg-green-500 hover:!bg-green-600 !text-white !border-green-500' : ''}`}
             onClick={onSendToTelegram}
             disabled={ads.length === 0 || isSendingToTelegram}
             title={

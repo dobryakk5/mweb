@@ -16,9 +16,12 @@ type HookFormDevtoolProps = {
 export default function HookFormDevtool({
   control,
 }: HookFormDevtoolProps): JSX.Element | null {
-  if (process.env.NODE_ENV === 'production') {
-    return null
-  }
+  // Временно отключено для избежания ошибки Maximum update depth
+  return null
 
-  return <DevTool control={control} />
+  // if (process.env.NODE_ENV === 'production') {
+  //   return null
+  // }
+
+  // return <DevTool control={control} />
 }

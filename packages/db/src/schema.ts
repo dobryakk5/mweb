@@ -1,4 +1,17 @@
-import { pgTable, varchar, index, bigint, integer, pgSchema, decimal, smallint, text, timestamp, boolean } from 'drizzle-orm/pg-core'
+import {
+  pgTable,
+  varchar,
+  index,
+  bigint,
+  integer,
+  pgSchema,
+  decimal,
+  smallint,
+  text,
+  timestamp,
+  boolean,
+  real,
+} from 'drizzle-orm/pg-core'
 import { relations } from 'drizzle-orm'
 
 import { id, timestamps } from './utils'
@@ -33,9 +46,7 @@ export const telegramUsers = usersSchema.table(
     photoUrl: varchar('photo_url'),
     ...timestamps,
   },
-  (t) => [
-    index('telegram_users_tg_user_id_idx').on(t.tgUserId),
-  ],
+  (t) => [index('telegram_users_tg_user_id_idx').on(t.tgUserId)],
 )
 
 export const sessions = usersSchema.table(
@@ -61,10 +72,13 @@ export const userFlats = usersSchema.table(
     address: varchar('address').notNull(),
     rooms: integer('rooms').notNull(),
     floor: integer('floor').notNull(),
+    lat: real('lat'), // Latitude for map display
+    lng: real('lng'), // Longitude for map display
     ...timestamps,
   },
   (t) => [
     index('user_flats_tg_user_id_idx').on(t.tgUserId),
+    index('user_flats_coordinates_idx').on(t.lat, t.lng), // Index for spatial queries
   ],
 )
 
@@ -78,7 +92,7 @@ export const ads = usersSchema.table(
     price: integer('price').notNull(),
     rooms: integer('rooms').notNull(),
     views: integer('views').default(0).notNull(),
-    
+
     // Новые колонки для данных от API парсинга
     totalArea: decimal('total_area', { precision: 5, scale: 2 }),
     livingArea: decimal('living_area', { precision: 5, scale: 2 }),
@@ -102,7 +116,7 @@ export const ads = usersSchema.table(
     viewsToday: smallint('views_today'),
     from: smallint('from').default(2).notNull(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
     sma: smallint('sma').default(0).notNull(), // 0 - обычное объявление, 1 - в сравнении квартир
-    
+
     ...timestamps,
   },
   (t) => [
@@ -125,9 +139,7 @@ export const adHistory = usersSchema.table(
     status: boolean('status'),
     updatedAt: timestamp('updated_at'),
   },
-  (t) => [
-    index('ad_history_ad_id_idx').on(t.adId),
-  ],
+  (t) => [index('ad_history_ad_id_idx').on(t.adId)],
 )
 
 // Определяем связи между таблицами

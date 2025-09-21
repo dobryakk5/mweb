@@ -2,7 +2,6 @@
 
 ## Обзор архитектуры
 
-- **Frontend (Web)**: Развернут на Netlify - https://mrealty.netlify.app
 - **Backend (API)**: Развертывается на self-hosted сервере 
 - **Database**: PostgreSQL на self-hosted сервере
 

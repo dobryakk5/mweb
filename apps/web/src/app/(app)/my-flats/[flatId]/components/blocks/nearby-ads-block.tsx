@@ -2,6 +2,7 @@
 
 import CollapsibleBlock from '../shared/collapsible-block'
 import AdsTable from '../shared/ads-table'
+import NearbyMap from '../shared/nearby-map'
 import { RefreshNearbyButton } from '../shared/update-buttons'
 import type {
   NearbyAdsBlockProps,
@@ -101,6 +102,8 @@ export default function NearbyAdsBlock({
     <RefreshNearbyButton onRefresh={onRefetch} isLoading={isLoading} />
   )
 
+  // Карта не использует координаты квартиры - получает координаты по адресу
+
   return (
     <CollapsibleBlock
       title='Объявления в радиусе 500м и дешевле'
@@ -108,6 +111,15 @@ export default function NearbyAdsBlock({
       onToggle={onToggleCollapse}
       headerActions={headerActions}
     >
+      {/* Карта с объектами в радиусе 500м */}
+      <NearbyMap
+        flatAddress={flat.address}
+        flatCoordinates={undefined}
+        nearbyAds={nearbyAds}
+        currentFlat={flat}
+      />
+
+      {/* Таблица объявлений */}
       <AdsTable
         ads={nearbyAds}
         columns={columns}

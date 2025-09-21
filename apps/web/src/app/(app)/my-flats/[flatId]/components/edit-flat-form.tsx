@@ -1,6 +1,6 @@
 'use client'
 
-import { type HTMLAttributes, type JSX, useEffect } from 'react'
+import { type HTMLAttributes, type JSX, useEffect, useCallback } from 'react'
 
 // Telegram Web App types
 declare global {
@@ -86,6 +86,11 @@ export default function EditFlatFormRefactored({
     isLoading: isLoadingNearbyAds,
   } = useNearbyAdsFromFindAds(flat?.id || 0)
 
+  // Memoized refetch function to prevent unnecessary re-renders
+  const handleRefetchNearbyAds = useCallback(async () => {
+    await refetchNearbyAds()
+  }, [refetchNearbyAds])
+
   // Actions hook
   const actions = useFlatAdsActions({
     flat,
@@ -100,7 +105,7 @@ export default function EditFlatFormRefactored({
   // Set mounted state
   useEffect(() => {
     state.setMounted(true)
-  }, [state])
+  }, [state.setMounted])
 
   // Update form when flat data loads
   useEffect(() => {
@@ -134,7 +139,7 @@ export default function EditFlatFormRefactored({
       })
       state.setUpdatedTodayAdIds(updatedTodayIds)
     }
-  }, [ads, state])
+  }, [ads, state.setUpdatedTodayAdIds])
 
   // Auto-save house ads to users.ads when broaderAdsFromFindAds loads
   useEffect(() => {
@@ -416,9 +421,7 @@ export default function EditFlatFormRefactored({
               nearbyAds={nearbyAdsFromFindAds}
               isCollapsed={isCollapsed('nearbyAds')}
               onToggleCollapse={() => toggleBlock('nearbyAds')}
-              onRefetch={async () => {
-                await refetchNearbyAds()
-              }}
+              onRefetch={handleRefetchNearbyAds}
               isLoading={isLoadingNearbyAds}
               onAddToComparison={actions.handleAddToComparison}
               onToggleComparison={actions.handleToggleComparison}
