@@ -3,7 +3,6 @@
 import CollapsibleBlock from '../shared/collapsible-block'
 import NearbyMap from '../shared/nearby-map'
 import NearbyAdsFilter from '../shared/nearby-ads-filter'
-import { RefreshNearbyButton } from '../shared/update-buttons'
 import type { NearbyAdsBlockProps } from '../types/ads-blocks.types'
 
 /**
@@ -23,10 +22,6 @@ export default function NearbyAdsBlock({
   comparisonAds,
   onSearchWithFilters,
 }: NearbyAdsBlockProps) {
-  const headerActions = (
-    <RefreshNearbyButton onRefresh={onRefetch} isLoading={isLoading} />
-  )
-
   // Находим активное объявление CIAN с минимальной ценой для базовых значений площадей
   const getBaseAreaValues = () => {
     const cianActiveAds = flatAds.filter(
@@ -66,7 +61,6 @@ export default function NearbyAdsBlock({
       title='Объявления рядом'
       isCollapsed={isCollapsed}
       onToggle={onToggleCollapse}
-      headerActions={headerActions}
     >
       {/* Фильтры поиска - теперь сверху и в одну строку */}
       {nearbyAds && nearbyAds.length > 0 && nearbyFilters && (
@@ -104,6 +98,14 @@ export default function NearbyAdsBlock({
         onAddToComparison={onAddToComparison}
         onToggleComparison={onToggleComparison}
         comparisonAds={comparisonAds}
+        filters={{
+          maxPrice:
+            nearbyFilters?.maxPrice || nearbyFilters?.currentPrice || 50000000,
+          rooms: nearbyFilters?.rooms || flat.rooms || 3,
+          minArea: nearbyFilters?.minArea || baseAreaValues.minArea,
+          minKitchenArea:
+            nearbyFilters?.minKitchenArea || baseAreaValues.minKitchenArea,
+        }}
       />
     </CollapsibleBlock>
   )

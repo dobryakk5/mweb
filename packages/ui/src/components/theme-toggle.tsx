@@ -21,7 +21,9 @@ export default function ThemeToggle({ className }: ThemeToggleProps) {
       <SunIcon className='size-5 dark:hidden' />
       <MoonIcon className='hidden size-5 dark:block' />
 
-      <span className='sr-only'>Toggle theme</span>
+      <span className='sr-only' suppressHydrationWarning>
+        Toggle theme
+      </span>
     </Button>
   )
 }

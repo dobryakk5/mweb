@@ -13,6 +13,22 @@ const getMapAdsSchema = z.object({
     .default('1000'),
 })
 
+const getFilteredHousesSchema = z.object({
+  north: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
+  south: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
+  east: z.string().transform(Number).pipe(z.number().min(-180).max(180)),
+  west: z.string().transform(Number).pipe(z.number().min(-180).max(180)),
+  flatId: z.string().transform(Number).pipe(z.number().int()),
+  maxPrice: z.string().transform(Number).pipe(z.number().min(0)).optional(),
+  rooms: z.string().transform(Number).pipe(z.number().int().min(1)).optional(),
+  minArea: z.string().transform(Number).pipe(z.number().min(0)).optional(),
+  minKitchenArea: z
+    .string()
+    .transform(Number)
+    .pipe(z.number().min(0))
+    .optional(),
+})
+
 const getMapPOISchema = z.object({
   lat: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
   lng: z.string().transform(Number).pipe(z.number().min(-180).max(180)),
@@ -158,7 +174,7 @@ export default async (fastify: FastifyInstance) => {
         })
         .parse(request.query)
 
-      // Get ads directly from flats_history by house_id
+      // Get ads directly from flats_history by house_id with additional info from flats table
       const result = await db.execute(
         sql`SELECT
           fh.id,
@@ -173,9 +189,13 @@ export default async (fastify: FastifyInstance) => {
           fh.is_actual as is_active,
           fh.person as person_type,
           fh.house_id,
-          CONCAT(mg.street, ', ', mg.housenum) as address
+          CONCAT(mg.street, ', ', mg.housenum) as address,
+          f.total_floors,
+          f.area,
+          f.kitchen_area
         FROM public.flats_history fh
         JOIN system.moscow_geo mg ON fh.house_id = mg.house_id
+        LEFT JOIN public.flats f ON fh.house_id = f.house_id AND fh.floor = f.floor AND fh.rooms = f.rooms
         WHERE fh.house_id = ${houseId}
         ORDER BY fh.is_actual DESC, fh.price ASC
         LIMIT 50`,
@@ -465,6 +485,197 @@ export default async (fastify: FastifyInstance) => {
       fastify.log.error(error)
       return reply.status(500).send({
         error: 'Failed to fetch houses in bounds',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  })
+
+  // Get filtered houses with ads within map bounds with filtering criteria
+  fastify.get('/map/houses-filtered', async (request, reply) => {
+    try {
+      const {
+        north,
+        south,
+        east,
+        west,
+        flatId,
+        maxPrice,
+        rooms,
+        minArea,
+        minKitchenArea,
+      } = getFilteredHousesSchema.parse(request.query)
+
+      // Get current flat address to exclude houses at the same address
+      const flatResult = await db.execute(
+        sql`SELECT address FROM "users".user_flats WHERE id = ${flatId} LIMIT 1`,
+      )
+      const currentFlatAddress = Array.isArray(flatResult)
+        ? flatResult[0]?.address
+        : flatResult.rows?.[0]?.address
+
+      // Parse current flat address to extract street and house number for comparison
+      let currentFlatStreet = null
+      let currentFlatHousenum = null
+      if (currentFlatAddress) {
+        const addressParts = currentFlatAddress.split(',').map((s) => s.trim())
+        if (addressParts.length >= 2) {
+          currentFlatStreet = addressParts[0]
+          currentFlatHousenum = addressParts[1]
+        }
+      }
+
+      // Calculate center point and radius from bounds
+      const centerLat = (north + south) / 2
+      const centerLng = (east + west) / 2
+      const latDiff = north - south
+      const lngDiff = east - west
+      const radius = (Math.max(latDiff, lngDiff) * 111000) / 2
+
+      // Get houses with ads that match the filtering criteria (including inactive ads)
+      const radiusInt = Math.round(Math.min(radius * 2, 5000))
+
+      // Build the SQL query using Drizzle sql template
+      const baseQuery = sql`
+        SELECT DISTINCT
+          mg.house_id,
+          CONCAT(mg.street, ', ', mg.housenum) as address,
+          system.ST_Y(system.ST_Transform(mg.centroid_utm, 4326)) as lat,
+          system.ST_X(system.ST_Transform(mg.centroid_utm, 4326)) as lng,
+          COUNT(fh.id) as ads_count,
+          COUNT(CASE WHEN fh.is_actual = 1 THEN 1 END) as active_ads_count
+        FROM system.moscow_geo mg
+        JOIN public.flats_history fh ON mg.house_id = fh.house_id
+        LEFT JOIN public.flats f ON fh.house_id = f.house_id AND fh.floor = f.floor AND fh.rooms = f.rooms
+        WHERE system.ST_DWithin(
+          system.ST_Transform(system.ST_GeomFromText(${`POINT(${centerLng} ${centerLat})`}, 4326), 32637),
+          mg.centroid_utm,
+          ${radiusInt}
+        )
+      `
+
+      // Add filter conditions dynamically
+      let finalQuery = baseQuery
+
+      if (maxPrice !== undefined) {
+        finalQuery = sql`${finalQuery} AND fh.price <= ${maxPrice}`
+      }
+
+      if (rooms !== undefined) {
+        finalQuery = sql`${finalQuery} AND fh.rooms >= ${rooms}`
+      }
+
+      if (minArea !== undefined) {
+        finalQuery = sql`${finalQuery} AND (f.area IS NULL OR f.area >= ${minArea})`
+      }
+
+      if (minKitchenArea !== undefined) {
+        finalQuery = sql`${finalQuery} AND (f.kitchen_area IS NULL OR f.kitchen_area >= ${minKitchenArea})`
+      }
+
+      finalQuery = sql`${finalQuery}
+        GROUP BY mg.house_id, mg.street, mg.housenum, mg.centroid_utm
+        HAVING COUNT(fh.id) > 0
+      `
+
+      const result = await db.execute(finalQuery)
+      const allHouses = Array.isArray(result) ? result : result.rows || []
+
+      // Filter houses that are within the exact bounds and exclude current flat address
+      const housesData = allHouses
+        .filter((house: any) => {
+          const lat = Number(house.lat)
+          const lng = Number(house.lng)
+          const isInBounds =
+            lat >= south && lat <= north && lng >= west && lng <= east
+
+          // Exclude houses that match the current flat address
+          let isCurrentFlatAddress = false
+          if (currentFlatStreet && currentFlatHousenum && house.address) {
+            const houseAddressParts = house.address
+              .split(',')
+              .map((s) => s.trim())
+            if (houseAddressParts.length >= 2) {
+              const houseStreet = houseAddressParts[0]
+              const houseHousenum = houseAddressParts[1]
+              const normalizeHousenum = (num) =>
+                num.replace(/\s+/g, '').toLowerCase()
+              isCurrentFlatAddress =
+                houseStreet === currentFlatStreet &&
+                normalizeHousenum(houseHousenum) ===
+                  normalizeHousenum(currentFlatHousenum)
+            }
+          }
+
+          return isInBounds && !isCurrentFlatAddress
+        })
+        .map((house: any) => ({
+          ...house,
+          has_active_ads: Number(house.active_ads_count) > 0,
+        }))
+
+      // Sort houses: inactive first (so active houses render on top)
+      const sortedHouses = housesData.sort((a, b) => {
+        return Number(a.has_active_ads) - Number(b.has_active_ads)
+      })
+
+      return {
+        houses: sortedHouses,
+        count: sortedHouses.length,
+        bounds: { north, south, east, west },
+        filters: { maxPrice, rooms, minArea, minKitchenArea },
+      }
+    } catch (error) {
+      fastify.log.error(error)
+      return reply.status(500).send({
+        error: 'Failed to fetch filtered houses',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  })
+
+  // Get minimum prices for houses
+  fastify.get('/map/house-prices', async (request, reply) => {
+    try {
+      const { houseIds } = z
+        .object({
+          houseIds: z.string(), // comma-separated house IDs
+        })
+        .parse(request.query)
+
+      const houseIdArray = houseIds
+        .split(',')
+        .map((id) => parseInt(id.trim()))
+        .filter((id) => !isNaN(id))
+
+      if (houseIdArray.length === 0) {
+        return reply.status(400).send({ error: 'No valid house IDs provided' })
+      }
+
+      // Get minimum price for each house
+      const pricePromises = houseIdArray.map(async (houseId) => {
+        const result = await db.execute(
+          sql`SELECT
+            ${houseId} as house_id,
+            MIN(price) as min_price
+          FROM public.flats_history
+          WHERE house_id = ${houseId} AND price > 0 AND is_actual = 1
+          LIMIT 1`,
+        )
+
+        const rows = Array.isArray(result) ? result : result.rows || []
+        return rows[0] || { house_id: houseId, min_price: null }
+      })
+
+      const housePrices = await Promise.all(pricePromises)
+
+      return {
+        prices: housePrices,
+        count: housePrices.length,
+      }
+    } catch (error) {
+      fastify.log.error(error)
+      return reply.status(500).send({
+        error: 'Failed to fetch house prices',
         message: error instanceof Error ? error.message : 'Unknown error',
       })
     }

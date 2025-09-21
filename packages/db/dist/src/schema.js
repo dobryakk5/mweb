@@ -43,9 +43,7 @@ exports.userFlats = exports.usersSchema.table('user_flats', {
     rooms: (0, pg_core_1.integer)('rooms').notNull(),
     floor: (0, pg_core_1.integer)('floor').notNull(),
     ...utils_1.timestamps,
-}, (t) => [
-    (0, pg_core_1.index)('user_flats_tg_user_id_idx').on(t.tgUserId),
-]);
+}, (t) => [(0, pg_core_1.index)('user_flats_tg_user_id_idx').on(t.tgUserId)]);
 exports.ads = exports.usersSchema.table('ads', {
     id: (0, pg_core_1.integer)('id').primaryKey().generatedAlwaysAsIdentity(),
     flatId: (0, pg_core_1.integer)('flat_id').notNull(), // Привязка к квартире

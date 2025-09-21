@@ -448,13 +448,11 @@ export default function AdsTable({
         )
 
       case 'createdAt':
-        return formatDate(ad.createdAt || ad.created)
+        // Всегда используем дату создания на источнике, а не в нашей системе
+        return formatDate(ad.created || ad.time_source_created)
       case 'updatedAt':
-        // Для объявлений из таблицы ads (sma=1, from=2) используем updatedAt
-        // Для объявлений из flats_history используем time_source_updated
-        const sourceUpdatedValue =
-          ad.updated || ad.time_source_updated || ad.updatedAt
-        return formatDate(sourceUpdatedValue)
+        // Всегда используем дату обновления на источнике, а не в нашей системе
+        return formatDate(ad.updated || ad.time_source_updated)
 
       case 'distance':
         return formatDistance(ad.distance_m || ad.distance)

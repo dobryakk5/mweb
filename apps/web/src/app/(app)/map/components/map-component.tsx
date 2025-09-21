@@ -414,6 +414,14 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
       }
 
       // Пользовательские квартиры загружаются отдельно в loadUserFlatsAndCenter
+
+      // Перезагружаем POI если соответствующие чекбоксы включены
+      if (showSchools) {
+        await loadPOIInBounds('school')
+      }
+      if (showKindergartens) {
+        await loadPOIInBounds('kindergarten')
+      }
     } catch (error) {
       console.error('Ошибка загрузки данных:', error)
     }
@@ -423,48 +431,53 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
   const handleSchoolsToggle = async (checked: boolean) => {
     setShowSchools(checked)
     if (checked) {
-      try {
-        // Загружаем школы из API
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/map/poi?lat=${currentCenter[0]}&lng=${currentCenter[1]}&radius=3000&types=school`,
-        )
-        const data = await response.json()
-        if (data.poi) {
-          setPois((prev) => [
-            ...prev.filter((p) => p.type !== 'school'),
-            ...data.poi.filter((p: POI) => p.type === 'school'),
-          ])
-          console.log(
-            `Загружено школ: ${data.poi.filter((p: POI) => p.type === 'school').length}`,
-          )
-        }
-      } catch (error) {
-        console.error('Ошибка загрузки школ:', error)
-      }
+      await loadPOIInBounds('school')
+    } else {
+      // Удаляем школы из состояния
+      setPois((prev) => prev.filter((p) => p.type !== 'school'))
     }
   }
 
   const handleKindergartensToggle = async (checked: boolean) => {
     setShowKindergartens(checked)
     if (checked) {
-      try {
-        // Загружаем детские сады из API
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/map/poi?lat=${currentCenter[0]}&lng=${currentCenter[1]}&radius=3000&types=kindergarten`,
-        )
-        const data = await response.json()
-        if (data.poi) {
-          setPois((prev) => [
-            ...prev.filter((p) => p.type !== 'kindergarten'),
-            ...data.poi.filter((p: POI) => p.type === 'kindergarten'),
-          ])
-          console.log(
-            `Загружено детских садов: ${data.poi.filter((p: POI) => p.type === 'kindergarten').length}`,
-          )
-        }
-      } catch (error) {
-        console.error('Ошибка загрузки детских садов:', error)
+      await loadPOIInBounds('kindergarten')
+    } else {
+      // Удаляем детские сады из состояния
+      setPois((prev) => prev.filter((p) => p.type !== 'kindergarten'))
+    }
+  }
+
+  // Функция для загрузки POI в видимой области карты
+  const loadPOIInBounds = async (poiType: 'school' | 'kindergarten') => {
+    try {
+      // Вычисляем радиус на основе зума карты для покрытия видимой области
+      // Чем меньше зум, тем больше радиус нужен
+      const getRadiusForZoom = (zoom: number) => {
+        if (zoom >= 16) return 1000 // 1км для детального зума
+        if (zoom >= 14) return 2000 // 2км для среднего зума
+        if (zoom >= 12) return 5000 // 5км для широкого зума
+        return 10000 // 10км для очень широкого зума
       }
+
+      const radius = getRadiusForZoom(currentZoom)
+
+      // Используем существующий endpoint с вычисленным радиусом
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/map/poi?lat=${currentCenter[0]}&lng=${currentCenter[1]}&radius=${radius}&types=${poiType}`,
+      )
+      const data = await response.json()
+      if (data.poi) {
+        setPois((prev) => [
+          ...prev.filter((p) => p.type !== poiType),
+          ...data.poi.filter((p: POI) => p.type === poiType),
+        ])
+        console.log(
+          `Загружено ${poiType === 'school' ? 'школ' : 'детских садов'}: ${data.poi.filter((p: POI) => p.type === poiType).length} (радиус: ${radius}м, зум: ${currentZoom})`,
+        )
+      }
+    } catch (error) {
+      console.error(`Ошибка загрузки ${poiType}:`, error)
     }
   }
 

@@ -2,6 +2,7 @@
 
 import { useState } from 'react'
 import dynamic from 'next/dynamic'
+import { getDomainFromUrl } from '../utils/ad-formatters'
 
 // Динамический импорт карты для SSR совместимости
 const DynamicMap = dynamic(() => import('./nearby-map-component'), {
@@ -22,6 +23,12 @@ interface NearbyMapProps {
   onAddToComparison?: (adData: any) => Promise<void>
   onToggleComparison?: (adId: number, inComparison: boolean) => Promise<void>
   comparisonAds?: any[]
+  filters?: {
+    maxPrice?: number
+    rooms?: number
+    minArea?: number
+    minKitchenArea?: number
+  }
 }
 
 export default function NearbyMap({
@@ -33,6 +40,7 @@ export default function NearbyMap({
   onAddToComparison,
   onToggleComparison,
   comparisonAds = [],
+  filters,
 }: NearbyMapProps) {
   const [selectedHouse, setSelectedHouse] = useState<any>(null)
   const [houseAds, setHouseAds] = useState<any[]>([])
@@ -89,6 +97,7 @@ export default function NearbyMap({
             nearbyAds={nearbyAds}
             currentFlat={currentFlat}
             onHouseClick={handleHouseClick}
+            filters={filters}
           />
         </div>
 
@@ -148,6 +157,7 @@ export default function NearbyMap({
                         const totalFloors = ad.total_floors || 0
                         const kitchenArea = ad.kitchen_area || 0
                         const price = ad.price || 0
+                        const source = getDomainFromUrl(ad.url || '')
 
                         return (
                           <div
@@ -155,14 +165,7 @@ export default function NearbyMap({
                             className={`bg-white rounded-lg p-3 border shadow-sm flex items-center justify-between ${!isActive ? 'opacity-60' : ''}`}
                           >
                             <div className='text-sm flex-1'>
-                              <a
-                                href={ad.url}
-                                target='_blank'
-                                rel='noopener noreferrer'
-                                className={`hover:underline ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
-                              >
-                                {rooms} комн.
-                              </a>
+                              {rooms} комн.
                               {area ? `, ${Number(area).toFixed(1)} м²` : ''}
                               {floor && totalFloors
                                 ? `, ${floor}/${totalFloors} эт.`
@@ -171,44 +174,57 @@ export default function NearbyMap({
                                   : ''}
                               {kitchenArea
                                 ? `, кухня ${Number(kitchenArea).toFixed(1)}м²`
-                                : ''}
-                              <span
-                                className={`ml-2 font-semibold ${isActive ? 'text-green-600' : 'text-gray-500'}`}
-                              >
-                                {(price / 1000000).toFixed(1)} млн ₽
-                              </span>
+                                : ', кухня -'}
                               {!isActive && (
                                 <span className='text-xs ml-2 text-red-500'>
                                   (неактивно)
                                 </span>
                               )}
                             </div>
-                            {(onAddToComparison || onToggleComparison) && (
-                              <button
-                                onClick={() => {
-                                  const inComparison = isAdInComparison(ad)
-                                  if (
-                                    ad.id &&
-                                    typeof ad.id === 'number' &&
-                                    onToggleComparison
-                                  ) {
-                                    // For database ads, use toggle comparison
-                                    onToggleComparison(ad.id, !inComparison)
-                                  } else if (onAddToComparison) {
-                                    // For external ads, use add to comparison
-                                    onAddToComparison(ad)
-                                  }
-                                }}
-                                className='ml-2 flex-shrink-0 w-6 h-6 text-blue-500 hover:text-blue-600 flex items-center justify-center text-lg font-bold'
-                                title={
-                                  isAdInComparison(ad)
-                                    ? 'Убрать из сравнения'
-                                    : 'Добавить в сравнение'
-                                }
+                            <div className='flex items-center gap-2'>
+                              <a
+                                href={ad.url}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className={`text-xs ${isActive ? 'text-blue-600 hover:text-blue-800' : 'text-gray-500'}`}
                               >
-                                {isAdInComparison(ad) ? '−' : '+'}
-                              </button>
-                            )}
+                                {source}
+                              </a>
+                              <span
+                                className={`text-right ${isActive ? 'text-gray-900' : 'text-gray-500'}`}
+                              >
+                                <span className='font-bold'>
+                                  {(price / 1000000).toFixed(1)}
+                                </span>
+                                <span className='font-normal'> млн ₽</span>
+                              </span>
+                              {(onAddToComparison || onToggleComparison) && (
+                                <button
+                                  onClick={() => {
+                                    const inComparison = isAdInComparison(ad)
+                                    if (
+                                      ad.id &&
+                                      typeof ad.id === 'number' &&
+                                      onToggleComparison
+                                    ) {
+                                      // For database ads, use toggle comparison
+                                      onToggleComparison(ad.id, !inComparison)
+                                    } else if (onAddToComparison) {
+                                      // For external ads, use add to comparison
+                                      onAddToComparison(ad)
+                                    }
+                                  }}
+                                  className='ml-2 flex-shrink-0 w-6 h-6 text-blue-500 hover:text-blue-600 flex items-center justify-center text-lg font-bold'
+                                  title={
+                                    isAdInComparison(ad)
+                                      ? 'Убрать из сравнения'
+                                      : 'Добавить в сравнение'
+                                  }
+                                >
+                                  {isAdInComparison(ad) ? '−' : '+'}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )
                       })}
@@ -222,16 +238,6 @@ export default function NearbyMap({
             </div>
           ) : (
             <div className='h-full flex flex-col'>
-              {/* Заголовок для списка 500м */}
-              <div className='p-4 bg-white border-b'>
-                <h3 className='font-semibold text-lg'>
-                  📍 Объявления в радиусе 500м
-                </h3>
-                <p className='text-sm text-gray-600'>
-                  {nearbyAds.length} объявлений найдено
-                </p>
-              </div>
-
               {/* Список всех объявлений в радиусе 500м */}
               <div className='flex-1 overflow-y-auto p-4'>
                 {nearbyAds.length > 0 ? (
@@ -259,6 +265,7 @@ export default function NearbyMap({
                         const totalFloors = ad.total_floors || 0
                         const kitchenArea = ad.kitchen_area || 0
                         const price = ad.price || 0
+                        const source = getDomainFromUrl(ad.url || '')
 
                         return (
                           <div
@@ -266,14 +273,7 @@ export default function NearbyMap({
                             className={`bg-white rounded-lg p-3 border shadow-sm flex items-center justify-between ${!isActive ? 'opacity-60' : ''}`}
                           >
                             <div className='text-sm flex-1'>
-                              <a
-                                href={ad.url}
-                                target='_blank'
-                                rel='noopener noreferrer'
-                                className={`hover:underline ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
-                              >
-                                {rooms} комн.
-                              </a>
+                              {rooms} комн.
                               {area ? `, ${Number(area).toFixed(1)} м²` : ''}
                               {floor && totalFloors
                                 ? `, ${floor}/${totalFloors} эт.`
@@ -282,44 +282,57 @@ export default function NearbyMap({
                                   : ''}
                               {kitchenArea
                                 ? `, кухня ${Number(kitchenArea).toFixed(1)}м²`
-                                : ''}
-                              <span
-                                className={`ml-2 font-semibold ${isActive ? 'text-green-600' : 'text-gray-500'}`}
-                              >
-                                {(price / 1000000).toFixed(1)} млн ₽
-                              </span>
+                                : ', кухня -'}
                               {!isActive && (
                                 <span className='text-xs ml-2 text-red-500'>
                                   (неактивно)
                                 </span>
                               )}
                             </div>
-                            {(onAddToComparison || onToggleComparison) && (
-                              <button
-                                onClick={() => {
-                                  const inComparison = isAdInComparison(ad)
-                                  if (
-                                    ad.id &&
-                                    typeof ad.id === 'number' &&
-                                    onToggleComparison
-                                  ) {
-                                    // For database ads, use toggle comparison
-                                    onToggleComparison(ad.id, !inComparison)
-                                  } else if (onAddToComparison) {
-                                    // For external ads, use add to comparison
-                                    onAddToComparison(ad)
-                                  }
-                                }}
-                                className='ml-2 flex-shrink-0 w-6 h-6 text-blue-500 hover:text-blue-600 flex items-center justify-center text-lg font-bold'
-                                title={
-                                  isAdInComparison(ad)
-                                    ? 'Убрать из сравнения'
-                                    : 'Добавить в сравнение'
-                                }
+                            <div className='flex items-center gap-2'>
+                              <a
+                                href={ad.url}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className={`text-xs ${isActive ? 'text-blue-600 hover:text-blue-800' : 'text-gray-500'}`}
                               >
-                                {isAdInComparison(ad) ? '−' : '+'}
-                              </button>
-                            )}
+                                {source}
+                              </a>
+                              <span
+                                className={`text-right ${isActive ? 'text-gray-900' : 'text-gray-500'}`}
+                              >
+                                <span className='font-bold'>
+                                  {(price / 1000000).toFixed(1)}
+                                </span>
+                                <span className='font-normal'> млн ₽</span>
+                              </span>
+                              {(onAddToComparison || onToggleComparison) && (
+                                <button
+                                  onClick={() => {
+                                    const inComparison = isAdInComparison(ad)
+                                    if (
+                                      ad.id &&
+                                      typeof ad.id === 'number' &&
+                                      onToggleComparison
+                                    ) {
+                                      // For database ads, use toggle comparison
+                                      onToggleComparison(ad.id, !inComparison)
+                                    } else if (onAddToComparison) {
+                                      // For external ads, use add to comparison
+                                      onAddToComparison(ad)
+                                    }
+                                  }}
+                                  className='ml-2 flex-shrink-0 w-6 h-6 text-blue-500 hover:text-blue-600 flex items-center justify-center text-lg font-bold'
+                                  title={
+                                    isAdInComparison(ad)
+                                      ? 'Убрать из сравнения'
+                                      : 'Добавить в сравнение'
+                                  }
+                                >
+                                  {isAdInComparison(ad) ? '−' : '+'}
+                                </button>
+                              )}
+                            </div>
                           </div>
                         )
                       })}
