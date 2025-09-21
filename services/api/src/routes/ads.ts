@@ -1007,6 +1007,32 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       const params = z.object({ flatId: z.string() }).parse(request.params)
       flatId = params.flatId
 
+      // Parse query filters
+      const filters = z
+        .object({
+          maxPrice: z
+            .string()
+            .optional()
+            .transform((val) => (val ? parseInt(val) : undefined)),
+          minArea: z
+            .string()
+            .optional()
+            .transform((val) => (val ? parseFloat(val) : undefined)),
+          rooms: z
+            .string()
+            .optional()
+            .transform((val) => (val ? parseInt(val) : undefined)),
+          minKitchenArea: z
+            .string()
+            .optional()
+            .transform((val) => (val ? parseFloat(val) : undefined)),
+          radius: z
+            .string()
+            .optional()
+            .transform((val) => (val ? parseInt(val) : 500)),
+        })
+        .parse(request.query)
+
       // Получаем данные квартиры
       const flats = await db
         .select()
@@ -1034,12 +1060,19 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         : (priceResult as any).rows || []
       const currentPrice = priceData[0]?.current_price || 999999999
 
-      // Ищем близлежащие квартиры дешевле текущей цены
+      // Use filters from query params or defaults
+      const finalMaxPrice = filters.maxPrice || currentPrice
+      const finalRooms = filters.rooms || currentFlat.rooms
+      const finalRadius = filters.radius
+      const finalMinArea = filters.minArea || null
+      const finalMinKitchenArea = filters.minKitchenArea || null
+
+      // Ищем близлежащие квартиры с учетом фильтров
       const nearbyResult = await db.transaction(async (tx) => {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
           sql`SELECT price, floor, rooms, person_type, created, updated, url, is_active, house_id, distance_m, area, kitchen_area
-              FROM public.find_nearby_apartments(${currentFlat.address}, ${currentFlat.rooms}, ${currentPrice}, NULL, NULL, 500)`,
+              FROM public.find_nearby_apartments(${currentFlat.address}, ${finalRooms}, ${finalMaxPrice}, ${finalMinArea}, ${finalMinKitchenArea}, ${finalRadius})`,
         )
       })
 
@@ -1048,10 +1081,21 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         : (nearbyResult as any).rows || []
 
       fastify.log.info(
-        `Found ${nearbyAds.length} nearby ads for flat ${flatId} within 500m`,
+        `Found ${nearbyAds.length} nearby ads for flat ${flatId} within ${finalRadius}m with filters: maxPrice=${finalMaxPrice}, rooms=${finalRooms}, minArea=${finalMinArea}, minKitchenArea=${finalMinKitchenArea}`,
       )
 
-      return reply.send(nearbyAds)
+      return reply.send({
+        ads: nearbyAds,
+        filters: {
+          maxPrice: finalMaxPrice,
+          rooms: finalRooms,
+          minArea: finalMinArea,
+          minKitchenArea: finalMinKitchenArea,
+          radius: finalRadius,
+          currentPrice, // возвращаем текущую цену для отображения в фильтре
+        },
+        count: nearbyAds.length,
+      })
     } catch (error) {
       const errorMessage =
         error instanceof Error ? error.message : String(error)

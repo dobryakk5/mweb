@@ -72,14 +72,9 @@ export const userFlats = usersSchema.table(
     address: varchar('address').notNull(),
     rooms: integer('rooms').notNull(),
     floor: integer('floor').notNull(),
-    lat: real('lat'), // Latitude for map display
-    lng: real('lng'), // Longitude for map display
     ...timestamps,
   },
-  (t) => [
-    index('user_flats_tg_user_id_idx').on(t.tgUserId),
-    index('user_flats_coordinates_idx').on(t.lat, t.lng), // Index for spatial queries
-  ],
+  (t) => [index('user_flats_tg_user_id_idx').on(t.tgUserId)],
 )
 
 export const ads = usersSchema.table(

@@ -1,7 +1,13 @@
 'use client'
 
-import React, { useEffect, useState, useCallback, useMemo } from 'react'
-import { MapContainer, TileLayer, Marker, Popup, Circle } from 'react-leaflet'
+import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import {
+  MapContainer,
+  TileLayer,
+  Marker,
+  Popup,
+  useMapEvents,
+} from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-defaulticon-compatibility'
@@ -13,6 +19,29 @@ interface NearbyMapComponentProps {
   nearbyAds: any[]
   currentFlat?: any
   onHouseClick?: (house: any) => void
+}
+
+// Component to handle map events
+function MapEventHandler({
+  onBoundsChange,
+}: { onBoundsChange: (bounds: L.LatLngBounds) => void }) {
+  const map = useMapEvents({
+    moveend: () => {
+      onBoundsChange(map.getBounds())
+    },
+    zoomend: () => {
+      onBoundsChange(map.getBounds())
+    },
+  })
+
+  // Trigger initial bounds on mount
+  useEffect(() => {
+    if (map) {
+      onBoundsChange(map.getBounds())
+    }
+  }, [map, onBoundsChange])
+
+  return null
 }
 
 export default function NearbyMapComponent({
@@ -28,6 +57,7 @@ export default function NearbyMapComponent({
     lat: number
     lng: number
   } | null>(null)
+  const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null)
 
   // Иконки
   const currentFlatIcon = new L.DivIcon({
@@ -40,6 +70,13 @@ export default function NearbyMapComponent({
   const houseIcon = new L.DivIcon({
     className: 'marker-house',
     html: `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#f59e0b;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,.6);"></span>`,
+    iconSize: [24, 24],
+    iconAnchor: [12, 12],
+  })
+
+  const inactiveHouseIcon = new L.DivIcon({
+    className: 'marker-house-inactive',
+    html: `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#9ca3af;border:2px solid white;box-shadow:0 0 4px rgba(0,0,0,.6);"></span>`,
     iconSize: [24, 24],
     iconAnchor: [12, 12],
   })
@@ -58,48 +95,7 @@ export default function NearbyMapComponent({
     }
   }, [flatAddress])
 
-  // Извлекаем уникальные house IDs из nearby ads с помощью useMemo
-  const houseIdsFromAds = useMemo(() => {
-    if (!nearbyAds || nearbyAds.length === 0) return []
-
-    const adsCountByHouse = new Map<
-      number,
-      { count: number; minDistance: number }
-    >()
-
-    nearbyAds.forEach((ad: any) => {
-      if (ad.house_id) {
-        const houseId = Number(ad.house_id)
-        const existing = adsCountByHouse.get(houseId)
-        if (existing) {
-          existing.count += 1
-          existing.minDistance = Math.min(
-            existing.minDistance,
-            ad.distance_m || 0,
-          )
-        } else {
-          adsCountByHouse.set(houseId, {
-            count: 1,
-            minDistance: ad.distance_m || 0,
-          })
-        }
-      }
-    })
-
-    return Array.from(adsCountByHouse.entries()).map(([houseId, data]) => ({
-      houseId,
-      ...data,
-    }))
-  }, [nearbyAds])
-
-  // Загружаем дома когда меняются house IDs
-  useEffect(() => {
-    if (houseIdsFromAds.length > 0) {
-      loadHousesData(houseIdsFromAds)
-    } else if (houses.length > 0) {
-      setHouses([])
-    }
-  }, [houseIdsFromAds])
+  // This useEffect will be moved after loadHousesInBounds definition
 
   const loadAddressCoordinates = async () => {
     try {
@@ -128,49 +124,34 @@ export default function NearbyMapComponent({
     }
   }
 
-  const loadHousesData = useCallback(
-    async (
-      houseData: Array<{ houseId: number; count: number; minDistance: number }>,
-    ) => {
+  const loadHousesInBounds = useCallback(
+    async (bounds: L.LatLngBounds, flatId: number) => {
       setLoading(true)
       try {
-        console.log('Loading houses data for:', houseData)
+        const north = bounds.getNorth()
+        const south = bounds.getSouth()
+        const east = bounds.getEast()
+        const west = bounds.getWest()
 
-        // Получаем координаты только для домов, которые есть в объявлениях
-        const houseIdsString = houseData.map((h) => h.houseId).join(',')
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/map/houses-by-ids?houseIds=${houseIdsString}`
-        console.log('Fetching houses from URL:', url)
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/map/houses-in-bounds?north=${north}&south=${south}&east=${east}&west=${west}&flatId=${flatId}`
+        console.log('Loading houses in bounds:', { north, south, east, west })
 
         const response = await fetch(url)
         console.log('Response status:', response.status)
 
         if (!response.ok) {
-          console.error('Failed to load house coordinates:', response.status)
+          console.error('Failed to load houses in bounds:', response.status)
           setHouses([])
           return
         }
 
         const data = await response.json()
-        console.log('Raw response data:', data)
-        const housesData = data.houses || []
+        console.log('Houses in bounds data:', data)
 
-        console.log('Houses data from API:', housesData)
-
-        // Добавляем количество объявлений и расстояние к каждому дому
-        const housesWithAds = housesData.map((house: any) => {
-          const houseId = Number(house.house_id)
-          const adsData = houseData.find((h) => h.houseId === houseId)
-          return {
-            ...house,
-            ads_count: adsData?.count || 0,
-            dist_m: adsData?.minDistance || 0,
-          }
-        })
-
-        console.log('Houses with ads:', housesWithAds)
-        setHouses(housesWithAds)
+        // API уже исключает дома по тому же адресу, что и текущая квартира
+        setHouses(data.houses || [])
       } catch (error) {
-        console.error('Error loading houses data:', error)
+        console.error('Error loading houses in bounds:', error)
         setHouses([])
       } finally {
         setLoading(false)
@@ -178,6 +159,13 @@ export default function NearbyMapComponent({
     },
     [],
   )
+
+  // Загружаем дома когда меняются bounds карты
+  useEffect(() => {
+    if (mapBounds && currentFlat?.id) {
+      loadHousesInBounds(mapBounds, currentFlat.id)
+    }
+  }, [mapBounds, currentFlat?.id, loadHousesInBounds])
 
   const handleHouseClick = (house: any) => {
     if (onHouseClick) {
@@ -216,20 +204,8 @@ export default function NearbyMapComponent({
           attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>'
         />
 
-        {/* Круг радиуса 500м */}
-        {addressCoordinates && (
-          <Circle
-            center={[addressCoordinates.lat, addressCoordinates.lng]}
-            radius={500}
-            pathOptions={{
-              color: '#ef4444',
-              weight: 2,
-              opacity: 0.6,
-              fillColor: '#ef4444',
-              fillOpacity: 0.1,
-            }}
-          />
-        )}
+        {/* Map event handler for bounds tracking */}
+        <MapEventHandler onBoundsChange={setMapBounds} />
 
         {/* Маркер текущей квартиры */}
         {addressCoordinates && (
@@ -251,37 +227,23 @@ export default function NearbyMapComponent({
           </Marker>
         )}
 
-        {/* Маркеры домов в радиусе 500м */}
-        {houses.map((house, index) => (
-          <Marker
-            key={`nearby-house-${house.house_id}-${index}`}
-            position={[house.lat, house.lng]}
-            icon={houseIcon}
-          >
-            <Popup>
-              <div style={{ minWidth: 200 }}>
-                <strong>🏢 Дом с объявлениями</strong>
-                <div className='text-lg font-bold text-orange-600'>
-                  {house.ads_count} объявлений
-                </div>
-                <div className='text-sm text-gray-600 mt-1'>
-                  {house.address}
-                </div>
-                <div className='text-sm text-gray-500 mt-1'>
-                  Расстояние: {house.dist_m}м
-                </div>
-                <div className='mt-2'>
-                  <button
-                    onClick={() => handleHouseClick(house)}
-                    className='px-3 py-1 bg-orange-500 text-white rounded text-sm hover:bg-orange-600 transition-colors'
-                  >
-                    Показать объявления →
-                  </button>
-                </div>
-              </div>
-            </Popup>
-          </Marker>
-        ))}
+        {/* Маркеры домов в видимой области */}
+        {houses.map((house, index) => {
+          const hasActiveAds =
+            house.has_active_ads === true || house.active_ads_count > 0
+          const iconToUse = hasActiveAds ? houseIcon : inactiveHouseIcon
+
+          return (
+            <Marker
+              key={`nearby-house-${house.house_id}-${index}`}
+              position={[house.lat, house.lng]}
+              icon={iconToUse}
+              eventHandlers={{
+                click: () => handleHouseClick(house),
+              }}
+            />
+          )
+        })}
 
         {/* Маркеры объявлений из таблицы (если у них есть координаты) */}
         {nearbyAds
@@ -329,18 +291,17 @@ export default function NearbyMapComponent({
         </div>
         <div className='flex items-center gap-2 mb-1'>
           <div className='w-4 h-4 rounded-full bg-orange-500 border-2 border-white'></div>
-          <span>Дома с объявлениями</span>
+          <span>Дома с активными объявлениями</span>
         </div>
         <div className='flex items-center gap-2'>
-          <div className='w-3 h-3 rounded-full bg-purple-500 border border-white'></div>
-          <span>Объявления из таблицы</span>
+          <div className='w-4 h-4 rounded-full bg-gray-400 border-2 border-white'></div>
+          <span>Дома только с неактивными</span>
         </div>
       </div>
 
       {/* Информация в правом верхнем углу */}
       <div className='absolute top-2 left-2 z-[1000] bg-white px-2 py-1 rounded shadow text-xs'>
-        <div>Радиус: 500м</div>
-        <div>Домов: {houses.length}</div>
+        <div>Домов на карте: {houses.length}</div>
         <div>Объявлений в таблице: {nearbyAds.length}</div>
       </div>
     </div>

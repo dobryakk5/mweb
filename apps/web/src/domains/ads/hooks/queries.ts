@@ -1,9 +1,22 @@
 import { useQuery } from '@tanstack/react-query'
 
 import { adKeys } from '../query-keys'
-import { fetchAds, fetchAd, findSimilarAdsByFlat, findBroaderAdsByAddress, findNearbyAdsByFlat } from '../fetchers'
+import {
+  fetchAds,
+  fetchAd,
+  findSimilarAdsByFlat,
+  findBroaderAdsByAddress,
+  findNearbyAdsByFlat,
+} from '../fetchers'
 
-export function useAds(filters: { search?: string; sortBy?: string; page?: number; flatId?: number } = {}) {
+export function useAds(
+  filters: {
+    search?: string
+    sortBy?: string
+    page?: number
+    flatId?: number
+  } = {},
+) {
   return useQuery({
     queryKey: adKeys.list(filters),
     queryFn: () => fetchAds(filters),
@@ -37,10 +50,24 @@ export function useBroaderAdsFromFindAds(flatId: number) {
 }
 
 // Хук для получения близлежащих объявлений в радиусе 500м
-export function useNearbyAdsFromFindAds(flatId: number) {
+export function useNearbyAdsFromFindAds(
+  flatId: number,
+  filters?: {
+    maxPrice?: number
+    minArea?: number
+    rooms?: number
+    minKitchenArea?: number
+    radius?: number
+  },
+) {
   return useQuery({
-    queryKey: ['findAds', 'nearby', flatId],
-    queryFn: () => findNearbyAdsByFlat(flatId),
+    queryKey: ['findAds', 'nearby', flatId, filters],
+    queryFn: () => findNearbyAdsByFlat(flatId, filters),
     enabled: !!flatId,
+    select: (data) => ({
+      ads: data.ads,
+      filters: data.filters,
+      count: data.count,
+    }),
   })
 }

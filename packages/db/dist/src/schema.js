@@ -25,9 +25,7 @@ exports.telegramUsers = exports.usersSchema.table('telegram_users', {
     username: (0, pg_core_1.varchar)('username'),
     photoUrl: (0, pg_core_1.varchar)('photo_url'),
     ...utils_1.timestamps,
-}, (t) => [
-    (0, pg_core_1.index)('telegram_users_tg_user_id_idx').on(t.tgUserId),
-]);
+}, (t) => [(0, pg_core_1.index)('telegram_users_tg_user_id_idx').on(t.tgUserId)]);
 exports.sessions = exports.usersSchema.table('sessions', {
     ...utils_1.id,
     tgUserId: (0, pg_core_1.bigint)('tg_user_id', { mode: 'number' }).notNull(),
@@ -95,9 +93,7 @@ exports.adHistory = exports.usersSchema.table('ad_history', {
     recordedAt: (0, pg_core_1.timestamp)('recorded_at').defaultNow(),
     status: (0, pg_core_1.boolean)('status'),
     updatedAt: (0, pg_core_1.timestamp)('updated_at'),
-}, (t) => [
-    (0, pg_core_1.index)('ad_history_ad_id_idx').on(t.adId),
-]);
+}, (t) => [(0, pg_core_1.index)('ad_history_ad_id_idx').on(t.adId)]);
 // Определяем связи между таблицами
 exports.userFlatsRelations = (0, drizzle_orm_1.relations)(exports.userFlats, ({ many }) => ({
     ads: many(exports.ads),

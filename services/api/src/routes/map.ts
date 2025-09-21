@@ -149,18 +149,36 @@ export default async (fastify: FastifyInstance) => {
     }
   })
 
-  // Get ads by house address for map house click
+  // Get ads by house_id for map house click
   fastify.get('/map/house-ads', async (request, reply) => {
     try {
-      const { address } = z
+      const { houseId } = z
         .object({
-          address: z.string(),
+          houseId: z.string().transform(Number).pipe(z.number().int()),
         })
         .parse(request.query)
 
-      // Get ads by house address - использую тот же метод что и в nearby-by-flat
+      // Get ads directly from flats_history by house_id
       const result = await db.execute(
-        sql`SELECT * FROM ads WHERE address = ${address} ORDER BY price ASC LIMIT 50`,
+        sql`SELECT
+          fh.id,
+          fh.avitoid,
+          fh.price,
+          fh.rooms,
+          fh.floor,
+          fh.description,
+          fh.url,
+          fh.time_source_created as created,
+          fh.time_source_updated as updated,
+          fh.is_actual as is_active,
+          fh.person as person_type,
+          fh.house_id,
+          CONCAT(mg.street, ', ', mg.housenum) as address
+        FROM public.flats_history fh
+        JOIN system.moscow_geo mg ON fh.house_id = mg.house_id
+        WHERE fh.house_id = ${houseId}
+        ORDER BY fh.is_actual DESC, fh.price ASC
+        LIMIT 50`,
       )
 
       const ads = Array.isArray(result) ? result : result.rows || []
@@ -168,7 +186,7 @@ export default async (fastify: FastifyInstance) => {
       return {
         ads,
         count: ads.length,
-        address,
+        houseId,
       }
     } catch (error) {
       fastify.log.error(error)
@@ -298,6 +316,155 @@ export default async (fastify: FastifyInstance) => {
       fastify.log.error(error)
       return reply.status(500).send({
         error: 'Failed to fetch houses by IDs',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  })
+
+  // Get houses with ads within map bounds (bounding box)
+  fastify.get('/map/houses-in-bounds', async (request, reply) => {
+    try {
+      const { north, south, east, west, flatId } = z
+        .object({
+          north: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
+          south: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
+          east: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(-180).max(180)),
+          west: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(-180).max(180)),
+          flatId: z.string().transform(Number).pipe(z.number().int()),
+        })
+        .parse(request.query)
+
+      // Get current flat address to exclude houses at the same address
+      const flatResult = await db.execute(
+        sql`SELECT address FROM "users".user_flats WHERE id = ${flatId} LIMIT 1`,
+      )
+      const currentFlatAddress = Array.isArray(flatResult)
+        ? flatResult[0]?.address
+        : flatResult.rows?.[0]?.address
+
+      console.log('Current flat address:', currentFlatAddress)
+
+      // Parse current flat address to extract street and house number for comparison
+      let currentFlatStreet = null
+      let currentFlatHousenum = null
+      if (currentFlatAddress) {
+        const addressParts = currentFlatAddress.split(',').map((s) => s.trim())
+        if (addressParts.length >= 2) {
+          currentFlatStreet = addressParts[0]
+          currentFlatHousenum = addressParts[1]
+          console.log('Parsed current flat:', {
+            street: currentFlatStreet,
+            housenum: currentFlatHousenum,
+          })
+        }
+      }
+
+      // Calculate center point and radius from bounds
+      const centerLat = (north + south) / 2
+      const centerLng = (east + west) / 2
+
+      // Calculate rough radius from bounds (distance from center to corner)
+      const latDiff = north - south
+      const lngDiff = east - west
+      const radius = (Math.max(latDiff, lngDiff) * 111000) / 2 // Convert degrees to meters roughly
+
+      // Get houses with ads within a large radius around the center
+      const radiusInt = Math.round(Math.min(radius * 2, 5000))
+      const result = await db.execute(
+        sql`SELECT * FROM public.get_houses_with_ads_by_coordinates(${centerLat}, ${centerLng}, ${radiusInt})`,
+      )
+
+      const allHouses = Array.isArray(result) ? result : result.rows || []
+      console.log(`Found ${allHouses.length} houses before filtering`)
+
+      // Filter houses that are within the exact bounds and exclude current flat address
+      const housesData = await Promise.all(
+        allHouses
+          .filter((house: any) => {
+            const lat = Number(house.lat)
+            const lng = Number(house.lng)
+            const isInBounds =
+              lat >= south && lat <= north && lng >= west && lng <= east
+
+            // Exclude houses that match the current flat address (compare by street and house number)
+            let isCurrentFlatAddress = false
+            if (currentFlatStreet && currentFlatHousenum && house.address) {
+              // Parse house address from API
+              const houseAddressParts = house.address
+                .split(',')
+                .map((s) => s.trim())
+              if (houseAddressParts.length >= 2) {
+                const houseStreet = houseAddressParts[0]
+                const houseHousenum = houseAddressParts[1]
+
+                // Compare street and house number (normalize house numbers for comparison)
+                const normalizeHousenum = (num) =>
+                  num.replace(/\s+/g, '').toLowerCase()
+                isCurrentFlatAddress =
+                  houseStreet === currentFlatStreet &&
+                  normalizeHousenum(houseHousenum) ===
+                    normalizeHousenum(currentFlatHousenum)
+
+                // Log only when address matches (for monitoring)
+                if (isCurrentFlatAddress) {
+                  console.log(
+                    `Found matching address - will exclude: ${house.address}`,
+                  )
+                }
+              }
+            }
+
+            if (isCurrentFlatAddress) {
+              console.log(
+                `Excluding house at same address: ${house.address} (matches ${currentFlatAddress})`,
+              )
+            }
+
+            return isInBounds && !isCurrentFlatAddress
+          })
+          .map(async (house: any) => {
+            // Get count of active ads for this house
+            const activeAdsResult = await db.execute(
+              sql`SELECT COUNT(*) as active_count FROM public.flats_history WHERE house_id = ${house.house_id} AND is_actual = 1`,
+            )
+
+            const activeAdsData = Array.isArray(activeAdsResult)
+              ? activeAdsResult
+              : activeAdsResult.rows || []
+            const activeCount =
+              activeAdsData.length > 0
+                ? Number(activeAdsData[0].active_count)
+                : 0
+
+            return {
+              ...house,
+              active_ads_count: activeCount,
+              has_active_ads: activeCount > 0,
+            }
+          }),
+      )
+
+      // Sort houses: inactive first (so active houses render on top)
+      const sortedHouses = housesData.sort((a, b) => {
+        // Inactive houses first (false < true), so active houses render on top in map
+        return Number(a.has_active_ads) - Number(b.has_active_ads)
+      })
+
+      return {
+        houses: sortedHouses,
+        count: sortedHouses.length,
+        bounds: { north, south, east, west },
+      }
+    } catch (error) {
+      fastify.log.error(error)
+      return reply.status(500).send({
+        error: 'Failed to fetch houses in bounds',
         message: error instanceof Error ? error.message : 'Unknown error',
       })
     }

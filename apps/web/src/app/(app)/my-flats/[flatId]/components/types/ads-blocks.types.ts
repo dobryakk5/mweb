@@ -101,6 +101,8 @@ export type HouseAdsBlockProps = BaseBlockProps & {
 // Nearby ads block specific types
 export type NearbyAdsBlockProps = BaseBlockProps & {
   nearbyAds: any[]
+  nearbyFilters?: any
+  flatAds?: any[] // Добавляем объявления по этой квартире для вычисления базовых значений
   onRefetch: () => Promise<void>
   isLoading: boolean
   onAddToComparison: (adData: any) => Promise<void>
@@ -108,6 +110,13 @@ export type NearbyAdsBlockProps = BaseBlockProps & {
   comparisonAds: any[]
   onUpdateAd?: (adId: number) => Promise<void>
   updatingAdIds?: Set<number>
+  onSearchWithFilters?: (filters: {
+    maxPrice?: number
+    minArea?: number
+    rooms?: number
+    minKitchenArea?: number
+    radius?: number
+  }) => void
 }
 
 // Comparison ads block specific types

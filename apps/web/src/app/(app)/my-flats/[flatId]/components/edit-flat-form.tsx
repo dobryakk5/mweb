@@ -1,6 +1,12 @@
 'use client'
 
-import { type HTMLAttributes, type JSX, useEffect, useCallback } from 'react'
+import {
+  type HTMLAttributes,
+  type JSX,
+  useEffect,
+  useCallback,
+  useState,
+} from 'react'
 
 // Telegram Web App types
 declare global {
@@ -64,6 +70,15 @@ export default function EditFlatFormRefactored({
   const state = useFlatAdsState()
   const { exportComparison } = useExcelExport(flat)
 
+  // Nearby ads filters state
+  const [nearbyFilters, setNearbyFilters] = useState<{
+    maxPrice?: number
+    minArea?: number
+    rooms?: number
+    minKitchenArea?: number
+    radius?: number
+  }>()
+
   // Form setup
   const form = useForm<FormValues>({
     resolver: zodResolver(formSchema),
@@ -81,10 +96,14 @@ export default function EditFlatFormRefactored({
   const { data: broaderAdsFromFindAds = [], refetch: refetchBroaderAds } =
     useBroaderAdsFromFindAds(flat?.id || 0)
   const {
-    data: nearbyAdsFromFindAds = [],
+    data: nearbyAdsData,
     refetch: refetchNearbyAds,
     isLoading: isLoadingNearbyAds,
-  } = useNearbyAdsFromFindAds(flat?.id || 0)
+  } = useNearbyAdsFromFindAds(flat?.id || 0, nearbyFilters)
+
+  // Extract ads from new API structure
+  const nearbyAdsFromFindAds = nearbyAdsData?.ads || []
+  const nearbyApiFilters = nearbyAdsData?.filters
 
   // Memoized refetch function to prevent unnecessary re-renders
   const handleRefetchNearbyAds = useCallback(async () => {
@@ -419,6 +438,9 @@ export default function EditFlatFormRefactored({
             <NearbyAdsBlock
               flat={flat}
               nearbyAds={nearbyAdsFromFindAds}
+              nearbyFilters={nearbyApiFilters}
+              flatAds={flatAds}
+              onSearchWithFilters={setNearbyFilters}
               isCollapsed={isCollapsed('nearbyAds')}
               onToggleCollapse={() => toggleBlock('nearbyAds')}
               onRefetch={handleRefetchNearbyAds}

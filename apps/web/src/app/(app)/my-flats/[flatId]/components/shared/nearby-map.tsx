@@ -19,6 +19,9 @@ interface NearbyMapProps {
   nearbyAds: any[]
   currentFlat?: any
   onHouseClick?: (house: any) => void
+  onAddToComparison?: (adData: any) => Promise<void>
+  onToggleComparison?: (adId: number, inComparison: boolean) => Promise<void>
+  comparisonAds?: any[]
 }
 
 export default function NearbyMap({
@@ -27,19 +30,33 @@ export default function NearbyMap({
   nearbyAds,
   currentFlat,
   onHouseClick,
+  onAddToComparison,
+  onToggleComparison,
+  comparisonAds = [],
 }: NearbyMapProps) {
   const [selectedHouse, setSelectedHouse] = useState<any>(null)
   const [houseAds, setHouseAds] = useState<any[]>([])
   const [loadingHouseAds, setLoadingHouseAds] = useState(false)
+
+  // Helper function to check if an ad is in comparison
+  const isAdInComparison = (ad: any) => {
+    if (ad.id && typeof ad.id === 'number') {
+      // For database ads, check if sma === 1
+      return ad.sma === 1
+    } else {
+      // For external ads, check if URL exists in comparisonAds
+      return comparisonAds.some((compAd) => compAd.url === ad.url)
+    }
+  }
 
   const handleHouseClick = async (house: any) => {
     setSelectedHouse(house)
     setLoadingHouseAds(true)
 
     try {
-      // Получаем объявления для выбранного дома
+      // Получаем объявления для выбранного дома по house_id
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/map/house-ads?address=${encodeURIComponent(house.address)}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/map/house-ads?houseId=${house.house_id}`,
       )
       if (response.ok) {
         const data = await response.json()
@@ -100,50 +117,101 @@ export default function NearbyMap({
                 </div>
               </div>
 
-              {/* Список объявлений */}
+              {/* Список объявлений по выбранному дому */}
               <div className='flex-1 overflow-y-auto p-4'>
                 {loadingHouseAds ? (
                   <div className='flex items-center justify-center h-32'>
                     <div className='text-gray-500'>Загрузка объявлений...</div>
                   </div>
                 ) : houseAds.length > 0 ? (
-                  <div className='space-y-3'>
-                    {houseAds.map((ad, index) => (
-                      <div
-                        key={index}
-                        className='bg-white rounded-lg p-4 border shadow-sm'
-                      >
-                        <div className='flex justify-between items-start mb-2'>
-                          <div className='font-semibold text-lg text-green-600'>
-                            {Number(ad.price).toLocaleString('ru-RU')} ₽
+                  <div className='space-y-2'>
+                    {houseAds
+                      .sort((a, b) => {
+                        const aActive =
+                          a.is_active === 1 || a.is_active === true
+                        const bActive =
+                          b.is_active === 1 || b.is_active === true
+
+                        // Сначала активные
+                        if (aActive && !bActive) return -1
+                        if (!aActive && bActive) return 1
+
+                        // Потом по цене по возрастанию
+                        return (a.price || 0) - (b.price || 0)
+                      })
+                      .map((ad, index) => {
+                        const isActive =
+                          ad.is_active === 1 || ad.is_active === true
+                        const rooms = ad.rooms || 0
+                        const area = ad.area || 0
+                        const floor = ad.floor || 0
+                        const totalFloors = ad.total_floors || 0
+                        const kitchenArea = ad.kitchen_area || 0
+                        const price = ad.price || 0
+
+                        return (
+                          <div
+                            key={index}
+                            className={`bg-white rounded-lg p-3 border shadow-sm flex items-center justify-between ${!isActive ? 'opacity-60' : ''}`}
+                          >
+                            <div className='text-sm flex-1'>
+                              <a
+                                href={ad.url}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className={`hover:underline ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
+                              >
+                                {rooms} комн.
+                              </a>
+                              {area ? `, ${Number(area).toFixed(1)} м²` : ''}
+                              {floor && totalFloors
+                                ? `, ${floor}/${totalFloors} эт.`
+                                : floor
+                                  ? `, ${floor} эт.`
+                                  : ''}
+                              {kitchenArea
+                                ? `, кухня ${Number(kitchenArea).toFixed(1)}м²`
+                                : ''}
+                              <span
+                                className={`ml-2 font-semibold ${isActive ? 'text-green-600' : 'text-gray-500'}`}
+                              >
+                                {(price / 1000000).toFixed(1)} млн ₽
+                              </span>
+                              {!isActive && (
+                                <span className='text-xs ml-2 text-red-500'>
+                                  (неактивно)
+                                </span>
+                              )}
+                            </div>
+                            {(onAddToComparison || onToggleComparison) && (
+                              <button
+                                onClick={() => {
+                                  const inComparison = isAdInComparison(ad)
+                                  if (
+                                    ad.id &&
+                                    typeof ad.id === 'number' &&
+                                    onToggleComparison
+                                  ) {
+                                    // For database ads, use toggle comparison
+                                    onToggleComparison(ad.id, !inComparison)
+                                  } else if (onAddToComparison) {
+                                    // For external ads, use add to comparison
+                                    onAddToComparison(ad)
+                                  }
+                                }}
+                                className='ml-2 flex-shrink-0 w-6 h-6 text-blue-500 hover:text-blue-600 flex items-center justify-center text-lg font-bold'
+                                title={
+                                  isAdInComparison(ad)
+                                    ? 'Убрать из сравнения'
+                                    : 'Добавить в сравнение'
+                                }
+                              >
+                                {isAdInComparison(ad) ? '−' : '+'}
+                              </button>
+                            )}
                           </div>
-                          <div className='text-sm text-gray-500'>
-                            {ad.rooms} комн.
-                          </div>
-                        </div>
-                        <div className='text-sm space-y-1'>
-                          <div>
-                            Этаж: {ad.floor} | Площадь: {ad.area}м²
-                          </div>
-                          {ad.kitchen_area && (
-                            <div>Кухня: {ad.kitchen_area}м²</div>
-                          )}
-                          {ad.person_type && <div>Автор: {ad.person_type}</div>}
-                        </div>
-                        {ad.url && (
-                          <div className='mt-3'>
-                            <a
-                              href={ad.url}
-                              target='_blank'
-                              rel='noopener noreferrer'
-                              className='text-blue-600 hover:underline text-sm'
-                            >
-                              Посмотреть объявление →
-                            </a>
-                          </div>
-                        )}
-                      </div>
-                    ))}
+                        )
+                      })}
                   </div>
                 ) : (
                   <div className='flex items-center justify-center h-32'>
@@ -153,13 +221,114 @@ export default function NearbyMap({
               </div>
             </div>
           ) : (
-            <div className='h-full flex items-center justify-center'>
-              <div className='text-center text-gray-500'>
-                <div className='text-4xl mb-2'>🏢</div>
-                <div className='font-medium'>Выберите дом на карте</div>
-                <div className='text-sm'>
-                  Нажмите на оранжевый маркер дома, чтобы увидеть объявления
-                </div>
+            <div className='h-full flex flex-col'>
+              {/* Заголовок для списка 500м */}
+              <div className='p-4 bg-white border-b'>
+                <h3 className='font-semibold text-lg'>
+                  📍 Объявления в радиусе 500м
+                </h3>
+                <p className='text-sm text-gray-600'>
+                  {nearbyAds.length} объявлений найдено
+                </p>
+              </div>
+
+              {/* Список всех объявлений в радиусе 500м */}
+              <div className='flex-1 overflow-y-auto p-4'>
+                {nearbyAds.length > 0 ? (
+                  <div className='space-y-2'>
+                    {nearbyAds
+                      .sort((a, b) => {
+                        const aActive =
+                          a.is_active === 1 || a.is_active === true
+                        const bActive =
+                          b.is_active === 1 || b.is_active === true
+
+                        // Сначала активные
+                        if (aActive && !bActive) return -1
+                        if (!aActive && bActive) return 1
+
+                        // Потом по цене по возрастанию
+                        return (a.price || 0) - (b.price || 0)
+                      })
+                      .map((ad, index) => {
+                        const isActive =
+                          ad.is_active === 1 || ad.is_active === true
+                        const rooms = ad.rooms || 0
+                        const area = ad.area || 0
+                        const floor = ad.floor || 0
+                        const totalFloors = ad.total_floors || 0
+                        const kitchenArea = ad.kitchen_area || 0
+                        const price = ad.price || 0
+
+                        return (
+                          <div
+                            key={index}
+                            className={`bg-white rounded-lg p-3 border shadow-sm flex items-center justify-between ${!isActive ? 'opacity-60' : ''}`}
+                          >
+                            <div className='text-sm flex-1'>
+                              <a
+                                href={ad.url}
+                                target='_blank'
+                                rel='noopener noreferrer'
+                                className={`hover:underline ${isActive ? 'text-blue-600' : 'text-gray-400'}`}
+                              >
+                                {rooms} комн.
+                              </a>
+                              {area ? `, ${Number(area).toFixed(1)} м²` : ''}
+                              {floor && totalFloors
+                                ? `, ${floor}/${totalFloors} эт.`
+                                : floor
+                                  ? `, ${floor} эт.`
+                                  : ''}
+                              {kitchenArea
+                                ? `, кухня ${Number(kitchenArea).toFixed(1)}м²`
+                                : ''}
+                              <span
+                                className={`ml-2 font-semibold ${isActive ? 'text-green-600' : 'text-gray-500'}`}
+                              >
+                                {(price / 1000000).toFixed(1)} млн ₽
+                              </span>
+                              {!isActive && (
+                                <span className='text-xs ml-2 text-red-500'>
+                                  (неактивно)
+                                </span>
+                              )}
+                            </div>
+                            {(onAddToComparison || onToggleComparison) && (
+                              <button
+                                onClick={() => {
+                                  const inComparison = isAdInComparison(ad)
+                                  if (
+                                    ad.id &&
+                                    typeof ad.id === 'number' &&
+                                    onToggleComparison
+                                  ) {
+                                    // For database ads, use toggle comparison
+                                    onToggleComparison(ad.id, !inComparison)
+                                  } else if (onAddToComparison) {
+                                    // For external ads, use add to comparison
+                                    onAddToComparison(ad)
+                                  }
+                                }}
+                                className='ml-2 flex-shrink-0 w-6 h-6 text-blue-500 hover:text-blue-600 flex items-center justify-center text-lg font-bold'
+                                title={
+                                  isAdInComparison(ad)
+                                    ? 'Убрать из сравнения'
+                                    : 'Добавить в сравнение'
+                                }
+                              >
+                                {isAdInComparison(ad) ? '−' : '+'}
+                              </button>
+                            )}
+                          </div>
+                        )
+                      })}
+                  </div>
+                ) : (
+                  <div className='flex items-center justify-center h-32'>
+                    <div className='text-gray-500'>Объявления не найдены</div>
+                  </div>
+                )}
               </div>
             </div>
           )}

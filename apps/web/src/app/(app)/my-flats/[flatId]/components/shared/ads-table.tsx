@@ -326,6 +326,36 @@ export default function AdsTable({
     const { key } = column
 
     switch (key) {
+      case 'compact':
+        const rooms = ad.rooms || 0
+        const compactArea = ad.area || ad.totalArea || 0
+        const floor = ad.floor || 0
+        const totalFloors = ad.totalFloors || ad.total_floors || 0
+        const compactKitchenArea = ad.kitchenArea || ad.kitchen_area || 0
+        const price = ad.price || 0
+
+        return (
+          <div className='text-sm'>
+            <a
+              href={ad.url}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='text-blue-600 hover:underline'
+            >
+              {rooms} комн.
+            </a>
+            {compactArea ? `, ${Number(compactArea).toFixed(1)} м²` : ''}
+            {floor ? `, ${floor}` : ''}
+            {totalFloors ? `/${totalFloors}` : ''} эт.
+            {compactKitchenArea
+              ? `, кухня ${Number(compactKitchenArea).toFixed(1)}`
+              : ''}
+            <span className='ml-2 font-semibold'>
+              {(price / 1000000).toFixed(1)} млн ₽
+            </span>
+          </div>
+        )
+
       case 'url':
         const { domain, url } = formatUrlForDisplay(ad.url)
         return (

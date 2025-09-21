@@ -1,13 +1,10 @@
 'use client'
 
 import CollapsibleBlock from '../shared/collapsible-block'
-import AdsTable from '../shared/ads-table'
 import NearbyMap from '../shared/nearby-map'
+import NearbyAdsFilter from '../shared/nearby-ads-filter'
 import { RefreshNearbyButton } from '../shared/update-buttons'
-import type {
-  NearbyAdsBlockProps,
-  ColumnConfig,
-} from '../types/ads-blocks.types'
+import type { NearbyAdsBlockProps } from '../types/ads-blocks.types'
 
 /**
  * Block component for nearby ads within 500m radius
@@ -15,121 +12,98 @@ import type {
 export default function NearbyAdsBlock({
   flat,
   nearbyAds,
+  nearbyFilters,
+  flatAds = [],
   isCollapsed,
   onToggleCollapse,
   onRefetch,
   isLoading,
   onAddToComparison,
   onToggleComparison,
-  onUpdateAd,
-  updatingAdIds,
   comparisonAds,
+  onSearchWithFilters,
 }: NearbyAdsBlockProps) {
-  const columns: ColumnConfig[] = [
-    {
-      key: 'url',
-      label: 'URL',
-      className: 'w-40',
-      filterable: true,
-      filterType: 'text',
-    },
-    {
-      key: 'price',
-      label: 'Цена, млн',
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-    },
-    {
-      key: 'rooms',
-      label: 'Комнат',
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-    },
-    {
-      key: 'floor',
-      label: 'Этаж',
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-    },
-    {
-      key: 'area',
-      label: 'Площадь',
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-    },
-    {
-      key: 'kitchenArea',
-      label: 'Кухня',
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-    },
-    {
-      key: 'distance',
-      label: 'Расстояние, м',
-      sortable: true,
-      filterable: true,
-      filterType: 'number',
-    },
-    {
-      key: 'createdAt',
-      label: 'Создано',
-      sortable: true,
-      filterable: true,
-      filterType: 'date',
-    },
-    {
-      key: 'updatedAt',
-      label: 'Обновлено',
-      sortable: true,
-      filterable: true,
-      filterType: 'date',
-    },
-    {
-      key: 'personType',
-      label: 'Автор',
-      filterable: true,
-      filterType: 'select',
-      filterOptions: ['собственник', 'агентство', 'неизвестно'],
-    },
-  ]
-
   const headerActions = (
     <RefreshNearbyButton onRefresh={onRefetch} isLoading={isLoading} />
   )
 
-  // Карта не использует координаты квартиры - получает координаты по адресу
+  // Находим активное объявление CIAN с минимальной ценой для базовых значений площадей
+  const getBaseAreaValues = () => {
+    const cianActiveAds = flatAds.filter(
+      (ad) =>
+        ad.url &&
+        ad.url.includes('cian.ru') &&
+        (ad.status === true || ad.status === 1) &&
+        ad.totalArea &&
+        ad.kitchenArea,
+    )
+
+    if (cianActiveAds.length === 0) {
+      return { minArea: undefined, minKitchenArea: undefined }
+    }
+
+    // Находим объявление с минимальной ценой среди активных CIAN
+    const minPriceAd = cianActiveAds.reduce((min, current) =>
+      current.price && (!min.price || current.price < min.price)
+        ? current
+        : min,
+    )
+
+    return {
+      minArea: minPriceAd.totalArea
+        ? Math.floor(Number(minPriceAd.totalArea) * 0.9)
+        : undefined,
+      minKitchenArea: minPriceAd.kitchenArea
+        ? Math.floor(Number(minPriceAd.kitchenArea) * 0.9)
+        : undefined,
+    }
+  }
+
+  const baseAreaValues = getBaseAreaValues()
 
   return (
     <CollapsibleBlock
-      title='Объявления в радиусе 500м и дешевле'
+      title='Объявления рядом'
       isCollapsed={isCollapsed}
       onToggle={onToggleCollapse}
       headerActions={headerActions}
     >
-      {/* Карта с объектами в радиусе 500м */}
+      {/* Фильтры поиска - теперь сверху и в одну строку */}
+      {nearbyAds && nearbyAds.length > 0 && nearbyFilters && (
+        <div className='mb-4'>
+          <NearbyAdsFilter
+            currentFilters={{
+              maxPrice:
+                nearbyFilters.maxPrice ||
+                nearbyFilters.currentPrice ||
+                50000000,
+              rooms: nearbyFilters.rooms || flat.rooms || 3,
+              minArea: nearbyFilters.minArea || baseAreaValues.minArea,
+              minKitchenArea:
+                nearbyFilters.minKitchenArea || baseAreaValues.minKitchenArea,
+              radius: nearbyFilters.radius || 500,
+            }}
+            onSearch={(filters) => {
+              console.log('New filters:', filters)
+              if (onSearchWithFilters) {
+                onSearchWithFilters(filters)
+              }
+            }}
+            isLoading={isLoading}
+            inline={true}
+          />
+        </div>
+      )}
+
+      {/* Карта с объектами в видимой области */}
       <NearbyMap
         flatAddress={flat.address}
         flatCoordinates={undefined}
         nearbyAds={nearbyAds}
         currentFlat={flat}
-      />
-
-      {/* Таблица объявлений */}
-      <AdsTable
-        ads={nearbyAds}
-        columns={columns}
-        onToggleComparison={onToggleComparison}
         onAddToComparison={onAddToComparison}
-        onUpdateAd={onUpdateAd}
-        updatingAdIds={updatingAdIds || new Set()}
-        showActions={true}
-        showComparison={true}
-        showDelete={false}
+        onToggleComparison={onToggleComparison}
+        comparisonAds={comparisonAds}
       />
     </CollapsibleBlock>
   )

@@ -262,8 +262,30 @@ export async function createAdFromSimilar(
 }
 export async function findNearbyAdsByFlat(
   flatId: number,
-): Promise<SimilarAd[]> {
-  const response = await api.get<SimilarAd[]>(`/ads/nearby-by-flat/${flatId}`)
+  filters?: {
+    maxPrice?: number
+    minArea?: number
+    rooms?: number
+    minKitchenArea?: number
+    radius?: number
+  },
+): Promise<{ ads: SimilarAd[]; filters: any; count: number }> {
+  const params = new URLSearchParams()
+  if (filters?.maxPrice) params.append('maxPrice', filters.maxPrice.toString())
+  if (filters?.minArea) params.append('minArea', filters.minArea.toString())
+  if (filters?.rooms) params.append('rooms', filters.rooms.toString())
+  if (filters?.minKitchenArea)
+    params.append('minKitchenArea', filters.minKitchenArea.toString())
+  if (filters?.radius) params.append('radius', filters.radius.toString())
+
+  const queryString = params.toString()
+  const url = `/ads/nearby-by-flat/${flatId}${queryString ? `?${queryString}` : ''}`
+
+  const response = await api.get<{
+    ads: SimilarAd[]
+    filters: any
+    count: number
+  }>(url)
   return response.data
 }
 
