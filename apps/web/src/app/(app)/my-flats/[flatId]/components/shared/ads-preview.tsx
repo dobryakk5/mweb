@@ -5,6 +5,7 @@ import {
   Loader2Icon,
   FilterIcon,
   AlertCircleIcon,
+  XIcon,
 } from '@acme/ui/components/icon'
 import type { AdData, FlatFilters } from '../hooks/use-map-ads-filter'
 import {
@@ -21,6 +22,8 @@ interface AdsPreviewProps {
   onAdHover?: (ad: AdData | null) => void
   onAdClick?: (ad: AdData) => void
   className?: string
+  selectedHouseId?: number | null
+  onClearHouseSelection?: () => void
 }
 
 interface AdItemProps {
@@ -37,18 +40,23 @@ const AdItem = ({ ad, onHover, onLeave, onClick }: AdItemProps) => {
   const domain = formatUrlForDisplay(ad.url).domain
   const price = formatPrice(ad.price)
 
+  const handleClick = () => {
+    window.open(ad.url, '_blank')
+    onClick?.()
+  }
+
   return (
     <div
       className='border-b border-gray-200 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-colors text-sm flex justify-between items-center'
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
-      onClick={onClick}
+      onClick={handleClick}
     >
-      <span className='truncate mr-2'>
+      <span className='truncate mr-2 text-black'>
         {ad.rooms}-комн., {area} м², {floor} этаж, {kitchen} кухня {domain}
       </span>
-      <span className='font-bold text-green-600 whitespace-nowrap'>
-        {price} млн ₽
+      <span className='text-black whitespace-nowrap'>
+        <span className='font-bold'>{price}</span> млн ₽
       </span>
     </div>
   )
@@ -128,6 +136,8 @@ export default function AdsPreview({
   onAdHover,
   onAdClick,
   className = '',
+  selectedHouseId,
+  onClearHouseSelection,
 }: AdsPreviewProps) {
   // Sort ads by price (cheapest first)
   const sortedAds = useMemo(() => {
@@ -154,15 +164,38 @@ export default function AdsPreview({
       <div className='p-4 border-b border-gray-200'>
         <div className='flex items-center justify-between mb-3'>
           <h3 className='text-lg font-semibold text-gray-900'>
-            Объявления в области
+            {selectedHouseId ? 'Объявления в доме' : 'Объявления в области'}
           </h3>
-          <div className='text-sm text-gray-500'>
-            {loading ? '...' : `${ads.length} шт.`}
+          <div className='flex items-center gap-2'>
+            <div className='text-sm text-gray-500'>
+              {loading ? '...' : `${ads.length} шт.`}
+            </div>
+            {selectedHouseId && onClearHouseSelection && (
+              <button
+                onClick={onClearHouseSelection}
+                className='p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors'
+                title='Показать все объявления в области'
+              >
+                <XIcon className='w-4 h-4' />
+              </button>
+            )}
           </div>
         </div>
 
+        {/* House selection indicator */}
+        {selectedHouseId && (
+          <div className='mb-3 p-2 bg-blue-50 rounded-md border border-blue-200'>
+            <div className='text-sm text-blue-800'>
+              📍 Показаны объявления из дома #{selectedHouseId}
+            </div>
+            <div className='text-xs text-blue-600 mt-1'>
+              Сортировка: сначала активные, затем по цене
+            </div>
+          </div>
+        )}
+
         {/* Filters display */}
-        <FiltersBadges filters={filters} />
+        {!selectedHouseId && <FiltersBadges filters={filters} />}
       </div>
 
       {/* Content */}

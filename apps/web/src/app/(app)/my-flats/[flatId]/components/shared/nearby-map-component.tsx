@@ -65,7 +65,7 @@ export default function NearbyMapComponent({
   onBoundsChange,
   filters,
 }: NearbyMapComponentProps) {
-  const [houses, setHouses] = useState<any[]>([])
+  // const [houses, setHouses] = useState<any[]>([]) // Больше не нужно - используем nearbyAds
   const [housePrices, setHousePrices] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(false)
   const [loadingPrices, setLoadingPrices] = useState(false)
@@ -73,6 +73,9 @@ export default function NearbyMapComponent({
     lat: number
     lng: number
   } | null>(null)
+  const [currentFlatHouseId, setCurrentFlatHouseId] = useState<number | null>(
+    null,
+  )
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null)
 
   // Handler for map bounds changes
@@ -94,12 +97,6 @@ export default function NearbyMapComponent({
   )
 
   // Иконки
-  const currentFlatIcon = new L.DivIcon({
-    className: 'marker-current-flat',
-    html: `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,.8);"></span>`,
-    iconSize: [30, 30],
-    iconAnchor: [15, 15],
-  })
 
   const houseIcon = new L.DivIcon({
     className: 'marker-house',
@@ -122,10 +119,11 @@ export default function NearbyMapComponent({
     iconAnchor: [10, 10],
   })
 
-  // Получаем координаты адреса
+  // Получаем координаты адреса и house_id
   useEffect(() => {
     if (flatAddress) {
       loadAddressCoordinates()
+      loadCurrentFlatHouseId()
     }
   }, [flatAddress])
 
@@ -155,6 +153,26 @@ export default function NearbyMapComponent({
       console.error('Error loading address coordinates:', error)
       // Fallback to specific address coordinates
       setAddressCoordinates({ lat: 55.7729, lng: 37.5897 })
+    }
+  }
+
+  const loadCurrentFlatHouseId = async () => {
+    try {
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/map/address-to-house-id?address=${encodeURIComponent(flatAddress)}`
+      console.log('Loading current flat house ID:', url)
+
+      const response = await fetch(url)
+      if (response.ok) {
+        const data = await response.json()
+        console.log('Current flat house ID:', data)
+        if (data.house_id) {
+          setCurrentFlatHouseId(data.house_id)
+        }
+      } else {
+        console.error('Failed to get house ID:', response.status)
+      }
+    } catch (error) {
+      console.error('Error loading current flat house ID:', error)
     }
   }
 
@@ -209,7 +227,7 @@ export default function NearbyMapComponent({
 
         if (!response.ok) {
           console.error('Failed to load houses in bounds:', response.status)
-          setHouses([])
+          // setHouses([]) // Больше не используется
           return
         }
 
@@ -218,7 +236,7 @@ export default function NearbyMapComponent({
 
         // API уже исключает дома по тому же адресу, что и текущая квартира
         const housesData = data.houses || []
-        setHouses(housesData)
+        // setHouses(housesData) // Больше не используется
 
         // Load prices for houses after setting houses
         const houseIds = housesData.map((house: any) => house.house_id)
@@ -227,7 +245,7 @@ export default function NearbyMapComponent({
         }
       } catch (error) {
         console.error('Error loading houses in bounds:', error)
-        setHouses([])
+        // setHouses([]) // Больше не используется
       } finally {
         setLoading(false)
       }
@@ -236,16 +254,20 @@ export default function NearbyMapComponent({
   )
 
   // Загружаем дома когда меняются bounds карты
-  // ВАЖНО: Всегда показываем дома на карте, фильтры только для preview панели
-  useEffect(() => {
-    if (mapBounds && currentFlat?.id) {
-      loadHousesInBounds(mapBounds, currentFlat.id)
-    }
-  }, [mapBounds, currentFlat?.id, loadHousesInBounds])
+  // Маркеры домов теперь создаются на основе nearbyAds (отфильтрованные данные)
+  // useEffect для загрузки домов больше не нужен
 
-  const createPriceIcon = (price: number, isActive: boolean) => {
+  const createPriceIcon = (
+    price: number,
+    isActive: boolean,
+    isCurrentUserHouse: boolean = false,
+  ) => {
     const priceText = (price / 1000000).toFixed(1)
-    const bgColor = isActive ? '#f59e0b' : '#9ca3af'
+    const bgColor = isCurrentUserHouse
+      ? '#ef4444'
+      : isActive
+        ? '#f59e0b'
+        : '#9ca3af'
     return new L.DivIcon({
       className: 'marker-house-price',
       html: `<div style="
@@ -337,19 +359,45 @@ export default function NearbyMapComponent({
       const hasActiveAds =
         house.has_active_ads === true || house.active_ads_count > 0
       const housePrice = housePrices[house.house_id]
+      const isCurrentUserHouse =
+        currentFlatHouseId && house.house_id === currentFlatHouseId
+
+      // Если это дом пользователя, создаем красный маркер
+      if (isCurrentUserHouse) {
+        const currentHouseIcon = housePrice
+          ? createPriceIcon(housePrice, hasActiveAds, true) // true = isCurrentUserHouse
+          : new L.DivIcon({
+              className: 'marker-current-house',
+              html: `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,.8);"></span>`,
+              iconSize: [30, 30],
+              iconAnchor: [15, 15],
+            })
+
+        return {
+          house,
+          position: [house.lat, house.lng],
+          icon: currentHouseIcon,
+          isGroup: false,
+          isCurrentUserHouse: true,
+        }
+      }
 
       return {
         house,
         position: [house.lat, house.lng],
         icon: housePrice
-          ? createPriceIcon(housePrice, hasActiveAds)
+          ? createPriceIcon(housePrice, hasActiveAds, false)
           : hasActiveAds
             ? houseIcon
             : inactiveHouseIcon,
         isGroup: false,
+        isCurrentUserHouse: false,
       }
     } else {
-      // Группа домов - создаем сводный маркер
+      // Группа домов - проверяем, есть ли в группе дом пользователя
+      const hasCurrentUserHouse =
+        currentFlatHouseId &&
+        group.some((h) => h.house_id === currentFlatHouseId)
       const centerLat = group.reduce((sum, h) => sum + h.lat, 0) / group.length
       const centerLng = group.reduce((sum, h) => sum + h.lng, 0) / group.length
       const totalAds = group.reduce(
@@ -360,7 +408,12 @@ export default function NearbyMapComponent({
         (h) => h.has_active_ads === true || h.active_ads_count > 0,
       )
 
-      // Создаем маркер группы
+      // Создаем маркер группы (красный если содержит дом пользователя)
+      const bgColor = hasCurrentUserHouse
+        ? '#ef4444'
+        : hasActiveAds
+          ? '#f59e0b'
+          : '#9ca3af'
       const groupIcon = new L.DivIcon({
         className: 'marker-house-group',
         html: `<div style="
@@ -370,7 +423,7 @@ export default function NearbyMapComponent({
           width: 32px;
           height: 32px;
           border-radius: 50%;
-          background: ${hasActiveAds ? '#f59e0b' : '#9ca3af'};
+          background: ${bgColor};
           border: 3px solid white;
           box-shadow: 0 0 6px rgba(0,0,0,.6);
           color: white;
@@ -394,12 +447,53 @@ export default function NearbyMapComponent({
         position: [centerLat, centerLng],
         icon: groupIcon,
         isGroup: true,
+        isCurrentUserHouse: hasCurrentUserHouse,
       }
     }
   }
 
+  // Создаем дома на основе отфильтрованных объявлений из nearbyAds
+  const housesFromAds = useMemo(() => {
+    if (!nearbyAds || nearbyAds.length === 0) return []
+
+    // Группируем объявления по house_id
+    const houseMap = new Map()
+
+    nearbyAds.forEach((ad) => {
+      if (!ad.house_id || !ad.lat || !ad.lng) return
+
+      if (!houseMap.has(ad.house_id)) {
+        houseMap.set(ad.house_id, {
+          house_id: ad.house_id,
+          lat: ad.lat,
+          lng: ad.lng,
+          address: `Дом ${ad.house_id}`,
+          active_ads_count: 0,
+          total_ads_count: 0,
+          has_active_ads: false,
+          dist_m: ad.distance_m || 0,
+        })
+      }
+
+      const house = houseMap.get(ad.house_id)
+      house.total_ads_count++
+
+      // Проверяем активность объявления (примерная логика)
+      const isActive =
+        ad.updated_at &&
+        new Date(ad.updated_at) >
+          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // активно если обновлено в последние 30 дней
+      if (isActive) {
+        house.active_ads_count++
+        house.has_active_ads = true
+      }
+    })
+
+    return Array.from(houseMap.values())
+  }, [nearbyAds])
+
   // Группируем дома по близости
-  const houseGroups = groupNearbyHouses(houses, 50) // 50 метров минимальное расстояние
+  const houseGroups = groupNearbyHouses(housesFromAds, 50) // 50 метров минимальное расстояние
   const markers = houseGroups.map((group) => createGroupMarker(group))
 
   // Определяем центр и зум карты
@@ -436,67 +530,26 @@ export default function NearbyMapComponent({
         {/* Map event handler for bounds tracking */}
         <MapEventHandler onBoundsChange={handleMapBoundsChange} />
 
-        {/* Маркер текущей квартиры */}
-        {addressCoordinates && currentFlat && (
-          <Marker
-            position={[addressCoordinates.lat, addressCoordinates.lng]}
-            icon={currentFlatIcon}
-            eventHandlers={{
-              click: async () => {
-                // Для текущей квартиры нужно сначала получить house_id по адресу
-                try {
-                  const response = await fetch(
-                    `${process.env.NEXT_PUBLIC_API_URL}/map/address-to-house-id?address=${encodeURIComponent(flatAddress)}`,
-                  )
-
-                  if (!response.ok) {
-                    console.warn(
-                      'Failed to get house_id for current flat address:',
-                      flatAddress,
-                    )
-                    return
-                  }
-
-                  const data = await response.json()
-                  const house_id = data.house_id
-
-                  if (!house_id) {
-                    console.warn(
-                      'No house_id found for current flat address:',
-                      flatAddress,
-                    )
-                    return
-                  }
-
-                  const currentHouse = {
-                    house_id: house_id,
-                    address: flatAddress,
-                    lat: addressCoordinates.lat,
-                    lng: addressCoordinates.lng,
-                    ads_count: 1, // Примерное значение
-                    dist_m: 0, // Расстояние до себя = 0
-                  }
-                  handleHouseClick(currentHouse)
-                } catch (error) {
-                  console.error(
-                    'Error getting house_id for current flat:',
-                    error,
-                  )
-                }
-              },
-            }}
-          />
-        )}
-
         {/* Сгруппированные маркеры домов в видимой области */}
         {markers.map((marker, index) => {
           const handleClick = () => {
             if (marker.isGroup && marker.house.houses) {
               // Для группы домов - можем показать попап с выбором или взять первый дом
               console.log('Группа домов:', marker.house.houses)
-              // Берем первый дом из группы для демонстрации
+              // Если группа содержит дом пользователя, предпочитаем его
+              if (marker.isCurrentUserHouse && currentFlatHouseId) {
+                const userHouse = marker.house.houses.find(
+                  (h: any) => h.house_id === currentFlatHouseId,
+                )
+                if (userHouse) {
+                  handleHouseClick(userHouse)
+                  return
+                }
+              }
+              // Иначе берем первый дом из группы
               handleHouseClick(marker.house.houses[0])
             } else {
+              // Для одиночного дома - кликаем как обычно
               handleHouseClick(marker.house)
             }
           }
@@ -579,7 +632,7 @@ export default function NearbyMapComponent({
       <div className='absolute bottom-2 left-2 z-[1000] bg-white px-3 py-2 rounded shadow text-xs'>
         <div className='flex items-center gap-2 mb-1'>
           <div className='w-4 h-4 rounded-full bg-red-500 border-2 border-white'></div>
-          <span>Моя квартира</span>
+          <span>Мой дом</span>
         </div>
         <div className='flex items-center gap-2 mb-1'>
           <div className='w-4 h-4 rounded-full bg-orange-500 border-2 border-white'></div>

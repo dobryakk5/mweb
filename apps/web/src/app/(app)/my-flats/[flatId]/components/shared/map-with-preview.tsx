@@ -90,12 +90,22 @@ export default function MapWithPreview({
   }, [currentFlat])
 
   // Initialize ads filter hook
-  const { ads, loading, error, bounds, setBounds, refetch, adsCount } =
-    useMapAdsFilter({
-      flatFilters,
-      enabled: !loadingFlat && !!currentFlat,
-      debounceMs: 300,
-    })
+  const {
+    ads,
+    mapAds,
+    loading,
+    error,
+    bounds,
+    setBounds,
+    refetch,
+    adsCount,
+    selectedHouseId,
+    setSelectedHouseId,
+  } = useMapAdsFilter({
+    flatFilters,
+    enabled: !loadingFlat && !!currentFlat,
+    debounceMs: 300,
+  })
 
   // Handle map bounds change from the map component
   const handleMapBoundsChange = useCallback((newBounds: MapBounds) => {
@@ -113,6 +123,20 @@ export default function MapWithPreview({
     setMapCenter({ lat: ad.lat, lng: ad.lng })
   }
 
+  // Handle house click on map - should show ads for that house in preview
+  const handleHouseClick = useCallback(
+    (house: any) => {
+      console.log('House clicked:', house)
+      setSelectedHouseId(house.house_id)
+    },
+    [setSelectedHouseId],
+  )
+
+  // Handle clearing house selection - return to showing all ads in bounds
+  const handleClearHouseSelection = useCallback(() => {
+    setSelectedHouseId(null)
+  }, [setSelectedHouseId])
+
   // Create markers for hovered ads to highlight on map
   const hoveredMarkers: HoveredAdMarker[] = useMemo(() => {
     if (!hoveredAd) return []
@@ -129,7 +153,7 @@ export default function MapWithPreview({
     return (
       <div className={`flex gap-4 ${className}`}>
         <div className='flex-1 min-h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
-        <div className='w-96 min-h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
+        <div className='w-[28rem] min-h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
       </div>
     )
   }
@@ -147,7 +171,7 @@ export default function MapWithPreview({
             </div>
           </div>
         </div>
-        <div className='w-96 min-h-[600px] bg-gray-50 rounded-lg'></div>
+        <div className='w-[28rem] min-h-[600px] bg-gray-50 rounded-lg'></div>
       </div>
     )
   }
@@ -159,17 +183,17 @@ export default function MapWithPreview({
         <div className='h-[600px] rounded-lg border border-gray-200'>
           <NearbyMapComponent
             flatAddress={currentFlat.address}
-            nearbyAds={[]}
+            nearbyAds={mapAds}
             currentFlat={currentFlat}
             filters={flatFilters}
             onBoundsChange={handleMapBoundsChange}
-            onHouseClick={() => {}}
+            onHouseClick={handleHouseClick}
           />
         </div>
       </div>
 
       {/* Preview Panel - Right side */}
-      <div className='w-96 min-h-[600px]'>
+      <div className='w-[28rem] min-h-[600px]'>
         <AdsPreview
           ads={ads}
           loading={loading}
@@ -177,6 +201,8 @@ export default function MapWithPreview({
           filters={flatFilters}
           onAdHover={handleAdHover}
           onAdClick={handleAdClick}
+          selectedHouseId={selectedHouseId}
+          onClearHouseSelection={handleClearHouseSelection}
           className='h-[600px] sticky top-4'
         />
 

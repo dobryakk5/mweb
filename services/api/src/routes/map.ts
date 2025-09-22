@@ -198,8 +198,8 @@ export default async (fastify: FastifyInstance) => {
         `Searching for house ads: houseId=${houseId}, maxPrice=${maxPrice}, rooms=${rooms}, minArea=${minArea}, minKitchenArea=${minKitchenArea}`,
       )
 
-      // Build dynamic query with filters
-      let baseQuery = sql`SELECT
+      // Build dynamic query with filters and deduplication by (rooms, floor, price) with source priority
+      let baseQuery = sql`SELECT DISTINCT ON (fh.rooms, fh.floor, fh.price)
         fh.id,
         fh.avitoid,
         fh.price,
@@ -238,7 +238,16 @@ export default async (fastify: FastifyInstance) => {
         baseQuery = sql`${baseQuery} AND f.kitchen_area IS NOT NULL AND f.kitchen_area >= ${minKitchenArea}`
       }
 
-      const finalQuery = sql`${baseQuery} ORDER BY fh.is_actual DESC, fh.price ASC LIMIT 50`
+      const finalQuery = sql`${baseQuery}
+        ORDER BY fh.rooms, fh.floor, fh.price,
+                 CASE
+                   WHEN fh.url LIKE '%cian.ru%' THEN 1
+                   WHEN fh.url LIKE '%yandex.ru%' THEN 2
+                   ELSE 3
+                 END,
+                 fh.is_actual DESC,
+                 fh.time_source_updated DESC
+        LIMIT 50`
 
       const result = await db.execute(finalQuery)
 
@@ -246,9 +255,7 @@ export default async (fastify: FastifyInstance) => {
 
       fastify.log.info(`Found ${ads.length} ads for house ${houseId}`)
       if (ads.length === 0) {
-        fastify.log.warn(
-          `No ads found for house ${houseId}. Query: ${finalQuery.sql}`,
-        )
+        fastify.log.warn(`No ads found for house ${houseId}`)
       }
 
       return {
@@ -868,7 +875,6 @@ export default async (fastify: FastifyInstance) => {
               {
                 method: 'GET',
                 headers: { 'Content-Type': 'application/json' },
-                timeout: 10000, // 10 second timeout
               },
             )
 
