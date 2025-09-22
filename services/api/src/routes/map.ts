@@ -57,7 +57,7 @@ export default async (fastify: FastifyInstance) => {
       )
 
       // Handle the result structure properly
-      const ads = Array.isArray(result) ? result : result.rows || []
+      const ads = Array.isArray(result) ? result : (result as any).rows || []
 
       return {
         ads,
@@ -84,7 +84,7 @@ export default async (fastify: FastifyInstance) => {
       )
 
       // Handle the result structure properly (same as ads endpoint)
-      const houses = Array.isArray(result) ? result : result.rows || []
+      const houses = Array.isArray(result) ? result : (result as any).rows || []
 
       return {
         houses,
@@ -147,7 +147,7 @@ export default async (fastify: FastifyInstance) => {
         `,
       )
 
-      const poi = Array.isArray(result) ? result : result.rows || []
+      const poi = Array.isArray(result) ? result : (result as any).rows || []
 
       return {
         poi,
@@ -238,7 +238,7 @@ export default async (fastify: FastifyInstance) => {
 
       const result = await db.execute(finalQuery)
 
-      const ads = Array.isArray(result) ? result : result.rows || []
+      const ads = Array.isArray(result) ? result : (result as any).rows || []
 
       return {
         ads,
@@ -264,7 +264,7 @@ export default async (fastify: FastifyInstance) => {
         sql`SELECT * FROM public.get_user_flats_with_coordinates(${tgUserId})`,
       )
 
-      const flats = Array.isArray(result) ? result : result.rows || []
+      const flats = Array.isArray(result) ? result : (result as any).rows || []
 
       return {
         flats,
@@ -308,7 +308,9 @@ export default async (fastify: FastifyInstance) => {
         LIMIT 1`,
       )
 
-      const coordinates = Array.isArray(result) ? result : result.rows || []
+      const coordinates = Array.isArray(result)
+        ? result
+        : (result as any).rows || []
 
       if (coordinates.length === 0) {
         return reply.status(404).send({ error: 'Address not found' })
@@ -359,7 +361,7 @@ export default async (fastify: FastifyInstance) => {
           LIMIT 1`,
         )
 
-        const rows = Array.isArray(result) ? result : result.rows || []
+        const rows = Array.isArray(result) ? result : (result as any).rows || []
         return rows[0] || null
       })
 
@@ -403,7 +405,7 @@ export default async (fastify: FastifyInstance) => {
       )
       const currentFlatAddress = Array.isArray(flatResult)
         ? flatResult[0]?.address
-        : flatResult.rows?.[0]?.address
+        : (flatResult as any).rows?.[0]?.address
 
       console.log('Current flat address:', currentFlatAddress)
 
@@ -437,7 +439,9 @@ export default async (fastify: FastifyInstance) => {
         sql`SELECT * FROM public.get_houses_with_ads_by_coordinates(${centerLat}, ${centerLng}, ${radiusInt})`,
       )
 
-      const allHouses = Array.isArray(result) ? result : result.rows || []
+      const allHouses = Array.isArray(result)
+        ? result
+        : (result as any).rows || []
       console.log(`Found ${allHouses.length} houses before filtering`)
 
       // Filter houses that are within the exact bounds and exclude current flat address
@@ -493,7 +497,7 @@ export default async (fastify: FastifyInstance) => {
 
             const activeAdsData = Array.isArray(activeAdsResult)
               ? activeAdsResult
-              : activeAdsResult.rows || []
+              : (activeAdsResult as any).rows || []
             const activeCount =
               activeAdsData.length > 0
                 ? Number(activeAdsData[0].active_count)
@@ -548,7 +552,7 @@ export default async (fastify: FastifyInstance) => {
       )
       const currentFlatAddress = Array.isArray(flatResult)
         ? flatResult[0]?.address
-        : flatResult.rows?.[0]?.address
+        : (flatResult as any).rows?.[0]?.address
 
       // Parse current flat address to extract street and house number for comparison
       let currentFlatStreet = null
@@ -615,7 +619,9 @@ export default async (fastify: FastifyInstance) => {
       `
 
       const result = await db.execute(finalQuery)
-      const allHouses = Array.isArray(result) ? result : result.rows || []
+      const allHouses = Array.isArray(result)
+        ? result
+        : (result as any).rows || []
 
       // Filter houses that are within the exact bounds and exclude current flat address
       const housesData = allHouses
@@ -699,7 +705,7 @@ export default async (fastify: FastifyInstance) => {
           LIMIT 1`,
         )
 
-        const rows = Array.isArray(result) ? result : result.rows || []
+        const rows = Array.isArray(result) ? result : (result as any).rows || []
         return rows[0] || { house_id: houseId, min_price: null }
       })
 
