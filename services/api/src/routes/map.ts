@@ -194,6 +194,10 @@ export default async (fastify: FastifyInstance) => {
         })
         .parse(request.query)
 
+      fastify.log.info(
+        `Searching for house ads: houseId=${houseId}, maxPrice=${maxPrice}, rooms=${rooms}, minArea=${minArea}, minKitchenArea=${minKitchenArea}`,
+      )
+
       // Build dynamic query with filters
       let baseQuery = sql`SELECT
         fh.id,
@@ -239,6 +243,13 @@ export default async (fastify: FastifyInstance) => {
       const result = await db.execute(finalQuery)
 
       const ads = Array.isArray(result) ? result : (result as any).rows || []
+
+      fastify.log.info(`Found ${ads.length} ads for house ${houseId}`)
+      if (ads.length === 0) {
+        fastify.log.warn(
+          `No ads found for house ${houseId}. Query: ${finalQuery.sql}`,
+        )
+      }
 
       return {
         ads,
@@ -719,6 +730,131 @@ export default async (fastify: FastifyInstance) => {
       fastify.log.error(error)
       return reply.status(500).send({
         error: 'Failed to fetch house prices',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  })
+
+  // Get house_id by address
+  fastify.get('/map/address-to-house-id', async (request, reply) => {
+    try {
+      const { address } = z
+        .object({
+          address: z.string().min(1),
+        })
+        .parse(request.query)
+
+      fastify.log.info(`Getting house_id for address: ${address}`)
+
+      const result = await db.execute(
+        sql`SELECT result_id as house_id FROM public.get_house_id_by_address(${address})`,
+      )
+
+      const houseData = Array.isArray(result)
+        ? result
+        : (result as any).rows || []
+
+      if (houseData.length === 0 || !houseData[0]?.house_id) {
+        fastify.log.warn(`House ID not found for address: ${address}`)
+        return reply
+          .status(404)
+          .send({ error: 'House ID not found for address' })
+      }
+
+      fastify.log.info(
+        `Found house_id ${houseData[0].house_id} for address: ${address}`,
+      )
+
+      return {
+        house_id: houseData[0].house_id,
+        address,
+      }
+    } catch (error) {
+      fastify.log.error(error)
+      return reply.status(500).send({
+        error: 'Failed to get house ID by address',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  })
+
+  // Get all ads within map bounds with filtering (for preview panel)
+  fastify.get('/map/ads-in-bounds', async (request, reply) => {
+    try {
+      const {
+        north,
+        south,
+        east,
+        west,
+        rooms,
+        maxPrice,
+        minArea,
+        minKitchenArea,
+        limit = 100,
+      } = z
+        .object({
+          north: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
+          south: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
+          east: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(-180).max(180)),
+          west: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(-180).max(180)),
+          rooms: z.string().transform(Number).pipe(z.number().int().min(1)),
+          maxPrice: z.string().transform(Number).pipe(z.number().min(0)),
+          minArea: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(0))
+            .optional(),
+          minKitchenArea: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(0))
+            .optional(),
+          limit: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().int().min(1).max(500))
+            .optional(),
+        })
+        .parse(request.query)
+
+      fastify.log.info(
+        `Getting ads in bounds: north=${north}, south=${south}, east=${east}, west=${west}, rooms=${rooms}, maxPrice=${maxPrice}`,
+      )
+
+      const result = await db.execute(
+        sql`SELECT * FROM public.get_ads_in_bounds(
+          ${north},
+          ${south},
+          ${east},
+          ${west},
+          ${rooms},
+          ${maxPrice},
+          ${minArea || null},
+          ${minKitchenArea || null},
+          ${limit}
+        )`,
+      )
+
+      const ads = Array.isArray(result) ? result : (result as any).rows || []
+
+      fastify.log.info(`Found ${ads.length} ads in bounds`)
+
+      return {
+        ads,
+        count: ads.length,
+        bounds: { north, south, east, west },
+        filters: { rooms, maxPrice, minArea, minKitchenArea },
+      }
+    } catch (error) {
+      fastify.log.error(error)
+      return reply.status(500).send({
+        error: 'Failed to fetch ads in bounds',
         message: error instanceof Error ? error.message : 'Unknown error',
       })
     }

@@ -8,9 +8,20 @@ import {
   QueryClientProvider,
 } from '@tanstack/react-query'
 import { ReactQueryStreamedHydration } from '@tanstack/react-query-next-experimental'
-import { ReactQueryDevtools } from '@tanstack/react-query-devtools'
+import dynamic from 'next/dynamic'
 
 import toast from '@acme/ui/lib/toast'
+
+// Динамически загружаем DevTools только в development
+const ReactQueryDevtools = dynamic(
+  () =>
+    import('@tanstack/react-query-devtools').then((d) => ({
+      default: d.ReactQueryDevtools,
+    })),
+  {
+    ssr: false,
+  },
+)
 
 type ReactQueryProviderProps = {
   children: ReactNode
@@ -56,7 +67,9 @@ export default function ReactQueryProvider({
     <QueryClientProvider client={queryClient}>
       <ReactQueryStreamedHydration>{children}</ReactQueryStreamedHydration>
 
-      <ReactQueryDevtools initialIsOpen={false} />
+      {process.env.NODE_ENV === 'development' && (
+        <ReactQueryDevtools initialIsOpen={false} />
+      )}
     </QueryClientProvider>
   )
 }

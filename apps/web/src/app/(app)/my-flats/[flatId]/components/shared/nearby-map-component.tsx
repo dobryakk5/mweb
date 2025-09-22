@@ -447,29 +447,47 @@ export default function NearbyMapComponent({
             position={[addressCoordinates.lat, addressCoordinates.lng]}
             icon={currentFlatIcon}
             eventHandlers={{
-              click: () => {
-                // Создаем объект дома для текущей квартиры
-                // Проверяем наличие house_id
-                const house_id =
-                  currentFlat.house_id || currentFlat.houseId || currentFlat.id
-
-                if (!house_id) {
-                  console.warn(
-                    'Cannot load house ads: no house_id found for current flat',
-                    currentFlat,
+              click: async () => {
+                // Для текущей квартиры нужно сначала получить house_id по адресу
+                try {
+                  const response = await fetch(
+                    `${process.env.NEXT_PUBLIC_API_URL}/map/address-to-house-id?address=${encodeURIComponent(flatAddress)}`,
                   )
-                  return
-                }
 
-                const currentHouse = {
-                  house_id: house_id,
-                  address: flatAddress,
-                  lat: addressCoordinates.lat,
-                  lng: addressCoordinates.lng,
-                  ads_count: 1, // Примерное значение
-                  dist_m: 0, // Расстояние до себя = 0
+                  if (!response.ok) {
+                    console.warn(
+                      'Failed to get house_id for current flat address:',
+                      flatAddress,
+                    )
+                    return
+                  }
+
+                  const data = await response.json()
+                  const house_id = data.house_id
+
+                  if (!house_id) {
+                    console.warn(
+                      'No house_id found for current flat address:',
+                      flatAddress,
+                    )
+                    return
+                  }
+
+                  const currentHouse = {
+                    house_id: house_id,
+                    address: flatAddress,
+                    lat: addressCoordinates.lat,
+                    lng: addressCoordinates.lng,
+                    ads_count: 1, // Примерное значение
+                    dist_m: 0, // Расстояние до себя = 0
+                  }
+                  handleHouseClick(currentHouse)
+                } catch (error) {
+                  console.error(
+                    'Error getting house_id for current flat:',
+                    error,
+                  )
                 }
-                handleHouseClick(currentHouse)
               },
             }}
           />
