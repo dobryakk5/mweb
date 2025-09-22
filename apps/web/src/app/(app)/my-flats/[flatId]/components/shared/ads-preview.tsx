@@ -31,52 +31,46 @@ interface AdItemProps {
 }
 
 const AdItem = ({ ad, onHover, onLeave, onClick }: AdItemProps) => {
+  const area = ad.area ? Number(ad.area).toFixed(1) : '—'
+  const kitchen = ad.kitchen_area ? Number(ad.kitchen_area).toFixed(1) : '—'
+  const floor = ad.total_floors ? `${ad.floor}/${ad.total_floors}` : ad.floor
+  const domain = formatUrlForDisplay(ad.url).domain
+  const price = formatPrice(ad.price)
+
   return (
     <div
-      className='border-b border-gray-200 p-3 hover:bg-gray-50 cursor-pointer transition-colors'
+      className='border-b border-gray-200 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-colors text-sm flex justify-between items-center'
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
       onClick={onClick}
     >
-      <div className='flex justify-between items-start mb-2'>
-        <div className='font-semibold text-lg text-green-600'>
-          {formatPrice(ad.price)}
-        </div>
-        <div className='text-sm text-gray-500'>{ad.rooms} комн.</div>
-      </div>
-
-      <div className='grid grid-cols-2 gap-2 text-sm text-gray-600 mb-2'>
-        {ad.area && <div>Площадь: {ad.area} м²</div>}
-        {ad.kitchen_area && <div>Кухня: {ad.kitchen_area} м²</div>}
-        <div>
-          Этаж: {ad.floor}
-          {ad.total_floors ? `/${ad.total_floors}` : ''}
-        </div>
-        <div className='text-xs text-gray-500'>
-          {formatDateShort(ad.updated_at)}
-        </div>
-      </div>
-
-      <div className='text-xs text-blue-600 hover:text-blue-800 truncate'>
-        {formatUrlForDisplay(ad.url)}
-      </div>
+      <span className='truncate mr-2'>
+        {ad.rooms}-комн., {area} м², {floor} этаж, {kitchen} кухня {domain}
+      </span>
+      <span className='font-bold text-green-600 whitespace-nowrap'>
+        {price} млн ₽
+      </span>
     </div>
   )
 }
 
 const FiltersBadges = ({ filters }: { filters: FlatFilters }) => {
+  const showPrice = filters.maxPrice < 100000000 // Only show price if it's not the fallback value
+
   return (
     <div className='flex flex-wrap gap-1 mb-3'>
       <div className='inline-flex items-center px-2 py-1 bg-blue-100 text-blue-800 text-xs rounded-full'>
         <FilterIcon className='w-3 h-3 mr-1' />
         Комнат: {filters.rooms}+
       </div>
-      <div className='inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full'>
-        До: {formatPrice(filters.maxPrice)}
-      </div>
+      {showPrice && (
+        <div className='inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full'>
+          До: {formatPrice(filters.maxPrice)} млн ₽
+        </div>
+      )}
       {filters.minArea && (
         <div className='inline-flex items-center px-2 py-1 bg-purple-100 text-purple-800 text-xs rounded-full'>
-          Площадь: {filters.minArea}+ м²
+          Площадь: {filters.minArea.toFixed(1)}+ м²
         </div>
       )}
       {filters.minKitchenArea && (

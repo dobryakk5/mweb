@@ -18,7 +18,7 @@ export const cleanValue = (value: any): any => {
 // Format price to millions
 export const formatPrice = (price: number | null | undefined): string => {
   if (price === null || price === undefined) return '\u00A0'
-  return (price / 1_000_000).toFixed(2)
+  return (price / 1_000_000).toFixed(1)
 }
 
 // Format date to Russian locale
@@ -91,7 +91,7 @@ export const formatFloor = (
 // Format area (square meters)
 export const formatArea = (area: number | null | undefined): string => {
   if (area === null || area === undefined) return '\u00A0'
-  return `${area} м²`
+  return `${Number(area).toFixed(1)} м²`
 }
 
 // Format boolean fields to readable text

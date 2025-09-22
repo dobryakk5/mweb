@@ -1,7 +1,7 @@
 'use client'
 
 import CollapsibleBlock from '../shared/collapsible-block'
-import NearbyMap from '../shared/nearby-map'
+import MapWithPreview from '../shared/map-with-preview'
 import NearbyAdsFilter from '../shared/nearby-ads-filter'
 import type { NearbyAdsBlockProps } from '../types/ads-blocks.types'
 
@@ -89,24 +89,8 @@ export default function NearbyAdsBlock({
         </div>
       )}
 
-      {/* Карта с объектами в видимой области */}
-      <NearbyMap
-        flatAddress={flat.address}
-        flatCoordinates={undefined}
-        nearbyAds={nearbyAds}
-        currentFlat={flat}
-        onAddToComparison={onAddToComparison}
-        onToggleComparison={onToggleComparison}
-        comparisonAds={comparisonAds}
-        filters={{
-          maxPrice:
-            nearbyFilters?.maxPrice || nearbyFilters?.currentPrice || 50000000,
-          rooms: nearbyFilters?.rooms || flat.rooms || 3,
-          minArea: nearbyFilters?.minArea || baseAreaValues.minArea,
-          minKitchenArea:
-            nearbyFilters?.minKitchenArea || baseAreaValues.minKitchenArea,
-        }}
-      />
+      {/* Карта с preview панелью для объявлений в видимой области */}
+      <MapWithPreview flatId={flat.id.toString()} className='w-full' />
     </CollapsibleBlock>
   )
 }

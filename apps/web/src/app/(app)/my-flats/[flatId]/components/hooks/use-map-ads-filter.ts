@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
-import { useDebounce } from '../../../../../../../hooks/use-debounce'
+import { useDebounce } from '../../../../../../hooks/use-debounce'
 
 interface MapBounds {
   north: number

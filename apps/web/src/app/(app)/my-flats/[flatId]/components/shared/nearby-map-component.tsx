@@ -19,6 +19,12 @@ interface NearbyMapComponentProps {
   nearbyAds: any[]
   currentFlat?: any
   onHouseClick?: (house: any) => void
+  onBoundsChange?: (bounds: {
+    north: number
+    south: number
+    east: number
+    west: number
+  }) => void
   filters?: {
     maxPrice?: number
     rooms?: number
@@ -56,6 +62,7 @@ export default function NearbyMapComponent({
   nearbyAds,
   currentFlat,
   onHouseClick,
+  onBoundsChange,
   filters,
 }: NearbyMapComponentProps) {
   const [houses, setHouses] = useState<any[]>([])
@@ -67,6 +74,24 @@ export default function NearbyMapComponent({
     lng: number
   } | null>(null)
   const [mapBounds, setMapBounds] = useState<L.LatLngBounds | null>(null)
+
+  // Handler for map bounds changes
+  const handleMapBoundsChange = useCallback(
+    (bounds: L.LatLngBounds) => {
+      setMapBounds(bounds)
+
+      // Если передан onBoundsChange callback (новая система preview), вызываем его
+      if (onBoundsChange) {
+        onBoundsChange({
+          north: bounds.getNorth(),
+          south: bounds.getSouth(),
+          east: bounds.getEast(),
+          west: bounds.getWest(),
+        })
+      }
+    },
+    [onBoundsChange],
+  )
 
   // Иконки
   const currentFlatIcon = new L.DivIcon({
@@ -169,46 +194,15 @@ export default function NearbyMapComponent({
         const east = bounds.getEast()
         const west = bounds.getWest()
 
-        // Build URL based on whether filters are provided
-        let url: string
-        console.log('Map component filters:', filters)
-        if (
-          filters &&
-          (filters.maxPrice ||
-            filters.rooms ||
-            filters.minArea ||
-            filters.minKitchenArea)
-        ) {
-          // Use filtered endpoint when filters are available
-          const params = new URLSearchParams({
-            north: north.toString(),
-            south: south.toString(),
-            east: east.toString(),
-            west: west.toString(),
-            flatId: flatId.toString(),
-          })
-
-          if (filters.maxPrice)
-            params.append('maxPrice', filters.maxPrice.toString())
-          if (filters.rooms) params.append('rooms', filters.rooms.toString())
-          if (filters.minArea)
-            params.append('minArea', filters.minArea.toString())
-          if (filters.minKitchenArea)
-            params.append('minKitchenArea', filters.minKitchenArea.toString())
-
-          url = `${process.env.NEXT_PUBLIC_API_URL}/map/houses-filtered?${params}`
-          console.log('Loading filtered houses in bounds:', {
-            north,
-            south,
-            east,
-            west,
-            filters,
-          })
-        } else {
-          // Use regular endpoint when no filters
-          url = `${process.env.NEXT_PUBLIC_API_URL}/map/houses-in-bounds?north=${north}&south=${south}&east=${east}&west=${west}&flatId=${flatId}`
-          console.log('Loading houses in bounds:', { north, south, east, west })
-        }
+        // КАРТА ВСЕГДА показывает ВСЕ дома без фильтрации
+        // Фильтрация только для preview панели через отдельный API
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/map/houses-in-bounds?north=${north}&south=${south}&east=${east}&west=${west}&flatId=${flatId}`
+        console.log('Loading all houses in bounds:', {
+          north,
+          south,
+          east,
+          west,
+        })
 
         const response = await fetch(url)
         console.log('Response status:', response.status)
@@ -242,6 +236,7 @@ export default function NearbyMapComponent({
   )
 
   // Загружаем дома когда меняются bounds карты
+  // ВАЖНО: Всегда показываем дома на карте, фильтры только для preview панели
   useEffect(() => {
     if (mapBounds && currentFlat?.id) {
       loadHousesInBounds(mapBounds, currentFlat.id)
@@ -439,7 +434,7 @@ export default function NearbyMapComponent({
         />
 
         {/* Map event handler for bounds tracking */}
-        <MapEventHandler onBoundsChange={setMapBounds} />
+        <MapEventHandler onBoundsChange={handleMapBoundsChange} />
 
         {/* Маркер текущей квартиры */}
         {addressCoordinates && currentFlat && (

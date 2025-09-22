@@ -778,6 +778,172 @@ export default async (fastify: FastifyInstance) => {
     }
   })
 
+  // Get full flat data by ID (including areas from public.flats table)
+  fastify.get('/map/flat-full-data/:flatId', async (request, reply) => {
+    try {
+      const { flatId } = z
+        .object({
+          flatId: z.string().transform(Number).pipe(z.number().int()),
+        })
+        .parse(request.params)
+
+      fastify.log.info(`Getting full data for flat ${flatId}`)
+
+      // Get basic flat data
+      const flatResult = await db.execute(
+        sql`SELECT id, address, rooms, floor FROM "users".user_flats WHERE id = ${flatId} LIMIT 1`,
+      )
+      const flatData = Array.isArray(flatResult)
+        ? flatResult[0]
+        : (flatResult as any).rows?.[0]
+
+      if (!flatData) {
+        return reply.status(404).send({ error: 'Flat not found' })
+      }
+
+      // Get house_id by address
+      const houseResult = await db.execute(
+        sql`SELECT result_id as house_id FROM public.get_house_id_by_address(${flatData.address})`,
+      )
+      const houseData = Array.isArray(houseResult)
+        ? houseResult[0]
+        : (houseResult as any).rows?.[0]
+
+      if (!houseData?.house_id) {
+        fastify.log.warn(`House ID not found for address: ${flatData.address}`)
+        return reply.status(404).send({
+          error: 'House ID not found for flat address',
+          flatData: {
+            ...flatData,
+            house_id: null,
+            area: null,
+            kitchen_area: null,
+            price: null,
+          },
+        })
+      }
+
+      // Get detailed data from public.flats table using (house_id, floor, rooms) link
+      const detailsResult = await db.execute(
+        sql`SELECT area, kitchen_area, total_floors FROM public.flats
+            WHERE house_id = ${houseData.house_id}
+              AND rooms = ${flatData.rooms}
+              AND floor = ${flatData.floor}
+            LIMIT 1`,
+      )
+      const detailsData = Array.isArray(detailsResult)
+        ? detailsResult[0]
+        : (detailsResult as any).rows?.[0]
+
+      // Fallback to Python API if data not found in public.flats
+      let finalDetailsData = detailsData
+
+      if (!detailsData?.area || !detailsData?.kitchen_area) {
+        fastify.log.info(
+          `Missing area/kitchen data for flat ${flatId}, trying Python API fallback`,
+        )
+
+        try {
+          // Find cian URL for this exact flat (house_id, floor, rooms)
+          const cianUrlResult = await db.execute(
+            sql`SELECT url FROM public.flats_history
+                WHERE house_id = ${houseData.house_id}
+                  AND rooms = ${flatData.rooms}
+                  AND floor = ${flatData.floor}
+                  AND url LIKE '%cian%'
+                LIMIT 1`,
+          )
+          const cianUrlData = Array.isArray(cianUrlResult)
+            ? cianUrlResult[0]
+            : (cianUrlResult as any).rows?.[0]
+
+          if (cianUrlData?.url) {
+            fastify.log.info(`Found cian URL for fallback: ${cianUrlData.url}`)
+
+            // Call Python API to parse flat details
+            const pythonApiUrl =
+              process.env.PYTHON_API_URL || 'http://localhost:8008'
+            const response = await fetch(
+              `${pythonApiUrl}/api/parse/single?url=${encodeURIComponent(cianUrlData.url)}`,
+              {
+                method: 'GET',
+                headers: { 'Content-Type': 'application/json' },
+                timeout: 10000, // 10 second timeout
+              },
+            )
+
+            if (response.ok) {
+              const pythonData = await response.json()
+              fastify.log.info(`Python API response:`, pythonData)
+
+              // Extract area and kitchen_area from Python API response
+              if (pythonData?.area || pythonData?.kitchen_area) {
+                finalDetailsData = {
+                  area: pythonData.area || detailsData?.area || null,
+                  kitchen_area:
+                    pythonData.kitchen_area ||
+                    detailsData?.kitchen_area ||
+                    null,
+                  total_floors:
+                    pythonData.total_floors ||
+                    detailsData?.total_floors ||
+                    null,
+                }
+
+                // Optionally save to public.flats for future use
+                try {
+                  await db.execute(
+                    sql`INSERT INTO public.flats (house_id, rooms, floor, area, kitchen_area, total_floors)
+                        VALUES (${houseData.house_id}, ${flatData.rooms}, ${flatData.floor},
+                                ${finalDetailsData.area}, ${finalDetailsData.kitchen_area}, ${finalDetailsData.total_floors})
+                        ON CONFLICT (house_id, rooms, floor)
+                        DO UPDATE SET
+                          area = COALESCE(EXCLUDED.area, public.flats.area),
+                          kitchen_area = COALESCE(EXCLUDED.kitchen_area, public.flats.kitchen_area),
+                          total_floors = COALESCE(EXCLUDED.total_floors, public.flats.total_floors)`,
+                  )
+                  fastify.log.info(
+                    `Saved Python API data to public.flats for future use`,
+                  )
+                } catch (saveError) {
+                  fastify.log.warn(
+                    `Failed to save Python API data to DB:`,
+                    saveError,
+                  )
+                }
+              }
+            } else {
+              fastify.log.warn(`Python API request failed: ${response.status}`)
+            }
+          } else {
+            fastify.log.info(`No cian URL found for fallback parsing`)
+          }
+        } catch (pythonError) {
+          fastify.log.warn(`Python API fallback failed:`, pythonError)
+        }
+      }
+
+      const fullFlatData = {
+        ...flatData,
+        house_id: houseData.house_id,
+        area: finalDetailsData?.area || null,
+        kitchen_area: finalDetailsData?.kitchen_area || null,
+        total_floors: finalDetailsData?.total_floors || null,
+        price: null, // TODO: Get from ads or form data
+      }
+
+      fastify.log.info(`Full flat data:`, fullFlatData)
+
+      return { flat: fullFlatData }
+    } catch (error) {
+      fastify.log.error(error)
+      return reply.status(500).send({
+        error: 'Failed to get flat full data',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  })
+
   // Get all ads within map bounds with filtering (for preview panel)
   fastify.get('/map/ads-in-bounds', async (request, reply) => {
     try {
