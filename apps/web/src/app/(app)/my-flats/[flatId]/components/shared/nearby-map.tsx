@@ -62,9 +62,34 @@ export default function NearbyMap({
     setLoadingHouseAds(true)
 
     try {
-      // Получаем объявления для выбранного дома по house_id
+      // Проверяем, что у дома есть house_id
+      if (!house.house_id) {
+        console.warn('House does not have house_id:', house)
+        setLoadingHouseAds(false)
+        return
+      }
+
+      // Получаем объявления для выбранного дома по house_id с фильтрами
+      const searchParams = new URLSearchParams({
+        houseId: house.house_id.toString(),
+      })
+
+      // Добавляем фильтры если они есть
+      if (filters?.maxPrice) {
+        searchParams.append('maxPrice', filters.maxPrice.toString())
+      }
+      if (filters?.rooms) {
+        searchParams.append('rooms', filters.rooms.toString())
+      }
+      if (filters?.minArea) {
+        searchParams.append('minArea', filters.minArea.toString())
+      }
+      if (filters?.minKitchenArea) {
+        searchParams.append('minKitchenArea', filters.minKitchenArea.toString())
+      }
+
       const response = await fetch(
-        `${process.env.NEXT_PUBLIC_API_URL}/map/house-ads?houseId=${house.house_id}`,
+        `${process.env.NEXT_PUBLIC_API_URL}/map/house-ads?${searchParams}`,
       )
       if (response.ok) {
         const data = await response.json()

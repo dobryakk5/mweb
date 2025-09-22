@@ -15,17 +15,21 @@ interface UserFlat {
   floor: number
   lat?: number
   lng?: number
+  house_id?: number
 }
 
 interface POI {
-  type: 'school' | 'kindergarten'
+  id?: number
+  type: 'school' | 'kindergarten' | 'hospital'
   name: string
   lat: number
   lng: number
-  distance_m: number
+  distance_m?: number
+  address?: string
 }
 
 interface Ad {
+  ad_id?: number
   price: string
   rooms: number
   floor: number
@@ -38,10 +42,10 @@ interface Ad {
   distance_m: number
   area?: string
   kitchen_area?: string
-  // Computed from house_id for map display
   lat?: number
   lng?: number
   address?: string
+  // Computed from house_id for map display
 }
 
 interface House {
@@ -70,7 +74,10 @@ function FitBounds({ flats }: { flats: UserFlat[] }) {
 
     if (flatsWithCoords.length === 1) {
       // Если только одна квартира, центрируем на ней с зумом
-      map.setView([flatsWithCoords[0].lat!, flatsWithCoords[0].lng!], 15)
+      const flat = flatsWithCoords[0]
+      if (flat && flat.lat != null && flat.lng != null) {
+        map.setView([flat.lat, flat.lng], 15)
+      }
     } else {
       map.fitBounds(bounds, { padding: [20, 20] })
     }
@@ -319,7 +326,7 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
       const lng = center[1] + (Math.random() - 0.5) * 0.01
       pois.push({
         id: i + 1,
-        name: schools[i % schools.length],
+        name: schools[i % schools.length] || 'Школа',
         type: 'school',
         lat,
         lng,
@@ -333,7 +340,7 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
       const lng = center[1] + (Math.random() - 0.5) * 0.01
       pois.push({
         id: i + 10,
-        name: kindergartens[i % kindergartens.length],
+        name: kindergartens[i % kindergartens.length] || 'Детский сад',
         type: 'kindergarten',
         lat,
         lng,
@@ -347,7 +354,7 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
       const lng = center[1] + (Math.random() - 0.5) * 0.01
       pois.push({
         id: i + 20,
-        name: hospitals[i % hospitals.length],
+        name: hospitals[i % hospitals.length] || 'Больница',
         type: 'hospital',
         lat,
         lng,
@@ -640,16 +647,18 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
           })}
 
         {/* Маркеры объявлений */}
-        {ads.map((ad) => (
-          <Marker
-            key={`ad-${ad.ad_id}`}
-            position={[ad.lat, ad.lng]}
-            icon={adIcon}
-            eventHandlers={{
-              click: () => onObjectSelect?.({ type: 'ad', data: ad }),
-            }}
-          />
-        ))}
+        {ads
+          .filter((ad) => ad.lat && ad.lng)
+          .map((ad) => (
+            <Marker
+              key={`ad-${ad.ad_id || ad.url}`}
+              position={[ad.lat!, ad.lng!]}
+              icon={adIcon}
+              eventHandlers={{
+                click: () => onObjectSelect?.({ type: 'ad', data: ad }),
+              }}
+            />
+          ))}
 
         {/* Маркеры домов с объявлениями (зум 16+) */}
         {(() => {

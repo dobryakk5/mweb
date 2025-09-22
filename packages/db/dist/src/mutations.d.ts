@@ -1,167 +1,206 @@
-import type { UpsertUser } from './types';
-export declare function addUser(values: Pick<UpsertUser, 'username' | 'firstName' | 'lastName' | 'email'>): Promise<{
-    id: string;
-}[]>;
-export declare function updateUserById(id: string, values: Partial<UpsertUser>): Promise<{
-    id: string;
-    username: string;
-    firstName: string;
-    lastName: string;
-}[]>;
-export declare function deleteUserById(id: string): Promise<import("postgres").RowList<never[]>>;
+import type { UpsertUser } from './types'
+export declare function addUser(
+  values: Pick<UpsertUser, 'username' | 'firstName' | 'lastName' | 'email'>,
+): Promise<
+  {
+    id: string
+  }[]
+>
+export declare function updateUserById(
+  id: string,
+  values: Partial<UpsertUser>,
+): Promise<
+  {
+    id: string
+    username: string
+    firstName: string
+    lastName: string
+  }[]
+>
+export declare function deleteUserById(
+  id: string,
+): Promise<import('postgres').RowList<never[]>>
 export type CreateAd = {
-    flatId: number;
-    url: string;
-    address: string;
-    price: number;
-    rooms: number;
-};
+  flatId: number
+  url: string
+  address: string
+  price: number
+  rooms: number
+}
 export type UpdateAd = {
-    address?: string;
-    price?: number;
-    rooms?: number;
-    totalArea?: string;
-    livingArea?: string;
-    kitchenArea?: string;
-    floor?: number;
-    totalFloors?: number;
-    bathroom?: string;
-    balcony?: string;
-    renovation?: string;
-    furniture?: string;
-    constructionYear?: number;
-    houseType?: string;
-    ceilingHeight?: string;
-    metroStation?: string;
-    metroTime?: string;
-    tags?: string;
-    description?: string;
-    photoUrls?: string[];
-    source?: number;
-    status?: string;
-    viewsToday?: number;
-    totalViews?: number;
-};
-export declare function addAd(values: CreateAd): Promise<{
-    id: number;
-    url: string;
-    flatId: number;
-}[]>;
-export declare function updateAdById(id: number, values: UpdateAd): Promise<{
-    id: number;
-    url: string;
-    flatId: number;
-    address: string;
-    price: number;
-    updatedAt: Date;
-}[]>;
-export declare function updateAdByUrl(url: string, values: UpdateAd): Promise<{
-    id: number;
-    url: string;
-    flatId: number;
-    address: string;
-    price: number;
-    updatedAt: Date;
-}[]>;
-export declare function getAdByUrl(url: string): Promise<{
-    createdAt: Date;
-    updatedAt: Date;
-    id: number;
-    flatId: number;
-    url: string;
-    address: string;
-    price: number;
-    rooms: number;
-    views: number;
-    totalArea: string | null;
-    livingArea: string | null;
-    kitchenArea: string | null;
-    floor: number | null;
-    totalFloors: number | null;
-    bathroom: string | null;
-    balcony: string | null;
-    renovation: string | null;
-    furniture: string | null;
-    constructionYear: number | null;
-    houseType: string | null;
-    ceilingHeight: string | null;
-    metroStation: string | null;
-    metroTime: string | null;
-    tags: string | null;
-    description: string | null;
-    photoUrls: string[] | null;
-    source: number | null;
-    status: boolean | null;
-    viewsToday: number | null;
-    from: number;
-    sma: number;
-}[]>;
-export declare function getAdById(id: number): Promise<{
-    createdAt: Date;
-    updatedAt: Date;
-    id: number;
-    flatId: number;
-    url: string;
-    address: string;
-    price: number;
-    rooms: number;
-    views: number;
-    totalArea: string | null;
-    livingArea: string | null;
-    kitchenArea: string | null;
-    floor: number | null;
-    totalFloors: number | null;
-    bathroom: string | null;
-    balcony: string | null;
-    renovation: string | null;
-    furniture: string | null;
-    constructionYear: number | null;
-    houseType: string | null;
-    ceilingHeight: string | null;
-    metroStation: string | null;
-    metroTime: string | null;
-    tags: string | null;
-    description: string | null;
-    photoUrls: string[] | null;
-    source: number | null;
-    status: boolean | null;
-    viewsToday: number | null;
-    from: number;
-    sma: number;
-}[]>;
-export declare function getAdsByFlatId(flatId: number): Promise<{
-    createdAt: Date;
-    updatedAt: Date;
-    id: number;
-    flatId: number;
-    url: string;
-    address: string;
-    price: number;
-    rooms: number;
-    views: number;
-    totalArea: string | null;
-    livingArea: string | null;
-    kitchenArea: string | null;
-    floor: number | null;
-    totalFloors: number | null;
-    bathroom: string | null;
-    balcony: string | null;
-    renovation: string | null;
-    furniture: string | null;
-    constructionYear: number | null;
-    houseType: string | null;
-    ceilingHeight: string | null;
-    metroStation: string | null;
-    metroTime: string | null;
-    tags: string | null;
-    description: string | null;
-    photoUrls: string[] | null;
-    source: number | null;
-    status: boolean | null;
-    viewsToday: number | null;
-    from: number;
-    sma: number;
-}[]>;
-export declare function deleteAdById(id: number): Promise<import("postgres").RowList<never[]>>;
-export declare function deleteAdByUrl(url: string): Promise<import("postgres").RowList<never[]>>;
+  address?: string
+  price?: number
+  rooms?: number
+  totalArea?: string
+  livingArea?: string
+  kitchenArea?: string
+  floor?: number
+  totalFloors?: number
+  bathroom?: string
+  balcony?: string
+  renovation?: string
+  furniture?: string
+  constructionYear?: number
+  houseType?: string
+  ceilingHeight?: string
+  metroStation?: string
+  metroTime?: string
+  tags?: string
+  description?: string
+  photoUrls?: string[]
+  source?: number
+  status?: string
+  viewsToday?: number
+  totalViews?: number
+}
+export declare function addAd(values: CreateAd): Promise<
+  {
+    id: number
+    url: string
+    flatId: number
+  }[]
+>
+export declare function updateAdById(
+  id: number,
+  values: UpdateAd,
+): Promise<
+  {
+    id: number
+    url: string
+    flatId: number
+    address: string
+    price: number
+    updatedAt: Date
+  }[]
+>
+export declare function updateAdByUrl(
+  url: string,
+  values: UpdateAd,
+): Promise<
+  {
+    id: number
+    url: string
+    flatId: number
+    address: string
+    price: number
+    updatedAt: Date
+  }[]
+>
+export declare function getAdByUrl(url: string): Promise<
+  {
+    createdAt: Date
+    updatedAt: Date
+    id: number
+    flatId: number
+    url: string
+    address: string
+    price: number
+    rooms: number
+    views: number
+    totalArea: string | null
+    livingArea: string | null
+    kitchenArea: string | null
+    floor: number | null
+    totalFloors: number | null
+    bathroom: string | null
+    balcony: string | null
+    renovation: string | null
+    furniture: string | null
+    constructionYear: number | null
+    houseType: string | null
+    ceilingHeight: string | null
+    metroStation: string | null
+    metroTime: string | null
+    tags: string | null
+    description: string | null
+    photoUrls: string[] | null
+    source: number | null
+    status: boolean | null
+    viewsToday: number | null
+    from: number
+    sma: number
+    sourceCreated: Date | null
+    sourceUpdated: Date | null
+  }[]
+>
+export declare function getAdById(id: number): Promise<
+  {
+    createdAt: Date
+    updatedAt: Date
+    id: number
+    flatId: number
+    url: string
+    address: string
+    price: number
+    rooms: number
+    views: number
+    totalArea: string | null
+    livingArea: string | null
+    kitchenArea: string | null
+    floor: number | null
+    totalFloors: number | null
+    bathroom: string | null
+    balcony: string | null
+    renovation: string | null
+    furniture: string | null
+    constructionYear: number | null
+    houseType: string | null
+    ceilingHeight: string | null
+    metroStation: string | null
+    metroTime: string | null
+    tags: string | null
+    description: string | null
+    photoUrls: string[] | null
+    source: number | null
+    status: boolean | null
+    viewsToday: number | null
+    from: number
+    sma: number
+    sourceCreated: Date | null
+    sourceUpdated: Date | null
+  }[]
+>
+export declare function getAdsByFlatId(flatId: number): Promise<
+  {
+    createdAt: Date
+    updatedAt: Date
+    id: number
+    flatId: number
+    url: string
+    address: string
+    price: number
+    rooms: number
+    views: number
+    totalArea: string | null
+    livingArea: string | null
+    kitchenArea: string | null
+    floor: number | null
+    totalFloors: number | null
+    bathroom: string | null
+    balcony: string | null
+    renovation: string | null
+    furniture: string | null
+    constructionYear: number | null
+    houseType: string | null
+    ceilingHeight: string | null
+    metroStation: string | null
+    metroTime: string | null
+    tags: string | null
+    description: string | null
+    photoUrls: string[] | null
+    source: number | null
+    status: boolean | null
+    viewsToday: number | null
+    from: number
+    sma: number
+    sourceCreated: Date | null
+    sourceUpdated: Date | null
+  }[]
+>
+export declare function deleteAdById(
+  id: number,
+): Promise<import('postgres').RowList<never[]>>
+export declare function deleteAdByUrl(
+  url: string,
+): Promise<import('postgres').RowList<never[]>>
 //# sourceMappingURL=mutations.d.ts.map

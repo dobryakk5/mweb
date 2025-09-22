@@ -279,6 +279,134 @@ export default function NearbyMapComponent({
     }
   }
 
+  // Функция для группировки близких домов (чтобы избежать наложения маркеров)
+  const groupNearbyHouses = (houses: any[], minDistance = 50) => {
+    const groups: any[][] = []
+    const processed = new Set<number>()
+
+    houses.forEach((house, index) => {
+      if (processed.has(index)) return
+
+      const group = [house]
+      processed.add(index)
+
+      // Ищем дома в радиусе minDistance метров
+      houses.forEach((otherHouse, otherIndex) => {
+        if (processed.has(otherIndex) || index === otherIndex) return
+
+        const distance = calculateDistance(
+          house.lat,
+          house.lng,
+          otherHouse.lat,
+          otherHouse.lng,
+        )
+
+        if (distance <= minDistance) {
+          group.push(otherHouse)
+          processed.add(otherIndex)
+        }
+      })
+
+      groups.push(group)
+    })
+
+    return groups
+  }
+
+  // Функция для расчета расстояния между двумя точками в метрах
+  const calculateDistance = (
+    lat1: number,
+    lng1: number,
+    lat2: number,
+    lng2: number,
+  ) => {
+    const R = 6371e3 // Радиус Земли в метрах
+    const φ1 = (lat1 * Math.PI) / 180
+    const φ2 = (lat2 * Math.PI) / 180
+    const Δφ = ((lat2 - lat1) * Math.PI) / 180
+    const Δλ = ((lng2 - lng1) * Math.PI) / 180
+
+    const a =
+      Math.sin(Δφ / 2) * Math.sin(Δφ / 2) +
+      Math.cos(φ1) * Math.cos(φ2) * Math.sin(Δλ / 2) * Math.sin(Δλ / 2)
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a))
+
+    return R * c
+  }
+
+  // Функция для создания маркера группы домов
+  const createGroupMarker = (group: any[]) => {
+    if (group.length === 1) {
+      // Один дом - обычный маркер
+      const house = group[0]
+      const hasActiveAds =
+        house.has_active_ads === true || house.active_ads_count > 0
+      const housePrice = housePrices[house.house_id]
+
+      return {
+        house,
+        position: [house.lat, house.lng],
+        icon: housePrice
+          ? createPriceIcon(housePrice, hasActiveAds)
+          : hasActiveAds
+            ? houseIcon
+            : inactiveHouseIcon,
+        isGroup: false,
+      }
+    } else {
+      // Группа домов - создаем сводный маркер
+      const centerLat = group.reduce((sum, h) => sum + h.lat, 0) / group.length
+      const centerLng = group.reduce((sum, h) => sum + h.lng, 0) / group.length
+      const totalAds = group.reduce(
+        (sum, h) => sum + (h.active_ads_count || 0),
+        0,
+      )
+      const hasActiveAds = group.some(
+        (h) => h.has_active_ads === true || h.active_ads_count > 0,
+      )
+
+      // Создаем маркер группы
+      const groupIcon = new L.DivIcon({
+        className: 'marker-house-group',
+        html: `<div style="
+          display: flex;
+          align-items: center;
+          justify-content: center;
+          width: 32px;
+          height: 32px;
+          border-radius: 50%;
+          background: ${hasActiveAds ? '#f59e0b' : '#9ca3af'};
+          border: 3px solid white;
+          box-shadow: 0 0 6px rgba(0,0,0,.6);
+          color: white;
+          font-weight: bold;
+          font-size: 12px;
+        ">${group.length}</div>`,
+        iconSize: [32, 32],
+        iconAnchor: [16, 16],
+      })
+
+      return {
+        house: {
+          house_id: `group-${group.map((h) => h.house_id).join('-')}`,
+          address: `${group.length} домов`,
+          lat: centerLat,
+          lng: centerLng,
+          ads_count: totalAds,
+          dist_m: Math.min(...group.map((h) => h.dist_m || 0)),
+          houses: group, // Сохраняем исходные дома в группе
+        },
+        position: [centerLat, centerLng],
+        icon: groupIcon,
+        isGroup: true,
+      }
+    }
+  }
+
+  // Группируем дома по близости
+  const houseGroups = groupNearbyHouses(houses, 50) // 50 метров минимальное расстояние
+  const markers = houseGroups.map((group) => createGroupMarker(group))
+
   // Определяем центр и зум карты
   const getMapCenter = (): [number, number] => {
     if (addressCoordinates) {
@@ -321,8 +449,20 @@ export default function NearbyMapComponent({
             eventHandlers={{
               click: () => {
                 // Создаем объект дома для текущей квартиры
+                // Проверяем наличие house_id
+                const house_id =
+                  currentFlat.house_id || currentFlat.houseId || currentFlat.id
+
+                if (!house_id) {
+                  console.warn(
+                    'Cannot load house ads: no house_id found for current flat',
+                    currentFlat,
+                  )
+                  return
+                }
+
                 const currentHouse = {
-                  house_id: currentFlat.house_id || currentFlat.houseId,
+                  house_id: house_id,
                   address: flatAddress,
                   lat: addressCoordinates.lat,
                   lng: addressCoordinates.lng,
@@ -335,28 +475,52 @@ export default function NearbyMapComponent({
           />
         )}
 
-        {/* Маркеры домов в видимой области */}
-        {houses.map((house, index) => {
-          const hasActiveAds =
-            house.has_active_ads === true || house.active_ads_count > 0
-          const housePrice = housePrices[house.house_id]
-
-          // Use price icon if price is available, otherwise use simple circle
-          const iconToUse = housePrice
-            ? createPriceIcon(housePrice, hasActiveAds)
-            : hasActiveAds
-              ? houseIcon
-              : inactiveHouseIcon
+        {/* Сгруппированные маркеры домов в видимой области */}
+        {markers.map((marker, index) => {
+          const handleClick = () => {
+            if (marker.isGroup && marker.house.houses) {
+              // Для группы домов - можем показать попап с выбором или взять первый дом
+              console.log('Группа домов:', marker.house.houses)
+              // Берем первый дом из группы для демонстрации
+              handleHouseClick(marker.house.houses[0])
+            } else {
+              handleHouseClick(marker.house)
+            }
+          }
 
           return (
             <Marker
-              key={`nearby-house-${house.house_id}-${index}`}
-              position={[house.lat, house.lng]}
-              icon={iconToUse}
+              key={`grouped-house-${marker.house.house_id}-${index}`}
+              position={marker.position as [number, number]}
+              icon={marker.icon}
               eventHandlers={{
-                click: () => handleHouseClick(house),
+                click: handleClick,
               }}
-            />
+            >
+              {marker.isGroup && (
+                <Popup>
+                  <div className='text-sm'>
+                    <strong>{marker.house.address}</strong>
+                    <div>Всего объявлений: {marker.house.ads_count}</div>
+                    <div className='text-xs text-gray-600 mt-1'>
+                      Дома в группе:
+                    </div>
+                    <div className='text-xs max-h-32 overflow-y-auto'>
+                      {marker.house.houses?.map((h: any, i: number) => (
+                        <div
+                          key={i}
+                          className='cursor-pointer hover:bg-gray-100 p-1 rounded'
+                        >
+                          {h.address || `Дом ${h.house_id}`}
+                          {h.active_ads_count > 0 &&
+                            ` (${h.active_ads_count} объявлений)`}
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+                </Popup>
+              )}
+            </Marker>
           )
         })}
 
@@ -408,9 +572,15 @@ export default function NearbyMapComponent({
           <div className='w-4 h-4 rounded-full bg-orange-500 border-2 border-white'></div>
           <span>Дома с активными объявлениями</span>
         </div>
-        <div className='flex items-center gap-2'>
+        <div className='flex items-center gap-2 mb-1'>
           <div className='w-4 h-4 rounded-full bg-gray-400 border-2 border-white'></div>
           <span>Дома только с неактивными</span>
+        </div>
+        <div className='flex items-center gap-2'>
+          <div className='w-5 h-5 rounded-full bg-orange-500 border-2 border-white flex items-center justify-center text-white text-xs font-bold'>
+            2
+          </div>
+          <span>Группа близких домов</span>
         </div>
       </div>
     </div>

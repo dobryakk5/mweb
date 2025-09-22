@@ -8,7 +8,8 @@ export interface CreateAdData {
   rooms: number
   from?: number // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma?: number // 0 - обычное объявление, 1 - в сравнении квартир
-  updatedAt?: string // Время обновления из источника
+  sourceCreated?: string // Время создания из источника
+  sourceUpdated?: string // Время обновления из источника
 }
 
 export interface UpdateAdData extends Partial<CreateAdData> {
@@ -48,6 +49,10 @@ export interface Ad {
   views: number
   createdAt: string
   updatedAt: string
+
+  // Временные метки из источника
+  sourceCreated?: string // Время создания из источника
+  sourceUpdated?: string // Время обновления из источника
 
   // Новые поля от API парсинга
   totalArea?: number
@@ -197,7 +202,7 @@ export async function createAdFromSimilarWithFrom(
     address: flatAddress || '', // Используем адрес квартиры если передан
     price: parseInt(similarAd.price.toString()),
     rooms: similarAd.rooms,
-    updatedAt: similarAd.updated, // Время обновления из источника
+    sourceUpdated: similarAd.updated, // Время обновления из источника
   }
 
   console.log('Sending ad data to API:', {
@@ -236,7 +241,7 @@ export async function createAdFromSimilar(
     address: flatAddress || '', // Используем адрес квартиры если передан
     price: parseInt(similarAd.price.toString()),
     rooms: similarAd.rooms,
-    updatedAt: similarAd.updated, // Время обновления из источника
+    sourceUpdated: similarAd.updated, // Время обновления из источника
   }
 
   console.log('Sending ad data to API:', {

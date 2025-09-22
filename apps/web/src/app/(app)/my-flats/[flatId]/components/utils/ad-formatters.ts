@@ -241,3 +241,25 @@ export const isUpdatedToday = (
     return false
   }
 }
+
+// Get display date for "Created" - prefer source timestamp, fallback to created_at
+export const getDisplayCreatedDate = (ad: any): string | null => {
+  return ad.sourceCreated || ad.createdAt || null
+}
+
+// Get display date for "Updated" - prefer source timestamp, fallback to updated_at
+export const getDisplayUpdatedDate = (ad: any): string | null => {
+  return ad.sourceUpdated || ad.updatedAt || ad.updated_at || null
+}
+
+// Check if ad was updated today using source timestamp first
+export const isUpdatedTodayFromSource = (ad: any): boolean => {
+  const displayDate = getDisplayUpdatedDate(ad)
+  return isUpdatedToday(displayDate)
+}
+
+// Check if status is old using source timestamp first
+export const isStatusOldFromSource = (ad: any): boolean => {
+  const displayDate = getDisplayUpdatedDate(ad)
+  return isStatusOld(displayDate)
+}

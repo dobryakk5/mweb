@@ -112,6 +112,10 @@ export const ads = usersSchema.table(
     from: smallint('from').default(2).notNull(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
     sma: smallint('sma').default(0).notNull(), // 0 - обычное объявление, 1 - в сравнении квартир
 
+    // Временные метки из источника
+    sourceCreated: timestamp('source_created'), // Время создания из источника
+    sourceUpdated: timestamp('source_updated'), // Время обновления из источника
+
     ...timestamps,
   },
   (t) => [

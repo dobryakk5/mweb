@@ -50,7 +50,7 @@ import { useCollapseState } from './hooks/use-collapse-state'
 import { useFlatAdsState } from './hooks/use-flat-ads-state'
 import { useFlatAdsActions } from './hooks/use-flat-ads-actions'
 import { useExcelExport } from './hooks/use-excel-export'
-import { isUpdatedToday } from './utils/ad-formatters'
+import { isUpdatedTodayFromSource } from './utils/ad-formatters'
 import {
   formSchema,
   type FormValues,
@@ -152,7 +152,7 @@ export default function EditFlatFormRefactored({
     if (ads && ads.length > 0) {
       const updatedTodayIds = new Set<number>()
       ads.forEach((ad) => {
-        if (isUpdatedToday(ad.updatedAt)) {
+        if (isUpdatedTodayFromSource(ad)) {
           updatedTodayIds.add(ad.id)
         }
       })

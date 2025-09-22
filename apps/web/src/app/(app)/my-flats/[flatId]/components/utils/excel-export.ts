@@ -3,36 +3,69 @@ import type { ExcelExportData } from '../types/ads-blocks.types'
 import { formatDate } from './ad-formatters'
 
 // Excel-специфичные функции форматирования (возвращают пустую строку вместо null)
-const formatPriceForExcel = (price: number | null | undefined): string => {
-  if (price === null || price === undefined) return ''
-  return (price / 1_000_000).toFixed(2)
+const formatPriceForExcel = (
+  price: number | null | undefined | string,
+): string => {
+  if (price === null || price === undefined || price === 'null' || price === '')
+    return ''
+  const numPrice = typeof price === 'string' ? parseFloat(price) : price
+  if (isNaN(numPrice)) return ''
+  return (numPrice / 1_000_000).toFixed(2)
 }
 
-const formatViewsForExcel = (views: number | null | undefined): string => {
-  if (views === null || views === undefined) return ''
-  return views.toString()
+const formatViewsForExcel = (
+  views: number | null | undefined | string,
+): string => {
+  if (views === null || views === undefined || views === 'null' || views === '')
+    return ''
+  const numViews = typeof views === 'string' ? parseInt(views) : views
+  if (isNaN(numViews)) return ''
+  return numViews.toString()
 }
 
-const formatAreaForExcel = (area: number | null | undefined): string => {
-  if (area === null || area === undefined) return ''
-  return `${area} м²`
+const formatAreaForExcel = (
+  area: number | null | undefined | string,
+): string => {
+  if (area === null || area === undefined || area === 'null' || area === '')
+    return ''
+  const numArea = typeof area === 'string' ? parseFloat(area) : area
+  if (isNaN(numArea)) return ''
+  return `${numArea} м²`
 }
 
 const formatBooleanForExcel = (
-  value: boolean | null | undefined,
+  value: boolean | null | undefined | string,
   trueText = 'Да',
   falseText = 'Нет',
 ): string => {
-  if (value === null || value === undefined) return ''
+  if (value === null || value === undefined || value === 'null' || value === '')
+    return ''
+  if (typeof value === 'string') {
+    const lowerValue = value.toLowerCase()
+    if (lowerValue === 'true' || lowerValue === '1') return trueText
+    if (lowerValue === 'false' || lowerValue === '0') return falseText
+    return ''
+  }
   return value ? trueText : falseText
 }
 
 const formatDateForExcel = (
   dateStr: string | Date | null | undefined,
 ): string => {
-  if (!dateStr) return ''
+  if (!dateStr || dateStr === 'null') return ''
   const date = typeof dateStr === 'string' ? new Date(dateStr) : dateStr
   return date.toLocaleDateString('ru-RU')
+}
+
+// Helper function to clean null string values
+const cleanNullValue = (value: any): any => {
+  if (value === null || value === undefined || value === 'null') return ''
+  return value
+}
+
+// Helper function to get display date for Excel export - prefer source timestamp, fallback to updated_at
+const getExcelDisplayDate = (ad: any): string | null => {
+  return ad.sourceUpdated || ad.updatedAt || null
 }
 
 /**
@@ -40,27 +73,30 @@ const formatDateForExcel = (
  */
 export const convertAdsToExcelData = (ads: any[]): ExcelExportData[] => {
   return ads.map((ad) => ({
-    URL: ad.url || '',
+    URL: cleanNullValue(ad.url),
     'Цена, млн': formatPriceForExcel(ad.price),
-    Комнаты: ad.rooms || '',
+    Комнаты: cleanNullValue(ad.rooms),
     'Общая площадь': formatAreaForExcel(ad.totalArea),
     'Жилая площадь': formatAreaForExcel(ad.livingArea),
     'Площадь кухни': formatAreaForExcel(ad.kitchenArea),
-    Этаж: ad.floor?.toString() || '',
-    'Всего этажей': ad.totalFloors?.toString() || '',
-    Санузел: ad.bathroom || '',
-    Балкон: ad.balcony || '',
-    Ремонт: ad.renovation || '',
+    Этаж: cleanNullValue(ad.floor?.toString()),
+    'Всего этажей': cleanNullValue(ad.totalFloors?.toString()),
+    Санузел: cleanNullValue(ad.bathroom),
+    Балкон: cleanNullValue(ad.balcony),
+    Ремонт: cleanNullValue(ad.renovation),
     Мебель: formatBooleanForExcel(ad.furniture, 'Есть', 'Нет'),
-    'Год постройки': ad.constructionYear?.toString() || '',
-    'Тип дома': ad.houseType || '',
-    'Высота потолков': ad.ceilingHeight ? `${ad.ceilingHeight} м` : '',
-    Метро: ad.metroStation || '',
-    'Время до метро': ad.metroTime || '',
-    Теги: ad.tags || '',
-    Описание: ad.description || '',
+    'Год постройки': cleanNullValue(ad.constructionYear?.toString()),
+    'Тип дома': cleanNullValue(ad.houseType),
+    'Высота потолков':
+      ad.ceilingHeight && ad.ceilingHeight !== 'null'
+        ? `${ad.ceilingHeight} м`
+        : '',
+    Метро: cleanNullValue(ad.metroStation),
+    'Время до метро': cleanNullValue(ad.metroTime),
+    Теги: cleanNullValue(ad.tags),
+    Описание: cleanNullValue(ad.description),
     'Просмотры сегодня': formatViewsForExcel(ad.viewsToday),
-    Обновлено: formatDateForExcel(ad.updatedAt),
+    Обновлено: formatDateForExcel(getExcelDisplayDate(ad)),
   }))
 }
 
@@ -188,10 +224,10 @@ export const prepareExcelDataWithColumns = (
           row['Просмотры сегодня'] = formatViewsForExcel(ad.viewsToday)
           break
         case 'updatedAt':
-          row['Обновлено'] = formatDateForExcel(ad.updatedAt)
+          row['Обновлено'] = formatDateForExcel(getExcelDisplayDate(ad))
           break
         default:
-          row[column] = ad[column] || ''
+          row[column] = cleanNullValue(ad[column])
       }
     })
 

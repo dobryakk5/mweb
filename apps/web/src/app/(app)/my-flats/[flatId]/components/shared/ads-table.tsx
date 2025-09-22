@@ -29,6 +29,9 @@ import {
   formatDistance,
   formatPersonType,
   isStatusOld,
+  getDisplayCreatedDate,
+  getDisplayUpdatedDate,
+  isStatusOldFromSource,
 } from '../utils/ad-formatters'
 
 /**
@@ -407,9 +410,9 @@ export default function AdsTable({
         )
 
       case 'status':
-        const statusIsOld = isStatusOld(ad.updatedAt)
+        const statusIsOld = isStatusOldFromSource(ad)
         const status = ad.status ?? ad.is_active
-        const statusUpdateDate = formatDateShort(ad.updatedAt || ad.updated_at)
+        const statusUpdateDate = formatDateShort(getDisplayUpdatedDate(ad))
 
         // Проверяем возраст объявления для красного кружка
         // Используем дату создания на источнике объявления (не в нашей таблице ads)
@@ -448,11 +451,15 @@ export default function AdsTable({
         )
 
       case 'createdAt':
-        // Всегда используем дату создания на источнике, а не в нашей системе
-        return formatDate(ad.created || ad.time_source_created)
+        // Используем дату создания из источника (sourceCreated) или fallback на created/time_source_created
+        return formatDate(
+          getDisplayCreatedDate(ad) || ad.created || ad.time_source_created,
+        )
       case 'updatedAt':
-        // Всегда используем дату обновления на источнике, а не в нашей системе
-        return formatDate(ad.updated || ad.time_source_updated)
+        // Используем дату обновления из источника (sourceUpdated) или fallback на updated/time_source_updated
+        return formatDate(
+          getDisplayUpdatedDate(ad) || ad.updated || ad.time_source_updated,
+        )
 
       case 'distance':
         return formatDistance(ad.distance_m || ad.distance)

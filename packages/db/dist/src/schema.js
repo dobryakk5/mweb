@@ -75,6 +75,9 @@ exports.ads = exports.usersSchema.table('ads', {
     viewsToday: (0, pg_core_1.smallint)('views_today'),
     from: (0, pg_core_1.smallint)('from').default(2).notNull(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
     sma: (0, pg_core_1.smallint)('sma').default(0).notNull(), // 0 - обычное объявление, 1 - в сравнении квартир
+    // Временные метки из источника
+    sourceCreated: (0, pg_core_1.timestamp)('source_created'), // Время создания из источника
+    sourceUpdated: (0, pg_core_1.timestamp)('source_updated'), // Время обновления из источника
     ...utils_1.timestamps,
 }, (t) => [
     (0, pg_core_1.index)('ads_flat_id_idx').on(t.flatId), // Индекс для быстрого поиска по квартире

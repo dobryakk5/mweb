@@ -168,38 +168,75 @@ export default async (fastify: FastifyInstance) => {
   // Get ads by house_id for map house click
   fastify.get('/map/house-ads', async (request, reply) => {
     try {
-      const { houseId } = z
+      const { houseId, maxPrice, rooms, minArea, minKitchenArea } = z
         .object({
           houseId: z.string().transform(Number).pipe(z.number().int()),
+          maxPrice: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(0))
+            .optional(),
+          rooms: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().int().min(1))
+            .optional(),
+          minArea: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(0))
+            .optional(),
+          minKitchenArea: z
+            .string()
+            .transform(Number)
+            .pipe(z.number().min(0))
+            .optional(),
         })
         .parse(request.query)
 
-      // Get ads directly from flats_history by house_id with additional info from flats table
-      const result = await db.execute(
-        sql`SELECT
-          fh.id,
-          fh.avitoid,
-          fh.price,
-          fh.rooms,
-          fh.floor,
-          fh.description,
-          fh.url,
-          fh.time_source_created as created,
-          fh.time_source_updated as updated,
-          fh.is_actual as is_active,
-          fh.person as person_type,
-          fh.house_id,
-          CONCAT(mg.street, ', ', mg.housenum) as address,
-          f.total_floors,
-          f.area,
-          f.kitchen_area
-        FROM public.flats_history fh
-        JOIN system.moscow_geo mg ON fh.house_id = mg.house_id
-        LEFT JOIN public.flats f ON fh.house_id = f.house_id AND fh.floor = f.floor AND fh.rooms = f.rooms
-        WHERE fh.house_id = ${houseId}
-        ORDER BY fh.is_actual DESC, fh.price ASC
-        LIMIT 50`,
-      )
+      // Build dynamic query with filters
+      let baseQuery = sql`SELECT
+        fh.id,
+        fh.avitoid,
+        fh.price,
+        fh.rooms,
+        fh.floor,
+        fh.description,
+        fh.url,
+        fh.time_source_created as created,
+        fh.time_source_updated as updated,
+        fh.is_actual as is_active,
+        fh.person as person_type,
+        fh.house_id,
+        CONCAT(mg.street, ', ', mg.housenum) as address,
+        f.total_floors,
+        f.area,
+        f.kitchen_area
+      FROM public.flats_history fh
+      JOIN system.moscow_geo mg ON fh.house_id = mg.house_id
+      LEFT JOIN public.flats f ON fh.house_id = f.house_id AND fh.floor = f.floor AND fh.rooms = f.rooms
+      WHERE fh.house_id = ${houseId}`
+
+      // Add filter conditions dynamically
+      if (maxPrice !== undefined) {
+        baseQuery = sql`${baseQuery} AND fh.price <= ${maxPrice}`
+      }
+
+      if (rooms !== undefined) {
+        baseQuery = sql`${baseQuery} AND fh.rooms >= ${rooms}`
+      }
+
+      if (minArea !== undefined) {
+        baseQuery = sql`${baseQuery} AND f.area IS NOT NULL AND f.area >= ${minArea}`
+      }
+
+      if (minKitchenArea !== undefined) {
+        baseQuery = sql`${baseQuery} AND f.kitchen_area IS NOT NULL AND f.kitchen_area >= ${minKitchenArea}`
+      }
+
+      const finalQuery = sql`${baseQuery} ORDER BY fh.is_actual DESC, fh.price ASC LIMIT 50`
+
+      const result = await db.execute(finalQuery)
 
       const ads = Array.isArray(result) ? result : result.rows || []
 
@@ -565,11 +602,11 @@ export default async (fastify: FastifyInstance) => {
       }
 
       if (minArea !== undefined) {
-        finalQuery = sql`${finalQuery} AND (f.area IS NULL OR f.area >= ${minArea})`
+        finalQuery = sql`${finalQuery} AND f.area IS NOT NULL AND f.area >= ${minArea}`
       }
 
       if (minKitchenArea !== undefined) {
-        finalQuery = sql`${finalQuery} AND (f.kitchen_area IS NULL OR f.kitchen_area >= ${minKitchenArea})`
+        finalQuery = sql`${finalQuery} AND f.kitchen_area IS NOT NULL AND f.kitchen_area >= ${minKitchenArea}`
       }
 
       finalQuery = sql`${finalQuery}

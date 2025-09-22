@@ -109,7 +109,8 @@ const createAdSchema = z.object({
   rooms: z.number().positive(),
   from: z.number().int().min(1).max(2).default(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma: z.number().int().min(0).max(1).default(0).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
-  updatedAt: z.string().optional(), // Время обновления из источника
+  sourceCreated: z.string().optional(), // Время создания из источника
+  sourceUpdated: z.string().optional(), // Время обновления из источника
 })
 
 // Схема для обновления объявления с данными от API парсинга
@@ -143,6 +144,10 @@ const updateAdSchema = z.object({
   viewsToday: z.number().optional(),
   from: z.number().int().min(1).max(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma: z.number().int().min(0).max(1).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
+
+  // Временные метки из источника
+  sourceCreated: z.string().optional(), // Время создания из источника
+  sourceUpdated: z.string().optional(), // Время обновления из источника
 
   // Параметры для Python API парсинга
   parseUrl: z.string().url().optional(),
@@ -416,7 +421,12 @@ export default async function adsRoutes(fastify: FastifyInstance) {
           views: 0, // Добавляем views по умолчанию
           from: body.from || 2, // По умолчанию - добавлено вручную
           sma: body.sma || 0, // По умолчанию - обычное объявление
-          updatedAt: body.updatedAt ? new Date(body.updatedAt) : new Date(), // Время из источника или текущее
+          sourceCreated: body.sourceCreated
+            ? new Date(body.sourceCreated)
+            : null, // Время создания из источника
+          sourceUpdated: body.sourceUpdated
+            ? new Date(body.sourceUpdated)
+            : null, // Время обновления из источника
         })
         .returning()
 
@@ -501,7 +511,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         .update(ads)
         .set({
           ...updateData,
-          updatedAt: new Date(),
+          // Не обновляем updatedAt при ручном редактировании - сохраняем временные метки источника
         })
         .where(eq(ads.id, adId))
         .returning()
@@ -715,12 +725,15 @@ export default async function adsRoutes(fastify: FastifyInstance) {
 
       // Статус уже boolean в БД, конвертация не нужна
 
-      // Принудительно обновляем все поля
+      // Принудительно обновляем все поля, сохраняя source timestamps если они есть
       const result = await db
         .update(ads)
         .set({
           ...forceUpdateData,
-          updatedAt: new Date(),
+          // Обновляем updatedAt только если это принудительное обновление без source timestamps
+          ...(forceUpdateData.sourceCreated || forceUpdateData.sourceUpdated
+            ? {}
+            : { updatedAt: new Date() }),
         })
         .where(eq(ads.id, adIdNum))
         .returning()
@@ -1321,7 +1334,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         message: `Saved ${insertResult.length} new house ads`,
         savedCount: insertResult.length,
         totalFound: houseAds.length,
-        alreadyExisted: existingUrls.length,
+        alreadyExisted: existingAds.length,
       })
     } catch (error) {
       const errorMessage =
