@@ -923,13 +923,37 @@ export default async (fastify: FastifyInstance) => {
         }
       }
 
+      // Get minimum price from active ads for this flat (house_id, floor, rooms)
+      let minPrice = null
+      try {
+        const priceResult = await db.execute(
+          sql`SELECT MIN(price) as min_price
+              FROM public.flats_history
+              WHERE house_id = ${houseData.house_id}
+                AND rooms = ${flatData.rooms}
+                AND floor = ${flatData.floor}
+                AND is_actual = 1
+                AND price > 0`,
+        )
+        const priceData = Array.isArray(priceResult)
+          ? priceResult[0]
+          : (priceResult as any).rows?.[0]
+        minPrice = priceData?.min_price || null
+        fastify.log.info(`Min price for flat ${flatId}: ${minPrice}`)
+      } catch (priceError) {
+        fastify.log.warn(
+          `Failed to get min price for flat ${flatId}:`,
+          priceError,
+        )
+      }
+
       const fullFlatData = {
         ...flatData,
         house_id: houseData.house_id,
         area: finalDetailsData?.area || null,
         kitchen_area: finalDetailsData?.kitchen_area || null,
         total_floors: finalDetailsData?.total_floors || null,
-        price: null, // TODO: Get from ads or form data
+        price: minPrice,
       }
 
       fastify.log.info(`Full flat data:`, fullFlatData)
