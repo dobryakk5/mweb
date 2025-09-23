@@ -844,6 +844,7 @@ export default async (fastify: FastifyInstance) => {
         `Getting houses in bounds: north=${north}, south=${south}, east=${east}, west=${west}, rooms=${rooms}, maxPrice=${maxPrice}, minArea=${minArea}, minKitchenArea=${minKitchenArea}`,
       )
 
+      // Сначала получаем список house_id с фильтрацией
       const result = await db.execute(
         sql`SELECT * FROM public.get_houses_in_bounds(
           ${north},
@@ -857,9 +858,41 @@ export default async (fastify: FastifyInstance) => {
         )`,
       )
 
-      const houses = Array.isArray(result) ? result : (result as any).rows || []
+      const houseRows = Array.isArray(result)
+        ? result
+        : (result as any).rows || []
 
-      fastify.log.info(`Found ${houses.length} houses in bounds with filters`)
+      if (houseRows.length === 0) {
+        fastify.log.info('No houses found in bounds with filters')
+        return {
+          houses: [],
+          count: 0,
+          bounds: { north, south, east, west },
+          filters: { rooms, maxPrice, minArea, minKitchenArea },
+        }
+      }
+
+      // Извлекаем house_id из результатов
+      const houseIds = houseRows.map((row: any) => row.house_id)
+
+      // Получаем координаты из кэша
+      const coordinates = await getHouseCoordinates(houseIds)
+
+      // Объединяем данные домов с координатами
+      const houses = houseRows
+        .map((house: any) => {
+          const coords = coordinates.get(house.house_id)
+          return {
+            ...house,
+            lat: coords?.lat || null,
+            lng: coords?.lng || null,
+          }
+        })
+        .filter((house: any) => house.lat && house.lng) // Убираем дома без координат
+
+      fastify.log.info(
+        `Found ${houses.length} houses in bounds with filters (${houseRows.length} before coordinate filtering)`,
+      )
 
       return {
         houses,

@@ -284,7 +284,7 @@ export default function AdsPreview({
     loading: houseInfoLoading,
     error: houseInfoError,
   } = useHouseInfo({
-    houseId: selectedHouseId,
+    houseId: selectedHouseId ?? null,
     enabled: !!selectedHouseId,
   })
   // Filter duplicates with source priority: Cian > Yandex > Avito
