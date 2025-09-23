@@ -26,6 +26,7 @@ interface NearbyMapComponentProps {
   nearbyAds: any[]
   currentFlat?: any
   selectedHouseId?: number | null
+  viewedHouses?: Set<number>
   onHouseClick?: (house: any) => void
   onBoundsChange?: (bounds: {
     north: number
@@ -71,6 +72,7 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   nearbyAds,
   currentFlat,
   selectedHouseId,
+  viewedHouses = new Set(),
   onHouseClick,
   onBoundsChange,
   filters,
@@ -110,6 +112,17 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   )
 
   // Иконки
+
+  // Helper function to determine border style based on house viewing state
+  const getBorderStyle = (houseId: number) => {
+    if (selectedHouseId === houseId) {
+      return '3px solid red' // Currently selected house gets red border
+    } else if (viewedHouses.has(houseId)) {
+      return '2px solid white' // Previously viewed houses get white border
+    } else {
+      return 'none' // New/unviewed houses get no border
+    }
+  }
 
   const houseIcon = new L.DivIcon({
     className: 'marker-house',
@@ -217,7 +230,14 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
         if (filters?.rooms && ad.rooms < filters.rooms) return false
 
         // Filter by price (include ads with price <= maxPrice)
-        if (filters?.maxPrice && ad.price > filters.maxPrice) return false
+        if (filters?.maxPrice && ad.price > filters.maxPrice) {
+          if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
+            console.log(
+              `🚫 [PRICE_FILTER] Excluded ad ${ad.price} > ${filters.maxPrice}`,
+            )
+          }
+          return false
+        }
 
         // Filter by area
         if (filters?.minArea && ad.area && ad.area < filters.minArea)
@@ -297,6 +317,7 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
     price: number,
     isActive: boolean,
     isCurrentUserHouse: boolean = false,
+    houseId?: number,
   ) => {
     const priceText = (price / 1000000).toFixed(1)
     const bgColor = isCurrentUserHouse
@@ -304,6 +325,14 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
       : isActive
         ? '#f59e0b'
         : '#9ca3af'
+
+    // Use viewing state border if houseId is provided, otherwise default white border
+    const borderStyle = houseId ? getBorderStyle(houseId) : '3px solid white'
+    const shadowStyle =
+      borderStyle === 'none'
+        ? '0 2px 6px rgba(0,0,0,.4)'
+        : '0 2px 8px rgba(0,0,0,.6)'
+
     return new L.DivIcon({
       className: 'marker-house-circle-price',
       html: `<div style="
@@ -314,8 +343,8 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
         height: 32px;
         border-radius: 50%;
         background: ${bgColor};
-        border: 3px solid white;
-        box-shadow: 0 2px 6px rgba(0,0,0,.4);
+        border: ${borderStyle};
+        box-shadow: ${shadowStyle};
         color: white;
         font-size: 10px;
         font-weight: bold;
@@ -417,17 +446,32 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
 
       // Всегда показываем цену, если она есть
       const icon = housePrice
-        ? createCirclePriceIcon(housePrice, hasActiveAds, isCurrentUserHouse)
+        ? createCirclePriceIcon(
+            housePrice,
+            hasActiveAds,
+            isCurrentUserHouse,
+            house.house_id,
+          )
         : isCurrentUserHouse
           ? new L.DivIcon({
               className: 'marker-current-house',
-              html: `<span style="display:inline-block;width:32px;height:32px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,.8);"></span>`,
+              html: `<span style="display:inline-block;width:32px;height:32px;border-radius:50%;background:#ef4444;border:${getBorderStyle(house.house_id)};box-shadow:0 0 6px rgba(0,0,0,.8);"></span>`,
               iconSize: [32, 32],
               iconAnchor: [16, 16],
             })
           : hasActiveAds
-            ? houseIcon
-            : inactiveHouseIcon
+            ? new L.DivIcon({
+                className: 'marker-house',
+                html: `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#f59e0b;border:${getBorderStyle(house.house_id)};box-shadow:0 0 4px rgba(0,0,0,.6);"></span>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+              })
+            : new L.DivIcon({
+                className: 'marker-house-inactive',
+                html: `<span style="display:inline-block;width:20px;height:20px;border-radius:50%;background:#9ca3af;border:${getBorderStyle(house.house_id)};box-shadow:0 0 4px rgba(0,0,0,.6);"></span>`,
+                iconSize: [24, 24],
+                iconAnchor: [12, 12],
+              })
 
       return {
         house,
@@ -463,11 +507,17 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
         groupPrices.length > 0 ? Math.min(...groupPrices) : null
 
       // Создаем иконку - либо с ценой, либо с количеством домов
+      // Find the house ID with the minimum price for border styling
+      const minPriceHouseId = minGroupPrice
+        ? group.find((h) => housePrices[h.house_id] === minGroupPrice)?.house_id
+        : group[0]?.house_id
+
       const groupIcon = minGroupPrice
         ? createCirclePriceIcon(
             minGroupPrice,
             hasActiveAds,
             hasCurrentUserHouse,
+            minPriceHouseId,
           )
         : new L.DivIcon({
             className: 'marker-house-group',
@@ -485,7 +535,7 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
                     ? '#f59e0b'
                     : '#9ca3af'
               };
-              border: 3px solid white;
+              border: ${getBorderStyle(minPriceHouseId || group[0]?.house_id)};
               box-shadow: 0 0 6px rgba(0,0,0,.6);
               color: white;
               font-weight: bold;
@@ -812,15 +862,9 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
           <div className='w-4 h-4 rounded-full bg-orange-500 border-2 border-white'></div>
           <span>Дома с активными объявлениями</span>
         </div>
-        <div className='flex items-center gap-2 mb-1'>
+        <div className='flex items-center gap-2'>
           <div className='w-4 h-4 rounded-full bg-gray-400 border-2 border-white'></div>
           <span>Дома только с неактивными</span>
-        </div>
-        <div className='flex items-center gap-2'>
-          <div className='w-5 h-5 rounded-full bg-orange-500 border-2 border-white flex items-center justify-center text-white text-xs font-bold'>
-            2
-          </div>
-          <span>Группа близких домов</span>
         </div>
       </div>
     </div>

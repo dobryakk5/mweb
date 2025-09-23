@@ -49,6 +49,7 @@ export default function MapWithPreview({
   } | null>(null)
   const [currentFlat, setCurrentFlat] = useState<any>(null)
   const [loadingFlat, setLoadingFlat] = useState(true)
+  const [viewedHouses, setViewedHouses] = useState<Set<number>>(new Set())
 
   // Load current flat data from API
   useEffect(() => {
@@ -162,6 +163,8 @@ export default function MapWithPreview({
     (house: any) => {
       console.log('House clicked:', house)
       setSelectedHouseId(house.house_id)
+      // Mark house as viewed
+      setViewedHouses((prev) => new Set(prev).add(house.house_id))
     },
     [setSelectedHouseId],
   )
@@ -248,6 +251,7 @@ export default function MapWithPreview({
             currentFlat={currentFlat}
             filters={flatFilters}
             selectedHouseId={selectedHouseId}
+            viewedHouses={viewedHouses}
             onBoundsChange={handleMapBoundsChange}
             onHouseClick={handleHouseClick}
             mapAds={mapAds}

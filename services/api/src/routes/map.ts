@@ -3,6 +3,42 @@ import { z } from 'zod'
 import { db } from '@acme/db'
 import { sql } from 'drizzle-orm'
 
+// Кеш для координат домов
+const houseCoordinatesCache = new Map<number, { lat: number; lng: number }>()
+
+// Функция для пакетной загрузки координат
+async function getHouseCoordinates(houseIds: number[]) {
+  const uncachedIds = houseIds.filter((id) => !houseCoordinatesCache.has(id))
+
+  if (uncachedIds.length > 0) {
+    const coordinates = await db.execute(sql`
+      SELECT house_id,
+             system.ST_Y(system.ST_Transform(centroid_utm, 4326)) as lat,
+             system.ST_X(system.ST_Transform(centroid_utm, 4326)) as lng
+      FROM system.moscow_geo
+      WHERE house_id = ANY(${uncachedIds})
+    `)
+
+    const rows = Array.isArray(coordinates)
+      ? coordinates
+      : (coordinates as any).rows || []
+
+    rows.forEach((coord: any) => {
+      houseCoordinatesCache.set(coord.house_id, {
+        lat: coord.lat,
+        lng: coord.lng,
+      })
+    })
+  }
+
+  return houseIds
+    .map((id) => ({
+      house_id: id,
+      ...houseCoordinatesCache.get(id),
+    }))
+    .filter((house) => house.lat && house.lng)
+}
+
 const getMapAdsSchema = z.object({
   lat: z.string().transform(Number).pipe(z.number().min(-90).max(90)),
   lng: z.string().transform(Number).pipe(z.number().min(-180).max(180)),
@@ -400,25 +436,38 @@ export default async (fastify: FastifyInstance) => {
         return reply.status(400).send({ error: 'No valid house IDs provided' })
       }
 
-      // Get house data by IDs from the same source as find_nearby_apartments
-      // Используем столбец house_id напрямую из system.moscow_geo
-      const houseDataPromises = houseIdArray.map(async (houseId) => {
-        const result = await db.execute(
+      // Use cached coordinates for better performance
+      const coordinatesData = await getHouseCoordinates(houseIdArray)
+
+      // Get additional address data for houses that have coordinates
+      const houseIdsWithCoords = coordinatesData.map((h) => h.house_id)
+
+      let addressData: any[] = []
+      if (houseIdsWithCoords.length > 0) {
+        const addressResult = await db.execute(
           sql`SELECT
             g.house_id,
-            CONCAT(g.street, ', ', g.housenum) as address,
-            system.ST_Y(system.ST_Transform(g.centroid_utm, 4326)) as lat,
-            system.ST_X(system.ST_Transform(g.centroid_utm, 4326)) as lng
+            CONCAT(g.street, ', ', g.housenum) as address
           FROM "system".moscow_geo g
-          WHERE g.house_id = ${houseId}
-          LIMIT 1`,
+          WHERE g.house_id = ANY(${houseIdsWithCoords})`,
         )
+        addressData = Array.isArray(addressResult)
+          ? addressResult
+          : (addressResult as any).rows || []
+      }
 
-        const rows = Array.isArray(result) ? result : (result as any).rows || []
-        return rows[0] || null
+      // Combine coordinates with address data
+      const housesData = coordinatesData.map((house) => {
+        const addressInfo = addressData.find(
+          (addr) => addr.house_id === house.house_id,
+        )
+        return {
+          house_id: house.house_id,
+          address: addressInfo?.address || `Дом ${house.house_id}`,
+          lat: house.lat,
+          lng: house.lng,
+        }
       })
-
-      const housesData = (await Promise.all(houseDataPromises)).filter(Boolean)
 
       return {
         houses: housesData,
@@ -973,6 +1022,122 @@ export default async (fastify: FastifyInstance) => {
       fastify.log.error(error)
       return reply.status(500).send({
         error: 'Failed to update ads statuses',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  })
+
+  // Get house address and type by house_id
+  fastify.get('/map/house-info/:houseId', async (request, reply) => {
+    try {
+      const { houseId } = z
+        .object({
+          houseId: z.string().transform(Number).pipe(z.number().int()),
+        })
+        .parse(request.params)
+
+      fastify.log.info(`Getting house info for house_id: ${houseId}`)
+
+      // First, get the house address from moscow_geo
+      const addressResult = await db.execute(
+        sql`SELECT CONCAT(street, ', ', housenum) as address
+            FROM "system".moscow_geo
+            WHERE house_id = ${houseId}
+            LIMIT 1`,
+      )
+
+      const addressData = Array.isArray(addressResult)
+        ? addressResult[0]
+        : (addressResult as any).rows?.[0]
+
+      if (!addressData?.address) {
+        return reply.status(404).send({
+          error: 'House address not found',
+          house_id: houseId,
+        })
+      }
+
+      // Get house_type_id from flats table
+      const houseTypeResult = await db.execute(
+        sql`SELECT house_type_id
+            FROM public.flats
+            WHERE house_id = ${houseId}
+            LIMIT 1`,
+      )
+
+      const houseTypeData = Array.isArray(houseTypeResult)
+        ? houseTypeResult[0]
+        : (houseTypeResult as any).rows?.[0]
+
+      let houseTypeName = 'Неизвестно'
+
+      if (houseTypeData?.house_type_id) {
+        // Get house type name from lookup_types
+        const typeNameResult = await db.execute(
+          sql`SELECT name
+              FROM "users".lookup_types
+              WHERE category = 'house_type' AND id = ${houseTypeData.house_type_id}
+              LIMIT 1`,
+        )
+
+        const typeNameData = Array.isArray(typeNameResult)
+          ? typeNameResult[0]
+          : (typeNameResult as any).rows?.[0]
+
+        if (typeNameData?.name) {
+          houseTypeName = typeNameData.name
+        }
+      }
+
+      fastify.log.info(
+        `House info for ${houseId}: address="${addressData.address}", type="${houseTypeName}"`,
+      )
+
+      return {
+        house_id: houseId,
+        address: addressData.address,
+        house_type: houseTypeName,
+        house_type_id: houseTypeData?.house_type_id || null,
+      }
+    } catch (error) {
+      fastify.log.error(error)
+      return reply.status(500).send({
+        error: 'Failed to get house info',
+        message: error instanceof Error ? error.message : 'Unknown error',
+      })
+    }
+  })
+
+  // Batch endpoint for house coordinates
+  fastify.post('/map/houses-coordinates', async (request, reply) => {
+    try {
+      const { houseIds } = z
+        .object({
+          houseIds: z.array(z.number().int()).max(1000), // Максимум 1000 домов за раз
+        })
+        .parse(request.body)
+
+      if (houseIds.length === 0) {
+        return { houses: [], count: 0 }
+      }
+
+      fastify.log.info(`Getting coordinates for ${houseIds.length} houses`)
+
+      const houses = await getHouseCoordinates(houseIds)
+
+      fastify.log.info(
+        `Returned ${houses.length} houses with coordinates (${houseCoordinatesCache.size} in cache)`,
+      )
+
+      return {
+        houses,
+        count: houses.length,
+        cached: houseCoordinatesCache.size,
+      }
+    } catch (error) {
+      fastify.log.error(error)
+      return reply.status(500).send({
+        error: 'Failed to get house coordinates',
         message: error instanceof Error ? error.message : 'Unknown error',
       })
     }

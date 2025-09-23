@@ -11,6 +11,7 @@ import {
   MinusIcon,
 } from '@acme/ui/components/icon'
 import type { AdData, FlatFilters } from '../hooks/use-map-ads-filter'
+import { useHouseInfo } from '../hooks/use-house-info'
 import {
   formatPrice,
   formatDateShort,
@@ -68,19 +69,19 @@ const AdItem = ({
 
     if (url.includes('cian.ru')) {
       return {
-        text: 'C',
+        text: 'cian',
         className: `bg-blue-100 text-blue-800 ${baseClasses}`,
       }
     }
     if (url.includes('avito.ru')) {
       return {
-        text: 'A',
+        text: 'avito',
         className: `bg-green-100 text-green-800 ${baseClasses}`,
       }
     }
     if (url.includes('yandex.ru')) {
       return {
-        text: 'Y',
+        text: 'yandex',
         className: `bg-red-100 text-red-800 ${baseClasses}`,
       }
     }
@@ -112,9 +113,6 @@ const AdItem = ({
         onClick={handleClick}
       >
         {ad.rooms}-к., {area} м², {floor} эт, {kitchen} кух
-        {!isActive && (
-          <span className='ml-2 text-xs text-gray-400'>(неактивно)</span>
-        )}
       </span>
       <div className='flex items-center gap-2 whitespace-nowrap'>
         <span
@@ -280,6 +278,15 @@ export default function AdsPreview({
   comparisonAds = [],
   showInitialLegend = false,
 }: AdsPreviewProps) {
+  // Fetch house info when a specific house is selected
+  const {
+    houseInfo,
+    loading: houseInfoLoading,
+    error: houseInfoError,
+  } = useHouseInfo({
+    houseId: selectedHouseId,
+    enabled: !!selectedHouseId,
+  })
   // Filter duplicates with source priority: Cian > Yandex > Avito
   const deduplicatedAds = useMemo(() => {
     const originalCount = ads.length
@@ -369,12 +376,25 @@ export default function AdsPreview({
         {/* House selection indicator */}
         {selectedHouseId && (
           <div className='mb-3 p-2 bg-blue-50 rounded-md border border-blue-200'>
-            <div className='text-sm text-blue-800'>
-              📍 Показаны объявления из дома #{selectedHouseId}
-            </div>
-            <div className='text-xs text-blue-600 mt-1'>
-              Сортировка: сначала активные, затем по цене
-            </div>
+            {houseInfoLoading ? (
+              <div className='text-sm text-blue-800 flex items-center'>
+                <Loader2Icon className='w-4 h-4 animate-spin mr-2' />📍 Загрузка
+                информации о доме...
+              </div>
+            ) : houseInfoError ? (
+              <div className='text-sm text-blue-800'>
+                📍 Показаны объявления из дома #{selectedHouseId}
+              </div>
+            ) : houseInfo ? (
+              <div className='text-sm text-blue-800'>
+                📍 {houseInfo.address}
+                {houseInfo.house_type_id ? ` (${houseInfo.house_type})` : ''}
+              </div>
+            ) : (
+              <div className='text-sm text-blue-800'>
+                📍 Показаны объявления из дома #{selectedHouseId}
+              </div>
+            )}
           </div>
         )}
 

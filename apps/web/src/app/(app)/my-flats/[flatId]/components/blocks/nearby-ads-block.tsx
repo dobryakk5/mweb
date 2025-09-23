@@ -24,23 +24,21 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
   comparisonAds,
   onSearchWithFilters,
 }: NearbyAdsBlockProps) {
-  // Находим активное объявление CIAN с минимальной ценой для базовых значений площадей
+  // Находим активное объявление с минимальной ценой для базовых значений площадей
   const getBaseAreaValues = () => {
-    const cianActiveAds = flatAds.filter(
+    const activeAdsWithAreas = flatAds.filter(
       (ad) =>
-        ad.url &&
-        ad.url.includes('cian.ru') &&
         (ad.status === true || ad.status === 1) &&
         ad.totalArea &&
         ad.kitchenArea,
     )
 
-    if (cianActiveAds.length === 0) {
+    if (activeAdsWithAreas.length === 0) {
       return { minArea: undefined, minKitchenArea: undefined }
     }
 
-    // Находим объявление с минимальной ценой среди активных CIAN
-    const minPriceAd = cianActiveAds.reduce((min, current) =>
+    // Находим объявление с минимальной ценой среди всех активных объявлений с площадями
+    const minPriceAd = activeAdsWithAreas.reduce((min, current) =>
       current.price && (!min.price || current.price < min.price)
         ? current
         : min,
@@ -75,25 +73,49 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
       // Получаем базовые значения площадей
       const baseAreaValues = getBaseAreaValues()
 
-      // Получаем минимальную цену из активных CIAN объявлений текущей квартиры
+      // Получаем минимальную цену из всех активных объявлений текущей квартиры
       const getMinPriceFromCurrentFlatAds = () => {
-        const cianActiveAds = flatAds.filter(
-          (ad) =>
-            ad.url &&
-            ad.url.includes('cian.ru') &&
-            (ad.status === true || ad.status === 1) &&
-            ad.price,
+        const allAds = flatAds.length
+        const activeAds = flatAds.filter(
+          (ad) => (ad.status === true || ad.status === 1) && ad.price,
         )
 
-        if (cianActiveAds.length === 0) return 50000000 // fallback
+        if (process.env.NODE_ENV === 'development') {
+          const timestamp = new Date().toISOString().slice(11, 23)
+          console.log(
+            `💰 [${timestamp}] PRICE_FILTER - Total ads: ${allAds}, Active ads: ${activeAds.length}`,
+          )
+          if (activeAds.length > 0) {
+            const prices = activeAds.map((ad) => ad.price).sort((a, b) => a - b)
+            const sources = activeAds.map((ad) => {
+              if (ad.url?.includes('cian.ru')) return 'cian'
+              if (ad.url?.includes('yandex.ru')) return 'yandex'
+              if (ad.url?.includes('avito.ru')) return 'avito'
+              return 'other'
+            })
+            console.log(`💰 [${timestamp}] Active prices:`, prices)
+            console.log(`💰 [${timestamp}] Active sources:`, sources)
+          }
+        }
 
-        const minPriceAd = cianActiveAds.reduce((min, current) =>
+        if (activeAds.length === 0) return 50000000 // fallback
+
+        const minPriceAd = activeAds.reduce((min, current) =>
           current.price && (!min.price || current.price < min.price)
             ? current
             : min,
         )
 
-        return minPriceAd.price || 50000000
+        const finalPrice = minPriceAd.price || 50000000
+
+        if (process.env.NODE_ENV === 'development') {
+          const timestamp = new Date().toISOString().slice(11, 23)
+          console.log(
+            `💰 [${timestamp}] MIN_PRICE - Selected: ${finalPrice} from ad: ${minPriceAd.url}`,
+          )
+        }
+
+        return finalPrice
       }
 
       const newDefaultFilters = {
