@@ -1,11 +1,14 @@
 'use client'
 
 import { useMemo } from 'react'
+import { buttonVariants } from '@acme/ui/components/button'
 import {
   Loader2Icon,
   FilterIcon,
   AlertCircleIcon,
   XIcon,
+  PlusIcon,
+  MinusIcon,
 } from '@acme/ui/components/icon'
 import type { AdData, FlatFilters } from '../hooks/use-map-ads-filter'
 import {
@@ -24,6 +27,10 @@ interface AdsPreviewProps {
   className?: string
   selectedHouseId?: number | null
   onClearHouseSelection?: () => void
+  onAddToComparison?: (ad: AdData) => void
+  onToggleComparison?: (ad: AdData) => void // Новый коллбек для toggle
+  comparisonAds?: AdData[] // Массив объявлений в сравнении
+  showInitialLegend?: boolean
 }
 
 interface AdItemProps {
@@ -31,33 +38,119 @@ interface AdItemProps {
   onHover?: () => void
   onLeave?: () => void
   onClick?: () => void
+  onAddToComparison?: () => void
+  onToggleComparison?: () => void
+  isInComparison?: boolean
 }
 
-const AdItem = ({ ad, onHover, onLeave, onClick }: AdItemProps) => {
+const AdItem = ({
+  ad,
+  onHover,
+  onLeave,
+  onClick,
+  onAddToComparison,
+  onToggleComparison,
+  isInComparison,
+}: AdItemProps) => {
   const area = ad.area ? Number(ad.area).toFixed(1) : '—'
   const kitchen = ad.kitchen_area ? Number(ad.kitchen_area).toFixed(1) : '—'
   const floor = ad.total_floors ? `${ad.floor}/${ad.total_floors}` : ad.floor
-  const domain = formatUrlForDisplay(ad.url).domain
+  const { domain } = formatUrlForDisplay(ad.url)
   const price = formatPrice(ad.price)
+
+  // Проверяем активность объявления (API может возвращать 0/1 или true/false)
+  const isActive = ad.is_active === true || ad.is_active === 1
+
+  // Определяем источник для бейджа
+  const getSourceBadge = (url: string) => {
+    const baseClasses = isActive ? '' : 'opacity-60'
+
+    if (url.includes('cian.ru')) {
+      return {
+        text: 'cian',
+        className: `bg-blue-100 text-blue-800 ${baseClasses}`,
+      }
+    }
+    if (url.includes('avito.ru')) {
+      return {
+        text: 'avito',
+        className: `bg-green-100 text-green-800 ${baseClasses}`,
+      }
+    }
+    if (url.includes('yandex.ru')) {
+      return {
+        text: 'yandex',
+        className: `bg-red-100 text-red-800 ${baseClasses}`,
+      }
+    }
+    return {
+      text: domain,
+      className: `bg-gray-100 text-gray-800 ${baseClasses}`,
+    }
+  }
+
+  const sourceBadge = getSourceBadge(ad.url)
 
   const handleClick = () => {
     window.open(ad.url, '_blank')
     onClick?.()
   }
 
+  // Классы для неактивных объявлений
+  const textColorClass = isActive ? 'text-black' : 'text-gray-500'
+  const hoverClass = isActive ? 'hover:bg-gray-50' : 'hover:bg-gray-25'
+
   return (
     <div
-      className='border-b border-gray-200 px-3 py-2 hover:bg-gray-50 cursor-pointer transition-colors text-sm flex justify-between items-center'
+      className={`border-b border-gray-200 px-3 py-2 ${hoverClass} transition-colors text-sm flex justify-between items-center ${isActive ? '' : 'opacity-75'}`}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
-      onClick={handleClick}
     >
-      <span className='truncate mr-2 text-black'>
-        {ad.rooms}-комн., {area} м², {floor} этаж, {kitchen} кухня {domain}
+      <span
+        className={`truncate mr-2 ${textColorClass} cursor-pointer`}
+        onClick={handleClick}
+      >
+        {ad.rooms}-комн., {area} м², {floor} этаж, {kitchen} кухня
+        {!isActive && (
+          <span className='ml-2 text-xs text-gray-400'>(неактивно)</span>
+        )}
       </span>
-      <span className='text-black whitespace-nowrap'>
-        <span className='font-bold'>{price}</span> млн ₽
-      </span>
+      <div className='flex items-center gap-2 whitespace-nowrap'>
+        <span
+          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${sourceBadge.className}`}
+        >
+          {sourceBadge.text}
+        </span>
+        <span className={textColorClass}>
+          <span className='font-bold'>{price}</span> млн ₽
+        </span>
+        {(onAddToComparison || onToggleComparison) && (
+          <button
+            className={buttonVariants({
+              variant: 'outline',
+              size: 'sm',
+            })}
+            onClick={(e) => {
+              e.stopPropagation()
+              if (isInComparison && onToggleComparison) {
+                onToggleComparison()
+              } else if (onAddToComparison) {
+                onAddToComparison()
+              }
+            }}
+            title={
+              isInComparison ? 'Убрать из сравнения' : 'Добавить в сравнение'
+            }
+            disabled={!isActive}
+          >
+            {isInComparison ? (
+              <MinusIcon className='h-4 w-4' />
+            ) : (
+              <PlusIcon className='h-4 w-4' />
+            )}
+          </button>
+        )}
+      </div>
     </div>
   )
 }
@@ -86,6 +179,49 @@ const FiltersBadges = ({ filters }: { filters: FlatFilters }) => {
           Кухня: {filters.minKitchenArea}+ м²
         </div>
       )}
+    </div>
+  )
+}
+
+const MapLegend = () => {
+  return (
+    <div className='p-6 text-center'>
+      <h3 className='text-lg font-medium text-gray-900 mb-4'>Легенда карты</h3>
+      <div className='space-y-4 text-left'>
+        {/* Мой дом */}
+        <div className='flex items-center gap-3'>
+          <div className='w-6 h-6 bg-red-500 rounded-full border-2 border-white shadow-md flex items-center justify-center'>
+            <div className='w-2 h-2 bg-white rounded-full'></div>
+          </div>
+          <span className='text-sm text-gray-700'>Мой дом</span>
+        </div>
+
+        {/* Дома с активными объявлениями */}
+        <div className='flex items-center gap-3'>
+          <div className='w-6 h-6 bg-green-500 rounded-full border-2 border-white shadow-md flex items-center justify-center'>
+            <span className='text-xs font-bold text-white'>₽</span>
+          </div>
+          <span className='text-sm text-gray-700'>
+            Дома с активными объявлениями
+          </span>
+        </div>
+
+        {/* Дома только с неактивными объявлениями */}
+        <div className='flex items-center gap-3'>
+          <div className='w-6 h-6 bg-gray-400 rounded-full border-2 border-white shadow-md flex items-center justify-center'>
+            <span className='text-xs font-bold text-white'>₽</span>
+          </div>
+          <span className='text-sm text-gray-700'>
+            Дома только с неактивными объявлениями
+          </span>
+        </div>
+      </div>
+
+      <div className='mt-6 p-3 bg-blue-50 rounded-lg'>
+        <p className='text-xs text-blue-600'>
+          💡 Передвигайте карту, чтобы увидеть объявления в выбранной области
+        </p>
+      </div>
     </div>
   )
 }
@@ -138,10 +274,25 @@ export default function AdsPreview({
   className = '',
   selectedHouseId,
   onClearHouseSelection,
+  onAddToComparison,
+  onToggleComparison,
+  comparisonAds = [],
+  showInitialLegend = false,
 }: AdsPreviewProps) {
-  // Sort ads by price (cheapest first)
+  // Sort ads: active first, then by price (cheapest first)
   const sortedAds = useMemo(() => {
-    return [...ads].sort((a, b) => a.price - b.price)
+    return [...ads].sort((a, b) => {
+      // Проверяем активность
+      const aActive = a.is_active === true || a.is_active === 1
+      const bActive = b.is_active === true || b.is_active === 1
+
+      // Сначала активные, потом неактивные
+      if (aActive && !bActive) return -1
+      if (!aActive && bActive) return 1
+
+      // В рамках одной группы (активные или неактивные) сортируем по цене
+      return a.price - b.price
+    })
   }, [ads])
 
   const handleAdHover = (ad: AdData) => {
@@ -200,7 +351,9 @@ export default function AdsPreview({
 
       {/* Content */}
       <div className='max-h-96 overflow-y-auto'>
-        {error ? (
+        {showInitialLegend ? (
+          <MapLegend />
+        ) : error ? (
           <ErrorState error={error} />
         ) : loading ? (
           <LoadingState />
@@ -208,15 +361,31 @@ export default function AdsPreview({
           <EmptyState />
         ) : (
           <div>
-            {sortedAds.map((ad, index) => (
-              <AdItem
-                key={`${ad.house_id}-${ad.floor}-${ad.rooms}-${index}`}
-                ad={ad}
-                onHover={() => handleAdHover(ad)}
-                onLeave={handleAdLeave}
-                onClick={() => handleAdClick(ad)}
-              />
-            ))}
+            {sortedAds.map((ad, index) => {
+              // Check if this ad is in comparison by URL
+              const isInComparison = comparisonAds.some(
+                (compAd) => compAd.url === ad.url,
+              )
+
+              return (
+                <AdItem
+                  key={`${ad.house_id}-${ad.floor}-${ad.rooms}-${index}`}
+                  ad={ad}
+                  onHover={() => handleAdHover(ad)}
+                  onLeave={handleAdLeave}
+                  onClick={() => handleAdClick(ad)}
+                  onAddToComparison={
+                    onAddToComparison ? () => onAddToComparison(ad) : undefined
+                  }
+                  onToggleComparison={
+                    onToggleComparison
+                      ? () => onToggleComparison(ad)
+                      : undefined
+                  }
+                  isInComparison={isInComparison}
+                />
+              )
+            })}
           </div>
         )}
       </div>

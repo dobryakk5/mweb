@@ -67,8 +67,8 @@
   - p_north, p_south, p_east, p_west - границы видимой области карты (bounds)
   - p_rooms - минимальное количество комнат (≥ комнат текущей квартиры)
   - p_max_price - максимальная цена (< цены текущей квартиры)
-  - p_min_area - минимальная площадь (95% от площади текущей квартиры)
-  - p_min_kitchen_area - минимальная площадь кухни (≥ кухни текущей квартиры)
+  - p_min_area - минимальная площадь (90% от площади текущей квартиры)
+  - p_min_kitchen_area - минимальная площадь кухни (≥ 90%кухни текущей квартиры)
 
   Логика работы:
 
@@ -147,6 +147,48 @@
 Оранжевые маркеры домов могут накладываться на красный маркер текущей квартиры, если они находятся по одному адресу.
 
 ### Решение (API-level)
+
+1. GET /map/ads-in-bounds (строка 978) - основной эндпоинт для
+  получения всех объявлений в границах карты с фильтрацией
+    - Параметры: north, south, east, west, rooms, maxPrice, minArea,
+  minKitchenArea, limit
+    - Использует функцию public.get_ads_in_bounds()
+  2. GET /map/houses-filtered (строка 553) - получение домов с
+  объявлениями в границах карты с фильтрацией
+    - Те же параметры + flatId для исключения текущей квартиры
+  3. GET /map/houses-in-bounds (строка 402) - получение домов с
+  объявлениями в границах карты без фильтрации по цене/площади
+  4. GET /map/house-ads (строка 169) - получение объявлений конкретного
+  дома по houseId
+
+    Как формируются значения в фильтре:
+
+  1. Базовые значения в nearby-ads-block.tsx:28-57:
+    - Ищутся активные объявления CIAN для текущей квартиры
+    - Берется объявление с минимальной ценой
+    - Из него извлекаются площади: totalArea * 0.9 и kitchenArea * 0.9
+  2. Инициализация фильтров в nearby-ads-block.tsx:62-67:
+  const [mapFilters, setMapFilters] = useState<FlatFilters>(() => ({
+    rooms: nearbyFilters?.rooms || flat.rooms || 3,
+    maxPrice: nearbyFilters?.maxPrice || nearbyFilters?.currentPrice || 50000000,
+    minArea: nearbyFilters?.minArea || baseAreaValues.minArea,
+    minKitchenArea: nearbyFilters?.minKitchenArea || baseAreaValues.minKitchenArea,
+  }))
+  3. Компонент фильтра nearby-ads-filter.tsx:32-38:
+    - Получает currentFilters и создает локальное состояние
+    - Пользователь может редактировать поля ввода
+    - При нажатии "Искать еще" вызывается onSearch
+  4. Обновление фильтров в nearby-ads-block.tsx:70-91:
+    - Обновляет mapFilters для карты
+    - Вызывает onSearchWithFilters для поиска
+
+  Источники значений по приоритету:
+  1. nearbyFilters (если переданы извне)
+  2. Данные квартиры (flat.rooms)
+  3. Базовые значения из активных CIAN объявлений
+  4. Fallback значения (50000000 для цены, 3 для комнат)
+
+
 1. **В API endpoint `/map/houses-in-bounds`:**
    ```sql
    -- Получаем адрес текущей квартиры
@@ -380,6 +422,19 @@ const AdsPreview: React.FC<AdsPreviewProps> = ({
   );
 };
 ```
+fix
+  ✅ 1. Fixed map filter logic to match "Объявления в области" filter behavior
+
+  - Added externalFilters prop to MapWithPreview component
+  - Implemented filter synchronization between NearbyAdsFilter form and map preview
+  - Map preview now uses the same filters as the "Объявления в области" block
+
+  ✅ 2. Implemented automatic ad status updates via Python API for cian ads
+
+  - Created new API endpoint /map/update-ads-statuses in map.ts
+  - Added automatic status update functionality to use-map-ads-filter.ts hook
+  - Status updates trigger automatically as a second step after loading data from database (no manual buttons as requested)
+  - Updates run after 500ms delay to allow initial data to display first
 
 ### 5. Последовательность работы
 

@@ -21,6 +21,10 @@ const NearbyMapComponent = dynamic(() => import('./nearby-map-component'), {
 interface MapWithPreviewProps {
   flatId: string
   className?: string
+  externalFilters?: FlatFilters // Optional external filters to override automatic ones
+  onAddToComparison?: (ad: AdData) => void
+  onToggleComparison?: (adId: number, inComparison: boolean) => Promise<void>
+  comparisonAds?: any[]
 }
 
 interface HoveredAdMarker {
@@ -32,6 +36,10 @@ interface HoveredAdMarker {
 export default function MapWithPreview({
   flatId,
   className = '',
+  externalFilters,
+  onAddToComparison,
+  onToggleComparison,
+  comparisonAds,
 }: MapWithPreviewProps) {
   const [hoveredAd, setHoveredAd] = useState<AdData | null>(null)
   const [selectedAd, setSelectedAd] = useState<AdData | null>(null)
@@ -77,8 +85,14 @@ export default function MapWithPreview({
     loadFlatData()
   }, [flatId])
 
-  // Create filters based on current flat parameters
+  // Create filters based on external filters or current flat parameters
   const flatFilters: FlatFilters = useMemo(() => {
+    // If external filters are provided, use them
+    if (externalFilters) {
+      return externalFilters
+    }
+
+    // Otherwise fallback to automatic filters from flat data
     if (!currentFlat) return { rooms: 1, maxPrice: 100000000 }
 
     return {
@@ -87,7 +101,7 @@ export default function MapWithPreview({
       minArea: currentFlat.area ? currentFlat.area * 0.95 : undefined,
       minKitchenArea: currentFlat.kitchen_area || undefined,
     }
-  }, [currentFlat])
+  }, [externalFilters, currentFlat])
 
   // Initialize ads filter hook
   const {
@@ -99,8 +113,11 @@ export default function MapWithPreview({
     setBounds,
     refetch,
     adsCount,
+    cachedAdsCount,
     selectedHouseId,
     setSelectedHouseId,
+    updateAdsStatuses,
+    isUpdatingStatuses,
   } = useMapAdsFilter({
     flatFilters,
     enabled: !loadingFlat && !!currentFlat,
@@ -137,6 +154,25 @@ export default function MapWithPreview({
     setSelectedHouseId(null)
   }, [setSelectedHouseId])
 
+  // Handle toggle comparison for map ads (which don't have database IDs)
+  const handleToggleMapAdComparison = useCallback(
+    async (ad: AdData) => {
+      if (!comparisonAds || !onToggleComparison || !onAddToComparison) return
+
+      // Check if this ad is already in comparison by URL
+      const existingAd = comparisonAds.find((compAd) => compAd.url === ad.url)
+
+      if (existingAd && existingAd.id) {
+        // Ad exists in database - remove from comparison
+        await onToggleComparison(existingAd.id, false)
+      } else {
+        // Ad doesn't exist in database - add it via onAddToComparison
+        await onAddToComparison(ad)
+      }
+    },
+    [comparisonAds, onToggleComparison, onAddToComparison],
+  )
+
   // Create markers for hovered ads to highlight on map
   const hoveredMarkers: HoveredAdMarker[] = useMemo(() => {
     if (!hoveredAd) return []
@@ -149,10 +185,18 @@ export default function MapWithPreview({
     ]
   }, [hoveredAd])
 
+  // Convert map ads to format compatible with AdsPreview comparisonAds
+  const mapComparisonAds = useMemo(() => {
+    if (!comparisonAds) return []
+    return ads.filter((ad) =>
+      comparisonAds.some((compAd) => compAd.url === ad.url),
+    )
+  }, [ads, comparisonAds])
+
   if (loadingFlat) {
     return (
       <div className={`flex gap-4 ${className}`}>
-        <div className='flex-1 min-h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
+        <div className='w-[600px] h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
         <div className='w-[28rem] min-h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
       </div>
     )
@@ -161,7 +205,7 @@ export default function MapWithPreview({
   if (!currentFlat) {
     return (
       <div className={`flex gap-4 ${className}`}>
-        <div className='flex-1 min-h-[600px] flex items-center justify-center bg-gray-50 rounded-lg'>
+        <div className='w-[600px] h-[600px] flex items-center justify-center bg-gray-50 rounded-lg'>
           <div className='text-center'>
             <div className='text-lg text-gray-600 mb-2'>
               Ошибка загрузки данных квартиры
@@ -179,13 +223,14 @@ export default function MapWithPreview({
   return (
     <div className={`flex gap-4 ${className}`}>
       {/* Map Container - Left side */}
-      <div className='flex-1 min-h-[600px]'>
-        <div className='h-[600px] rounded-lg border border-gray-200'>
+      <div className='w-[600px] h-[600px]'>
+        <div className='h-[600px] w-[600px] rounded-lg border border-gray-200'>
           <NearbyMapComponent
             flatAddress={currentFlat.address}
             nearbyAds={mapAds}
             currentFlat={currentFlat}
             filters={flatFilters}
+            selectedHouseId={selectedHouseId}
             onBoundsChange={handleMapBoundsChange}
             onHouseClick={handleHouseClick}
           />
@@ -203,6 +248,10 @@ export default function MapWithPreview({
           onAdClick={handleAdClick}
           selectedHouseId={selectedHouseId}
           onClearHouseSelection={handleClearHouseSelection}
+          onAddToComparison={onAddToComparison}
+          onToggleComparison={handleToggleMapAdComparison}
+          comparisonAds={mapComparisonAds}
+          showInitialLegend={false}
           className='h-[600px] sticky top-4'
         />
 
@@ -223,9 +272,12 @@ export default function MapWithPreview({
                 ? `${bounds.north.toFixed(4)}, ${bounds.south.toFixed(4)}`
                 : 'null'}
             </div>
-            <div>Ads count: {adsCount}</div>
+            <div>
+              Ads displayed: {adsCount} / cached: {cachedAdsCount}
+            </div>
             <div>Loading: {loading ? 'yes' : 'no'}</div>
             <div>Error: {error || 'none'}</div>
+            <div>House selected: {selectedHouseId || 'none'}</div>
           </div>
         )}
       </div>

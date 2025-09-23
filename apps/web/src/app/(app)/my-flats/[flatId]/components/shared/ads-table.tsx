@@ -336,6 +336,11 @@ export default function AdsTable({
         const totalFloors = ad.totalFloors || ad.total_floors || 0
         const compactKitchenArea = ad.kitchenArea || ad.kitchen_area || 0
         const price = ad.price || 0
+        const compactIsActive =
+          ad.is_active === true ||
+          ad.is_active === 1 ||
+          ad.status === true ||
+          ad.status === 1
 
         return (
           <div className='text-sm'>
@@ -343,7 +348,7 @@ export default function AdsTable({
               href={ad.url}
               target='_blank'
               rel='noopener noreferrer'
-              className='text-blue-600 hover:underline'
+              className={`${compactIsActive ? 'text-blue-600' : 'text-gray-400'} hover:underline`}
             >
               {rooms} комн.
             </a>
@@ -353,9 +358,14 @@ export default function AdsTable({
             {compactKitchenArea
               ? `, кухня ${Number(compactKitchenArea).toFixed(1)}`
               : ''}
-            <span className='ml-2 font-semibold'>
+            <span
+              className={`ml-2 font-semibold ${compactIsActive ? 'text-black' : 'text-gray-500'}`}
+            >
               {(price / 1000000).toFixed(1)} млн ₽
             </span>
+            {!compactIsActive && (
+              <span className='ml-2 text-xs text-gray-400'>(неактивно)</span>
+            )}
           </div>
         )
 
@@ -635,11 +645,18 @@ export default function AdsTable({
                 ? `${ad.id}-${ad.url || ''}-${index}`
                 : `no-id-${ad.url || ''}-${index}`
 
+              // Проверяем активность объявления (может быть status, is_active, или другое поле)
+              const isActive =
+                ad.is_active === true ||
+                ad.is_active === 1 ||
+                ad.status === true ||
+                ad.status === 1
+
               return (
                 <tr
                   key={uniqueKey}
                   className={`border-b transition-colors hover:bg-muted/50 data-[state=selected]:bg-muted ${
-                    !ad.status ? 'opacity-50' : ''
+                    !isActive ? 'opacity-60 text-gray-500' : ''
                   }`}
                 >
                   {columns.map((column) => (

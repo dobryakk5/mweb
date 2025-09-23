@@ -28,6 +28,7 @@ interface AdData {
   url: string
   updated_at: string
   distance_m: number
+  is_active: boolean | number // API может возвращать 0/1 или true/false
 }
 
 interface UseMapAdsFilterOptions {
@@ -39,7 +40,7 @@ interface UseMapAdsFilterOptions {
 
 interface UseMapAdsFilterReturn {
   ads: AdData[]
-  mapAds: AdData[] // Отдельные данные для карты (всегда все дома в области)
+  mapAds: AdData[] // Данные для карты (всегда все дома в области)
   loading: boolean
   error: string | null
   bounds: MapBounds | null
@@ -48,6 +49,9 @@ interface UseMapAdsFilterReturn {
   adsCount: number
   selectedHouseId: number | null
   setSelectedHouseId: (houseId: number | null) => void
+  updateAdsStatuses: () => Promise<void>
+  isUpdatingStatuses: boolean
+  cachedAdsCount: number // Количество объявлений в кеше
 }
 
 export const useMapAdsFilter = ({
@@ -57,65 +61,23 @@ export const useMapAdsFilter = ({
   selectedHouseId = null,
 }: UseMapAdsFilterOptions): UseMapAdsFilterReturn => {
   const [bounds, setBounds] = useState<MapBounds | null>(null)
-  const [ads, setAds] = useState<AdData[]>([])
-  const [mapAds, setMapAds] = useState<AdData[]>([]) // Отдельные данные для карты
+  const [ads, setAds] = useState<AdData[]>([]) // Отображаемые объявления (для preview)
+  const [cachedAds, setCachedAds] = useState<AdData[]>([]) // КЕШ всех объявлений в области
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
   const [currentSelectedHouseId, setCurrentSelectedHouseId] = useState<
     number | null
   >(selectedHouseId)
+  const [isUpdatingStatuses, setIsUpdatingStatuses] = useState(false)
 
   // Debounce bounds changes to avoid too many API calls
   const debouncedBounds = useDebounce(bounds, debounceMs)
 
-  // Create API URL from bounds and filters OR house-specific URL
-  const apiUrl = useMemo(() => {
-    if (!enabled) return null
+  // Debounce house selection to avoid multiple requests
+  const debouncedSelectedHouseId = useDebounce(currentSelectedHouseId, 100)
 
-    // If a house is selected, show ads for that specific house
-    if (currentSelectedHouseId) {
-      const params = new URLSearchParams({
-        houseId: currentSelectedHouseId.toString(),
-        maxPrice: flatFilters.maxPrice.toString(),
-        rooms: flatFilters.rooms.toString(),
-      })
-
-      if (flatFilters.minArea) {
-        params.append('minArea', flatFilters.minArea.toString())
-      }
-
-      if (flatFilters.minKitchenArea) {
-        params.append('minKitchenArea', flatFilters.minKitchenArea.toString())
-      }
-
-      return `${process.env.NEXT_PUBLIC_API_URL}/map/house-ads?${params}`
-    }
-
-    // Otherwise, show ads in bounds (default behavior)
-    if (!debouncedBounds) return null
-
-    const params = new URLSearchParams({
-      north: debouncedBounds.north.toString(),
-      south: debouncedBounds.south.toString(),
-      east: debouncedBounds.east.toString(),
-      west: debouncedBounds.west.toString(),
-      rooms: flatFilters.rooms.toString(),
-      maxPrice: flatFilters.maxPrice.toString(),
-    })
-
-    if (flatFilters.minArea) {
-      params.append('minArea', flatFilters.minArea.toString())
-    }
-
-    if (flatFilters.minKitchenArea) {
-      params.append('minKitchenArea', flatFilters.minKitchenArea.toString())
-    }
-
-    return `${process.env.NEXT_PUBLIC_API_URL}/map/ads-in-bounds?${params}`
-  }, [debouncedBounds, flatFilters, enabled, currentSelectedHouseId])
-
-  // Отдельный URL для данных карты - всегда показывает все дома в области
-  const mapApiUrl = useMemo(() => {
+  // URL для загрузки ВСЕХ объявлений в области (для кеша)
+  const cacheApiUrl = useMemo(() => {
     if (!enabled || !debouncedBounds) return null
 
     const params = new URLSearchParams({
@@ -125,6 +87,7 @@ export const useMapAdsFilter = ({
       west: debouncedBounds.west.toString(),
       rooms: flatFilters.rooms.toString(),
       maxPrice: flatFilters.maxPrice.toString(),
+      limit: '500', // Максимальный лимит для кеша
     })
 
     if (flatFilters.minArea) {
@@ -135,18 +98,69 @@ export const useMapAdsFilter = ({
       params.append('minKitchenArea', flatFilters.minKitchenArea.toString())
     }
 
-    return `${process.env.NEXT_PUBLIC_API_URL}/map/ads-in-bounds?${params}`
+    return `${process.env.NEXT_PUBLIC_API_URL}/map/ads?${params}`
   }, [debouncedBounds, flatFilters, enabled])
 
-  // Fetch ads function (для preview панели)
-  const fetchAds = useCallback(async () => {
-    if (!apiUrl) return
+  // Функция для применения фильтров к кешу (для отображения в preview)
+  const applyFiltersToCache = useCallback(
+    (houseId?: number | null): AdData[] => {
+      let filtered = cachedAds
+
+      // Если выбран дом - фильтруем по house_id
+      if (houseId) {
+        filtered = filtered.filter((ad) => ad.house_id === houseId)
+      }
+
+      // Применяем дополнительные фильтры
+      filtered = filtered.filter((ad) => {
+        // Фильтр по комнатам
+        if (ad.rooms < flatFilters.rooms) return false
+
+        // Фильтр по цене
+        if (ad.price >= flatFilters.maxPrice) return false
+
+        // Фильтр по общей площади
+        if (flatFilters.minArea && ad.area && ad.area < flatFilters.minArea)
+          return false
+
+        // Фильтр по кухне (включаем null значения)
+        if (
+          flatFilters.minKitchenArea &&
+          ad.kitchen_area &&
+          ad.kitchen_area < flatFilters.minKitchenArea
+        )
+          return false
+
+        return true
+      })
+
+      return filtered
+    },
+    [cachedAds, flatFilters],
+  )
+
+  // mapAds - всегда все объявления из кеша (для карты)
+  const mapAds = useMemo(() => {
+    return applyFiltersToCache() // Без фильтра по дому
+  }, [applyFiltersToCache])
+
+  // Функция для загрузки объявлений в кеш
+  const fetchAndCacheAds = useCallback(async () => {
+    if (!cacheApiUrl) return
 
     setLoading(true)
     setError(null)
 
     try {
-      const response = await fetch(apiUrl)
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(
+          `🗂️ [${timestamp}] CACHE_LOAD - Fetching all ads for bounds:`,
+          cacheApiUrl,
+        )
+      }
+
+      const response = await fetch(cacheApiUrl)
 
       if (!response.ok) {
         throw new Error(`HTTP error! status: ${response.status}`)
@@ -158,93 +172,123 @@ export const useMapAdsFilter = ({
         throw new Error(data.error)
       }
 
-      // Handle different API response structures
       const responseAds = data.ads || []
+      setCachedAds(responseAds)
 
-      // If it's from house-ads endpoint, transform the structure to match ads-in-bounds
-      if (currentSelectedHouseId && responseAds.length > 0) {
-        const transformedAds = responseAds.map((ad: any) => ({
-          ...ad,
-          lat: 0, // House ads don't need lat/lng for preview
-          lng: 0,
-          distance_m: 0,
-        }))
-        setAds(transformedAds)
-      } else {
-        setAds(responseAds)
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(
+          `✅ [${timestamp}] CACHE_LOADED - ${responseAds.length} ads cached`,
+        )
       }
     } catch (err) {
       const errorMessage =
         err instanceof Error ? err.message : 'Unknown error occurred'
       setError(errorMessage)
-      console.error('Error fetching ads in bounds:', err)
+      console.error('Error fetching and caching ads:', err)
     } finally {
       setLoading(false)
     }
-  }, [apiUrl, currentSelectedHouseId])
-
-  // Fetch map ads function (для карты - всегда все дома в области)
-  const fetchMapAds = useCallback(async () => {
-    if (!mapApiUrl) return
-
-    try {
-      const response = await fetch(mapApiUrl)
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
-      }
-
-      const responseAds = data.ads || []
-      setMapAds(responseAds)
-    } catch (err) {
-      console.error('Error fetching map ads:', err)
-    }
-  }, [mapApiUrl])
+  }, [cacheApiUrl])
 
   // Refetch function for manual refresh
   const refetch = useCallback(() => {
-    if (apiUrl) {
-      fetchAds()
-    }
-    if (mapApiUrl) {
-      fetchMapAds()
-    }
-  }, [fetchAds, fetchMapAds, apiUrl, mapApiUrl])
+    fetchAndCacheAds()
+  }, [fetchAndCacheAds])
 
-  // Auto-fetch when apiUrl changes (для preview панели)
+  // Загружаем кеш при изменении bounds (движение карты)
   useEffect(() => {
-    if (apiUrl) {
-      fetchAds()
+    if (cacheApiUrl) {
+      fetchAndCacheAds().then(() => {
+        // Автоматически обновляем статусы после загрузки данных из БД
+        setTimeout(() => {
+          updateAdsStatuses()
+        }, 500)
+      })
     } else {
-      setAds([])
+      setCachedAds([])
       setError(null)
     }
-  }, [fetchAds, apiUrl])
+  }, [cacheApiUrl])
 
-  // Auto-fetch when mapApiUrl changes (для карты)
+  // Обновляем отображаемые объявления при изменении выбранного дома
   useEffect(() => {
-    if (mapApiUrl) {
-      fetchMapAds()
-    } else {
-      setMapAds([])
+    if (process.env.NODE_ENV === 'development') {
+      const timestamp = new Date().toISOString().slice(11, 23)
+      if (debouncedSelectedHouseId) {
+        console.log(
+          `🏠 [${timestamp}] HOUSE_FILTER - Filtering cache for house ${debouncedSelectedHouseId}`,
+        )
+      } else {
+        console.log(
+          `🗺️ [${timestamp}] BOUNDS_FILTER - Showing all ads in bounds`,
+        )
+      }
     }
-  }, [fetchMapAds, mapApiUrl])
+
+    // Фильтруем кеш в зависимости от выбранного дома
+    const filteredAds = applyFiltersToCache(debouncedSelectedHouseId)
+    setAds(filteredAds)
+
+    if (process.env.NODE_ENV === 'development') {
+      const timestamp = new Date().toISOString().slice(11, 23)
+      console.log(
+        `📊 [${timestamp}] FILTERED - Showing ${filteredAds.length} ads from cache of ${cachedAds.length}`,
+      )
+    }
+  }, [debouncedSelectedHouseId, applyFiltersToCache, cachedAds.length])
 
   // Clear data when disabled
   useEffect(() => {
     if (!enabled) {
       setAds([])
-      setMapAds([])
+      setCachedAds([])
       setError(null)
       setLoading(false)
     }
   }, [enabled])
+
+  // Function to update ads statuses via Python API
+  const updateAdsStatuses = useCallback(async () => {
+    if (!debouncedBounds || isUpdatingStatuses) return
+
+    setIsUpdatingStatuses(true)
+    try {
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/map/update-ads-statuses`,
+        {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            north: debouncedBounds.north,
+            south: debouncedBounds.south,
+            east: debouncedBounds.east,
+            west: debouncedBounds.west,
+            rooms: Number(flatFilters.rooms),
+            maxPrice: Number(flatFilters.maxPrice),
+            minArea: flatFilters.minArea
+              ? Number(flatFilters.minArea)
+              : undefined,
+            minKitchenArea: flatFilters.minKitchenArea
+              ? Number(flatFilters.minKitchenArea)
+              : undefined,
+          }),
+        },
+      )
+
+      if (response.ok) {
+        const result = await response.json()
+        console.log('Ads status update result:', result)
+
+        // Refetch cache to get updated statuses
+        fetchAndCacheAds()
+      }
+    } catch (error) {
+      console.error('Error updating ads statuses:', error)
+    } finally {
+      setIsUpdatingStatuses(false)
+    }
+  }, [debouncedBounds, flatFilters, isUpdatingStatuses, fetchAndCacheAds])
 
   return {
     ads,
@@ -255,8 +299,11 @@ export const useMapAdsFilter = ({
     setBounds,
     refetch,
     adsCount: ads.length,
+    cachedAdsCount: cachedAds.length,
     selectedHouseId: currentSelectedHouseId,
     setSelectedHouseId: setCurrentSelectedHouseId,
+    updateAdsStatuses,
+    isUpdatingStatuses,
   }
 }
 

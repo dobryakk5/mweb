@@ -53,14 +53,14 @@ export default function NearbyAdsFilter({
               maxPrice: parseFloat(e.target.value) * 1000000,
             })
           }
-          className='w-16 h-8 text-xs'
+          className='w-12 h-8 text-xs'
           placeholder='36.2'
         />
         <span className='text-xs text-gray-600'>млн</span>
       </div>
 
       <div className='flex items-center gap-1'>
-        <span className='text-xs text-gray-600'>Комнат:</span>
+        <span className='text-xs text-gray-600'>Комнат от:</span>
         <Input
           type='number'
           min='1'
@@ -69,7 +69,7 @@ export default function NearbyAdsFilter({
           onChange={(e) =>
             setFilters({ ...filters, rooms: parseInt(e.target.value) || 1 })
           }
-          className='w-12 h-8 text-xs'
+          className='w-8 h-8 text-xs'
         />
       </div>
 
@@ -86,7 +86,7 @@ export default function NearbyAdsFilter({
             })
           }
           placeholder='50'
-          className='w-12 h-8 text-xs'
+          className='w-10 h-8 text-xs'
         />
         <span className='text-xs text-gray-600'>м²</span>
       </div>
@@ -106,7 +106,7 @@ export default function NearbyAdsFilter({
             })
           }
           placeholder='7'
-          className='w-12 h-8 text-xs'
+          className='w-8 h-8 text-xs'
         />
         <span className='text-xs text-gray-600'>м²</span>
       </div>

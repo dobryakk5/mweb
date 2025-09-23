@@ -1,6 +1,13 @@
 'use client'
 
-import React, { useEffect, useState, useCallback, useMemo, useRef } from 'react'
+import React, {
+  useEffect,
+  useState,
+  useCallback,
+  useMemo,
+  useRef,
+  memo,
+} from 'react'
 import {
   MapContainer,
   TileLayer,
@@ -18,6 +25,7 @@ interface NearbyMapComponentProps {
   flatCoordinates?: { lat: number; lng: number }
   nearbyAds: any[]
   currentFlat?: any
+  selectedHouseId?: number | null
   onHouseClick?: (house: any) => void
   onBoundsChange?: (bounds: {
     north: number
@@ -56,16 +64,16 @@ function MapEventHandler({
   return null
 }
 
-export default function NearbyMapComponent({
+const NearbyMapComponent = memo(function NearbyMapComponent({
   flatAddress,
   flatCoordinates,
   nearbyAds,
   currentFlat,
+  selectedHouseId,
   onHouseClick,
   onBoundsChange,
   filters,
 }: NearbyMapComponentProps) {
-  // const [houses, setHouses] = useState<any[]>([]) // Больше не нужно - используем nearbyAds
   const [housePrices, setHousePrices] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(false)
   const [loadingPrices, setLoadingPrices] = useState(false)
@@ -82,6 +90,9 @@ export default function NearbyMapComponent({
   const handleMapBoundsChange = useCallback(
     (bounds: L.LatLngBounds) => {
       setMapBounds(bounds)
+
+      // Новая логика: устанавливаем bounds для загрузки домов
+      setCurrentBounds(bounds)
 
       // Если передан onBoundsChange callback (новая система preview), вызываем его
       if (onBoundsChange) {
@@ -126,8 +137,6 @@ export default function NearbyMapComponent({
       loadCurrentFlatHouseId()
     }
   }, [flatAddress])
-
-  // This useEffect will be moved after loadHousesInBounds definition
 
   const loadAddressCoordinates = async () => {
     try {
@@ -203,60 +212,6 @@ export default function NearbyMapComponent({
     }
   }, [])
 
-  const loadHousesInBounds = useCallback(
-    async (bounds: L.LatLngBounds, flatId: number) => {
-      setLoading(true)
-      try {
-        const north = bounds.getNorth()
-        const south = bounds.getSouth()
-        const east = bounds.getEast()
-        const west = bounds.getWest()
-
-        // КАРТА ВСЕГДА показывает ВСЕ дома без фильтрации
-        // Фильтрация только для preview панели через отдельный API
-        const url = `${process.env.NEXT_PUBLIC_API_URL}/map/houses-in-bounds?north=${north}&south=${south}&east=${east}&west=${west}&flatId=${flatId}`
-        console.log('Loading all houses in bounds:', {
-          north,
-          south,
-          east,
-          west,
-        })
-
-        const response = await fetch(url)
-        console.log('Response status:', response.status)
-
-        if (!response.ok) {
-          console.error('Failed to load houses in bounds:', response.status)
-          // setHouses([]) // Больше не используется
-          return
-        }
-
-        const data = await response.json()
-        console.log('Houses in bounds data:', data)
-
-        // API уже исключает дома по тому же адресу, что и текущая квартира
-        const housesData = data.houses || []
-        // setHouses(housesData) // Больше не используется
-
-        // Load prices for houses after setting houses
-        const houseIds = housesData.map((house: any) => house.house_id)
-        if (houseIds.length > 0) {
-          loadHousePrices(houseIds)
-        }
-      } catch (error) {
-        console.error('Error loading houses in bounds:', error)
-        // setHouses([]) // Больше не используется
-      } finally {
-        setLoading(false)
-      }
-    },
-    [filters, loadHousePrices],
-  )
-
-  // Загружаем дома когда меняются bounds карты
-  // Маркеры домов теперь создаются на основе nearbyAds (отфильтрованные данные)
-  // useEffect для загрузки домов больше не нужен
-
   const createPriceIcon = (
     price: number,
     isActive: boolean,
@@ -291,6 +246,9 @@ export default function NearbyMapComponent({
   }
 
   const handleHouseClick = (house: any) => {
+    // Сохраняем данные выбранного дома, чтобы он оставался видимым даже без объявлений
+    setSelectedHouseData(house)
+
     if (onHouseClick) {
       onHouseClick(house)
     }
@@ -307,18 +265,26 @@ export default function NearbyMapComponent({
       const group = [house]
       processed.add(index)
 
-      // Ищем дома в радиусе minDistance метров
+      // Ищем дома с тем же house_id или в радиусе minDistance метров
       houses.forEach((otherHouse, otherIndex) => {
         if (processed.has(otherIndex) || index === otherIndex) return
 
+        // ПРИОРИТЕТ 1: Дома с одинаковым house_id всегда группируются вместе
+        const sameHouseId =
+          house.house_id &&
+          otherHouse.house_id &&
+          house.house_id === otherHouse.house_id
+
+        // ПРИОРИТЕТ 2: Дома в радиусе minDistance метров (только если разные house_id)
         const distance = calculateDistance(
           house.lat,
           house.lng,
           otherHouse.lat,
           otherHouse.lng,
         )
+        const nearbyHouses = distance <= minDistance
 
-        if (distance <= minDistance) {
+        if (sameHouseId || nearbyHouses) {
           group.push(otherHouse)
           processed.add(otherIndex)
         }
@@ -408,12 +374,20 @@ export default function NearbyMapComponent({
         (h) => h.has_active_ads === true || h.active_ads_count > 0,
       )
 
+      // Определяем адрес группы в зависимости от того, одинаковые ли house_id
+      const uniqueHouseIds = [...new Set(group.map((h) => h.house_id))]
+      const isOneLogicalHouse = uniqueHouseIds.length === 1
+
       // Создаем маркер группы (красный если содержит дом пользователя)
       const bgColor = hasCurrentUserHouse
         ? '#ef4444'
         : hasActiveAds
           ? '#f59e0b'
           : '#9ca3af'
+
+      // Для одного логического дома показываем "1", для группы - количество уникальных домов
+      const displayNumber = isOneLogicalHouse ? 1 : uniqueHouseIds.length
+
       const groupIcon = new L.DivIcon({
         className: 'marker-house-group',
         html: `<div style="
@@ -429,15 +403,21 @@ export default function NearbyMapComponent({
           color: white;
           font-weight: bold;
           font-size: 12px;
-        ">${group.length}</div>`,
+        ">${displayNumber}</div>`,
         iconSize: [32, 32],
         iconAnchor: [16, 16],
       })
 
+      const groupAddress = isOneLogicalHouse
+        ? group[0].address || `Дом ${uniqueHouseIds[0]}` // Один логический дом
+        : `${uniqueHouseIds.length} домов` // Несколько разных домов
+
       return {
         house: {
-          house_id: `group-${group.map((h) => h.house_id).join('-')}`,
-          address: `${group.length} домов`,
+          house_id: isOneLogicalHouse
+            ? uniqueHouseIds[0]
+            : `group-${uniqueHouseIds.join('-')}`,
+          address: groupAddress,
           lat: centerLat,
           lng: centerLng,
           ads_count: totalAds,
@@ -452,48 +432,143 @@ export default function NearbyMapComponent({
     }
   }
 
-  // Создаем дома на основе отфильтрованных объявлений из nearbyAds
-  const housesFromAds = useMemo(() => {
-    if (!nearbyAds || nearbyAds.length === 0) return []
+  // State для хранения выбранного дома
+  const [selectedHouseData, setSelectedHouseData] = useState<any>(null)
 
-    // Группируем объявления по house_id
-    const houseMap = new Map()
+  // State для домов из API
+  const [housesFromAPI, setHousesFromAPI] = useState<any[]>([])
+  const [loadingHouses, setLoadingHouses] = useState(false)
+  const [currentBounds, setCurrentBounds] = useState<any>(null)
 
-    nearbyAds.forEach((ad) => {
-      if (!ad.house_id || !ad.lat || !ad.lng) return
+  // Очищаем данные выбранного дома при сбросе selectedHouseId
+  useEffect(() => {
+    if (!selectedHouseId) {
+      setSelectedHouseData(null)
+    }
+  }, [selectedHouseId])
 
-      if (!houseMap.has(ad.house_id)) {
-        houseMap.set(ad.house_id, {
-          house_id: ad.house_id,
-          lat: ad.lat,
-          lng: ad.lng,
-          address: `Дом ${ad.house_id}`,
-          active_ads_count: 0,
-          total_ads_count: 0,
-          has_active_ads: false,
-          dist_m: ad.distance_m || 0,
-        })
+  // Функция загрузки домов из API
+  const fetchHousesInBounds = useCallback(async (bounds: any, filters: any) => {
+    if (!bounds) return
+
+    setLoadingHouses(true)
+    try {
+      const params = new URLSearchParams({
+        north: bounds.north.toString(),
+        south: bounds.south.toString(),
+        east: bounds.east.toString(),
+        west: bounds.west.toString(),
+      })
+
+      if (filters?.rooms) params.append('rooms', filters.rooms.toString())
+      if (filters?.maxPrice)
+        params.append('maxPrice', filters.maxPrice.toString())
+      if (filters?.minArea) params.append('minArea', filters.minArea.toString())
+      if (filters?.minKitchenArea)
+        params.append('minKitchenArea', filters.minKitchenArea.toString())
+
+      const url = `${process.env.NEXT_PUBLIC_API_URL}/map/houses-in-bounds?${params}`
+
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(`🏠 [${timestamp}] Fetching houses from API:`, url)
       }
 
-      const house = houseMap.get(ad.house_id)
-      house.total_ads_count++
-
-      // Проверяем активность объявления (примерная логика)
-      const isActive =
-        ad.updated_at &&
-        new Date(ad.updated_at) >
-          new Date(Date.now() - 30 * 24 * 60 * 60 * 1000) // активно если обновлено в последние 30 дней
-      if (isActive) {
-        house.active_ads_count++
-        house.has_active_ads = true
+      const response = await fetch(url)
+      if (!response.ok) {
+        throw new Error(`HTTP error! status: ${response.status}`)
       }
-    })
 
-    return Array.from(houseMap.values())
-  }, [nearbyAds])
+      const data = await response.json()
+      const houses = data.houses || []
+
+      setHousesFromAPI(houses)
+
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(`🏠 [${timestamp}] Loaded ${houses.length} houses from API`)
+      }
+    } catch (error) {
+      console.error('Error fetching houses:', error)
+      setHousesFromAPI([])
+    } finally {
+      setLoadingHouses(false)
+    }
+  }, [])
+
+  // Загружаем дома когда изменяются bounds или фильтры
+  useEffect(() => {
+    if (currentBounds && filters) {
+      const boundsObj = {
+        north: currentBounds.getNorth(),
+        south: currentBounds.getSouth(),
+        east: currentBounds.getEast(),
+        west: currentBounds.getWest(),
+      }
+      fetchHousesInBounds(boundsObj, filters)
+    }
+  }, [currentBounds, filters, fetchHousesInBounds])
+
+  // Добавляем текущий дом пользователя и выбранный дом, если их нет в housesFromAPI
+  const allHouses = useMemo(() => {
+    let houses = [...housesFromAPI]
+
+    // Проверяем, есть ли дом пользователя в отфильтрованных домах
+    const hasCurrentUserHouse =
+      currentFlatHouseId &&
+      houses.some((house) => house.house_id === currentFlatHouseId)
+
+    // Если дома пользователя нет и у нас есть координаты, добавляем его
+    if (!hasCurrentUserHouse && currentFlatHouseId && addressCoordinates) {
+      // Логируем только один раз при добавлении
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(
+          `🏠 [${timestamp}] Adding current user house to map: ${currentFlatHouseId}`,
+        )
+      }
+
+      houses.push({
+        house_id: currentFlatHouseId,
+        lat: addressCoordinates.lat,
+        lng: addressCoordinates.lng,
+        address: flatAddress,
+        active_ads_count: 0,
+        total_ads_count: 0,
+        has_active_ads: false,
+        dist_m: 0,
+      })
+    }
+
+    // Проверяем, есть ли выбранный дом в отфильтрованных домах
+    const hasSelectedHouse =
+      selectedHouseId &&
+      houses.some((house) => house.house_id === selectedHouseId)
+
+    // Если выбранного дома нет и у нас есть его данные, добавляем его
+    if (!hasSelectedHouse && selectedHouseId && selectedHouseData) {
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(
+          `🏠 [${timestamp}] Adding selected house to map: ${selectedHouseId}`,
+        )
+      }
+
+      houses.push(selectedHouseData)
+    }
+
+    return houses
+  }, [
+    housesFromAPI,
+    currentFlatHouseId,
+    addressCoordinates,
+    flatAddress,
+    selectedHouseId,
+    selectedHouseData,
+  ])
 
   // Группируем дома по близости
-  const houseGroups = groupNearbyHouses(housesFromAds, 50) // 50 метров минимальное расстояние
+  const houseGroups = groupNearbyHouses(allHouses, 50) // 50 метров минимальное расстояние
   const markers = houseGroups.map((group) => createGroupMarker(group))
 
   // Определяем центр и зум карты
@@ -517,7 +592,7 @@ export default function NearbyMapComponent({
 
       <MapContainer
         center={mapCenter}
-        zoom={16}
+        zoom={15}
         style={{ height: '100%', width: '100%' }}
         className='rounded-lg border'
         attributionControl={false}
@@ -651,4 +726,6 @@ export default function NearbyMapComponent({
       </div>
     </div>
   )
-}
+})
+
+export default NearbyMapComponent
