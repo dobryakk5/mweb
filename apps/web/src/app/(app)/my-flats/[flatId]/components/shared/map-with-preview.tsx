@@ -64,6 +64,16 @@ export default function MapWithPreview({
         }
 
         const data = await response.json()
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log(`🏠 [MAP] Loading flat ${flatId}:`, {
+            flatId,
+            address: data.flat?.address,
+            rooms: data.flat?.rooms,
+            floor: data.flat?.floor,
+          })
+        }
+
         setCurrentFlat(data.flat)
       } catch (error) {
         console.error('Error loading flat data:', error)
@@ -126,6 +136,13 @@ export default function MapWithPreview({
 
   // Handle map bounds change from the map component
   const handleMapBoundsChange = useCallback((newBounds: MapBounds) => {
+    if (process.env.NODE_ENV === 'development') {
+      const timestamp = new Date().toISOString().slice(11, 23)
+      console.log(
+        `🗺️ [${timestamp}] MAP_BOUNDS_CHANGE:`,
+        `N:${newBounds.north.toFixed(4)} S:${newBounds.south.toFixed(4)} E:${newBounds.east.toFixed(4)} W:${newBounds.west.toFixed(4)}`,
+      )
+    }
     setBounds(newBounds)
   }, [])
 
@@ -233,6 +250,7 @@ export default function MapWithPreview({
             selectedHouseId={selectedHouseId}
             onBoundsChange={handleMapBoundsChange}
             onHouseClick={handleHouseClick}
+            mapAds={mapAds}
           />
         </div>
       </div>

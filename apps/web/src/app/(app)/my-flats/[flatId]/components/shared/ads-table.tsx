@@ -32,6 +32,7 @@ import {
   getDisplayCreatedDate,
   getDisplayUpdatedDate,
   isStatusOldFromSource,
+  deduplicateAdsBySourcePriority,
 } from '../utils/ad-formatters'
 
 /**
@@ -77,9 +78,14 @@ export default function AdsTable({
     }
   }, [openFilterKey])
 
+  // Дедупликация объявлений с приоритетом источников
+  const deduplicatedAds = useMemo(() => {
+    return deduplicateAdsBySourcePriority(ads)
+  }, [ads])
+
   // Функция для фильтрации данных
   const filteredAds = useMemo(() => {
-    return ads.filter((ad) => {
+    return deduplicatedAds.filter((ad) => {
       return Object.entries(filters).every(([key, filterValue]) => {
         if (!filterValue && filterValue !== false) return true
 
@@ -109,7 +115,7 @@ export default function AdsTable({
         return true
       })
     })
-  }, [ads, filters])
+  }, [deduplicatedAds, filters])
 
   // Функция для сортировки данных
   const sortedAds = useMemo(() => {
@@ -350,7 +356,7 @@ export default function AdsTable({
               rel='noopener noreferrer'
               className={`${compactIsActive ? 'text-blue-600' : 'text-gray-400'} hover:underline`}
             >
-              {rooms} комн.
+              {rooms} к.
             </a>
             {compactArea ? `, ${Number(compactArea).toFixed(1)} м²` : ''}
             {floor ? `, ${floor}` : ''}
@@ -361,7 +367,7 @@ export default function AdsTable({
             <span
               className={`ml-2 font-semibold ${compactIsActive ? 'text-black' : 'text-gray-500'}`}
             >
-              {(price / 1000000).toFixed(1)} млн ₽
+              {(price / 1000000).toFixed(1)} млн
             </span>
             {!compactIsActive && (
               <span className='ml-2 text-xs text-gray-400'>(неактивно)</span>

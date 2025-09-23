@@ -451,26 +451,57 @@ export default async (fastify: FastifyInstance) => {
         return reply.status(400).send({ error: 'No valid house IDs provided' })
       }
 
-      // Get minimum price for each house
-      const pricePromises = houseIdArray.map(async (houseId) => {
-        const result = await db.execute(
-          sql`SELECT
-            ${houseId} as house_id,
-            MIN(price) as min_price
-          FROM public.flats_history
-          WHERE house_id = ${houseId} AND price > 0 AND is_actual = 1
-          LIMIT 1`,
-        )
+      // Limit the number of house IDs to prevent timeout
+      if (houseIdArray.length > 100) {
+        return reply.status(400).send({
+          error: 'Too many house IDs provided. Maximum is 100.',
+        })
+      }
 
-        const rows = Array.isArray(result) ? result : (result as any).rows || []
-        return rows[0] || { house_id: houseId, min_price: null }
-      })
+      fastify.log.info(`Getting prices for ${houseIdArray.length} houses`)
 
-      const housePrices = await Promise.all(pricePromises)
+      // Process in batches of 20 to avoid overwhelming the database
+      const batchSize = 20
+      const allResults: any[] = []
+
+      for (let i = 0; i < houseIdArray.length; i += batchSize) {
+        const batch = houseIdArray.slice(i, i + batchSize)
+
+        const batchPromises = batch.map(async (houseId) => {
+          try {
+            const result = await db.execute(
+              sql`SELECT
+                ${houseId} as house_id,
+                MIN(price) as min_price
+              FROM public.flats_history
+              WHERE house_id = ${houseId} AND price > 0 AND is_actual = 1
+              LIMIT 1`,
+            )
+
+            const rows = Array.isArray(result)
+              ? result
+              : (result as any).rows || []
+            return rows[0] || { house_id: houseId, min_price: null }
+          } catch (error) {
+            fastify.log.error(
+              `Error getting price for house ${houseId}:`,
+              error,
+            )
+            return { house_id: houseId, min_price: null }
+          }
+        })
+
+        const batchResults = await Promise.all(batchPromises)
+        allResults.push(...batchResults)
+      }
+
+      fastify.log.info(
+        `Successfully got prices for ${allResults.length} houses`,
+      )
 
       return {
-        prices: housePrices,
-        count: housePrices.length,
+        prices: allResults,
+        count: allResults.length,
       }
     } catch (error) {
       fastify.log.error(error)

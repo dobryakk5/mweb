@@ -39,6 +39,7 @@ interface NearbyMapComponentProps {
     minArea?: number
     minKitchenArea?: number
   }
+  mapAds?: any[] // Cached ads data from useMapAdsFilter
 }
 
 // Component to handle map events
@@ -73,6 +74,7 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   onHouseClick,
   onBoundsChange,
   filters,
+  mapAds = [],
 }: NearbyMapComponentProps) {
   const [housePrices, setHousePrices] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(false)
@@ -141,7 +143,17 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   const loadAddressCoordinates = async () => {
     try {
       const url = `${process.env.NEXT_PUBLIC_API_URL}/map/address-coordinates?address=${encodeURIComponent(flatAddress)}`
-      console.log('Loading address coordinates:', url)
+
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(
+          `🗺️ [${timestamp}] MAP_CENTER - Loading coordinates for address:`,
+          {
+            flatAddress,
+            url,
+          },
+        )
+      }
 
       const response = await fetch(url)
       if (response.ok) {
@@ -185,32 +197,67 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
     }
   }
 
-  const loadHousePrices = useCallback(async (houseIds: number[]) => {
-    if (houseIds.length === 0) return
+  // Calculate house prices from cached ads data instead of separate API calls
+  const calculateHousePricesFromCache = useCallback(
+    (houseIds: number[]) => {
+      if (houseIds.length === 0 || mapAds.length === 0) return
 
-    setLoadingPrices(true)
-    try {
-      const url = `${process.env.NEXT_PUBLIC_API_URL}/map/house-prices?houseIds=${houseIds.join(',')}`
-      const response = await fetch(url)
+      const pricesMap: Record<number, number> = {}
 
-      if (response.ok) {
-        const data = await response.json()
-        const pricesMap: Record<number, number> = {}
-
-        data.prices.forEach((item: any) => {
-          if (item.min_price) {
-            pricesMap[item.house_id] = item.min_price
-          }
-        })
-
-        setHousePrices(pricesMap)
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(
+          `🏠 [${timestamp}] CACHE_PRICES - Calculating house prices from ${mapAds.length} cached ads for ${houseIds.length} houses`,
+        )
       }
-    } catch (error) {
-      console.error('Error loading house prices:', error)
-    } finally {
-      setLoadingPrices(false)
-    }
-  }, [])
+
+      // Apply filters to ads (similar to what we show in preview)
+      const filteredAds = mapAds.filter((ad: any) => {
+        // Filter by rooms
+        if (filters?.rooms && ad.rooms < filters.rooms) return false
+
+        // Filter by price (include ads with price <= maxPrice)
+        if (filters?.maxPrice && ad.price > filters.maxPrice) return false
+
+        // Filter by area
+        if (filters?.minArea && ad.area && ad.area < filters.minArea)
+          return false
+
+        // Filter by kitchen area
+        if (
+          filters?.minKitchenArea &&
+          ad.kitchen_area &&
+          ad.kitchen_area < filters.minKitchenArea
+        )
+          return false
+
+        return true
+      })
+
+      // Group ads by house_id and find minimum price for each house
+      houseIds.forEach((houseId) => {
+        const houseAds = filteredAds.filter(
+          (ad: any) => ad.house_id === houseId,
+        )
+        if (houseAds.length > 0) {
+          const minPrice = Math.min(...houseAds.map((ad: any) => ad.price))
+          pricesMap[houseId] = minPrice
+        }
+      })
+
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        const pricesCalculated = Object.keys(pricesMap).length
+        console.log(
+          `🏠 [${timestamp}] CACHE_PRICES - Calculated prices for ${pricesCalculated} houses:`,
+          pricesMap,
+        )
+      }
+
+      setHousePrices(pricesMap)
+    },
+    [mapAds, filters],
+  )
 
   const createPriceIcon = (
     price: number,
@@ -242,6 +289,40 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
       ">${priceText}</div>`,
       iconSize: [48, 24],
       iconAnchor: [24, 12],
+    })
+  }
+
+  // Создаем круглую иконку с ценой для всех домов
+  const createCirclePriceIcon = (
+    price: number,
+    isActive: boolean,
+    isCurrentUserHouse: boolean = false,
+  ) => {
+    const priceText = (price / 1000000).toFixed(1)
+    const bgColor = isCurrentUserHouse
+      ? '#ef4444'
+      : isActive
+        ? '#f59e0b'
+        : '#9ca3af'
+    return new L.DivIcon({
+      className: 'marker-house-circle-price',
+      html: `<div style="
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        border-radius: 50%;
+        background: ${bgColor};
+        border: 3px solid white;
+        box-shadow: 0 2px 6px rgba(0,0,0,.4);
+        color: white;
+        font-size: 10px;
+        font-weight: bold;
+        font-family: system-ui, -apple-system, sans-serif;
+      ">${priceText}</div>`,
+      iconSize: [32, 32],
+      iconAnchor: [16, 16],
     })
   }
 
@@ -319,94 +400,100 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
 
   // Функция для создания маркера группы домов
   const createGroupMarker = (group: any[]) => {
-    if (group.length === 1) {
-      // Один дом - обычный маркер
+    // Проверяем, все ли дома в группе имеют одинаковый house_id
+    const uniqueHouseIds = [...new Set(group.map((h) => h.house_id))]
+    const isOneLogicalHouse = uniqueHouseIds.length === 1
+
+    if (group.length === 1 || isOneLogicalHouse) {
+      // Один дом или один логический дом (один house_id) - обычный маркер
       const house = group[0]
-      const hasActiveAds =
-        house.has_active_ads === true || house.active_ads_count > 0
+      const hasActiveAds = Boolean(
+        house.has_active_ads === true || house.active_ads_count > 0,
+      )
       const housePrice = housePrices[house.house_id]
-      const isCurrentUserHouse =
-        currentFlatHouseId && house.house_id === currentFlatHouseId
+      const isCurrentUserHouse = Boolean(
+        currentFlatHouseId && house.house_id === currentFlatHouseId,
+      )
 
-      // Если это дом пользователя, создаем красный маркер
-      if (isCurrentUserHouse) {
-        const currentHouseIcon = housePrice
-          ? createPriceIcon(housePrice, hasActiveAds, true) // true = isCurrentUserHouse
-          : new L.DivIcon({
+      // Всегда показываем цену, если она есть
+      const icon = housePrice
+        ? createCirclePriceIcon(housePrice, hasActiveAds, isCurrentUserHouse)
+        : isCurrentUserHouse
+          ? new L.DivIcon({
               className: 'marker-current-house',
-              html: `<span style="display:inline-block;width:24px;height:24px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,.8);"></span>`,
-              iconSize: [30, 30],
-              iconAnchor: [15, 15],
+              html: `<span style="display:inline-block;width:32px;height:32px;border-radius:50%;background:#ef4444;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,.8);"></span>`,
+              iconSize: [32, 32],
+              iconAnchor: [16, 16],
             })
-
-        return {
-          house,
-          position: [house.lat, house.lng],
-          icon: currentHouseIcon,
-          isGroup: false,
-          isCurrentUserHouse: true,
-        }
-      }
+          : hasActiveAds
+            ? houseIcon
+            : inactiveHouseIcon
 
       return {
         house,
         position: [house.lat, house.lng],
-        icon: housePrice
-          ? createPriceIcon(housePrice, hasActiveAds, false)
-          : hasActiveAds
-            ? houseIcon
-            : inactiveHouseIcon,
+        icon,
         isGroup: false,
-        isCurrentUserHouse: false,
+        isCurrentUserHouse,
       }
     } else {
       // Группа домов - проверяем, есть ли в группе дом пользователя
-      const hasCurrentUserHouse =
+      const hasCurrentUserHouse = Boolean(
         currentFlatHouseId &&
-        group.some((h) => h.house_id === currentFlatHouseId)
+          group.some((h) => h.house_id === currentFlatHouseId),
+      )
       const centerLat = group.reduce((sum, h) => sum + h.lat, 0) / group.length
       const centerLng = group.reduce((sum, h) => sum + h.lng, 0) / group.length
       const totalAds = group.reduce(
         (sum, h) => sum + (h.active_ads_count || 0),
         0,
       )
-      const hasActiveAds = group.some(
-        (h) => h.has_active_ads === true || h.active_ads_count > 0,
+      const hasActiveAds = Boolean(
+        group.some((h) => h.has_active_ads === true || h.active_ads_count > 0),
       )
 
       // Определяем адрес группы в зависимости от того, одинаковые ли house_id
-      const uniqueHouseIds = [...new Set(group.map((h) => h.house_id))]
-      const isOneLogicalHouse = uniqueHouseIds.length === 1
+      // uniqueHouseIds и isOneLogicalHouse уже вычислены выше
 
-      // Создаем маркер группы (красный если содержит дом пользователя)
-      const bgColor = hasCurrentUserHouse
-        ? '#ef4444'
-        : hasActiveAds
-          ? '#f59e0b'
-          : '#9ca3af'
+      // Находим минимальную цену среди всех домов в группе
+      const groupPrices = group
+        .map((h) => housePrices[h.house_id])
+        .filter((price) => price !== undefined && price !== null)
+      const minGroupPrice =
+        groupPrices.length > 0 ? Math.min(...groupPrices) : null
 
-      // Для одного логического дома показываем "1", для группы - количество уникальных домов
-      const displayNumber = isOneLogicalHouse ? 1 : uniqueHouseIds.length
-
-      const groupIcon = new L.DivIcon({
-        className: 'marker-house-group',
-        html: `<div style="
-          display: flex;
-          align-items: center;
-          justify-content: center;
-          width: 32px;
-          height: 32px;
-          border-radius: 50%;
-          background: ${bgColor};
-          border: 3px solid white;
-          box-shadow: 0 0 6px rgba(0,0,0,.6);
-          color: white;
-          font-weight: bold;
-          font-size: 12px;
-        ">${displayNumber}</div>`,
-        iconSize: [32, 32],
-        iconAnchor: [16, 16],
-      })
+      // Создаем иконку - либо с ценой, либо с количеством домов
+      const groupIcon = minGroupPrice
+        ? createCirclePriceIcon(
+            minGroupPrice,
+            hasActiveAds,
+            hasCurrentUserHouse,
+          )
+        : new L.DivIcon({
+            className: 'marker-house-group',
+            html: `<div style="
+              display: flex;
+              align-items: center;
+              justify-content: center;
+              width: 32px;
+              height: 32px;
+              border-radius: 50%;
+              background: ${
+                hasCurrentUserHouse
+                  ? '#ef4444'
+                  : hasActiveAds
+                    ? '#f59e0b'
+                    : '#9ca3af'
+              };
+              border: 3px solid white;
+              box-shadow: 0 0 6px rgba(0,0,0,.6);
+              color: white;
+              font-weight: bold;
+              font-size: 12px;
+            ">${isOneLogicalHouse ? 1 : uniqueHouseIds.length}</div>`,
+            iconSize: [32, 32],
+            iconAnchor: [16, 16],
+          })
 
       const groupAddress = isOneLogicalHouse
         ? group[0].address || `Дом ${uniqueHouseIds[0]}` // Один логический дом
@@ -566,6 +653,18 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
     selectedHouseId,
     selectedHouseData,
   ])
+
+  // Calculate prices from cached ads data instead of API calls
+  useEffect(() => {
+    const houseIds = allHouses
+      .map((house) => house.house_id)
+      .filter((id) => id !== undefined && id !== null)
+      .filter((id, index, arr) => arr.indexOf(id) === index) // убираем дубликаты
+
+    if (houseIds.length > 0) {
+      calculateHousePricesFromCache(houseIds)
+    }
+  }, [allHouses, calculateHousePricesFromCache])
 
   // Группируем дома по близости
   const houseGroups = groupNearbyHouses(allHouses, 50) // 50 метров минимальное расстояние

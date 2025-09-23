@@ -1,4 +1,4 @@
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { useDebounce } from '../../../../../../hooks/use-debounce'
 
 interface MapBounds {
@@ -70,8 +70,14 @@ export const useMapAdsFilter = ({
   >(selectedHouseId)
   const [isUpdatingStatuses, setIsUpdatingStatuses] = useState(false)
 
+  // Ref to prevent duplicate requests
+  const activeRequestRef = useRef<string | null>(null)
+
   // Debounce bounds changes to avoid too many API calls
   const debouncedBounds = useDebounce(bounds, debounceMs)
+
+  // Add bounds comparison to prevent unnecessary updates
+  const boundsChangedRef = useRef<string>('')
 
   // Debounce house selection to avoid multiple requests
   const debouncedSelectedHouseId = useDebounce(currentSelectedHouseId, 100)
@@ -116,8 +122,8 @@ export const useMapAdsFilter = ({
         // Фильтр по комнатам
         if (ad.rooms < flatFilters.rooms) return false
 
-        // Фильтр по цене
-        if (ad.price >= flatFilters.maxPrice) return false
+        // Фильтр по цене (include ads with price <= maxPrice)
+        if (ad.price > flatFilters.maxPrice) return false
 
         // Фильтр по общей площади
         if (flatFilters.minArea && ad.area && ad.area < flatFilters.minArea)
@@ -147,6 +153,17 @@ export const useMapAdsFilter = ({
   // Функция для загрузки объявлений в кеш
   const fetchAndCacheAds = useCallback(async () => {
     if (!cacheApiUrl) return
+
+    // Check if the same request is already in progress
+    if (activeRequestRef.current === cacheApiUrl) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚫 [CACHE] Skipping duplicate request:', cacheApiUrl)
+      }
+      return
+    }
+
+    // Set the active request
+    activeRequestRef.current = cacheApiUrl
 
     setLoading(true)
     setError(null)
@@ -188,6 +205,10 @@ export const useMapAdsFilter = ({
       console.error('Error fetching and caching ads:', err)
     } finally {
       setLoading(false)
+      // Clear the active request ref
+      if (activeRequestRef.current === cacheApiUrl) {
+        activeRequestRef.current = null
+      }
     }
   }, [cacheApiUrl])
 
@@ -196,20 +217,58 @@ export const useMapAdsFilter = ({
     fetchAndCacheAds()
   }, [fetchAndCacheAds])
 
+  // Improved debounced version to prevent rapid calls during map movement
+  const debouncedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
+
+  const debouncedFetchAndCacheAds = useCallback(() => {
+    // Create a unique key for bounds comparison
+    const boundsKey = debouncedBounds
+      ? `${debouncedBounds.north}-${debouncedBounds.south}-${debouncedBounds.east}-${debouncedBounds.west}`
+      : 'no-bounds'
+
+    // Skip if bounds haven't actually changed
+    if (boundsChangedRef.current === boundsKey) {
+      if (process.env.NODE_ENV === 'development') {
+        console.log('🚫 [BOUNDS] Skipping identical bounds:', boundsKey)
+      }
+      return
+    }
+
+    // Clear any existing timeout
+    if (debouncedTimeoutRef.current) {
+      clearTimeout(debouncedTimeoutRef.current)
+    }
+
+    // Set new timeout
+    debouncedTimeoutRef.current = setTimeout(() => {
+      if (cacheApiUrl && activeRequestRef.current !== cacheApiUrl) {
+        boundsChangedRef.current = boundsKey
+
+        if (process.env.NODE_ENV === 'development') {
+          console.log('🗺️ [BOUNDS] New bounds detected, fetching:', boundsKey)
+        }
+
+        fetchAndCacheAds()
+      }
+    }, 300) // Increased debounce time for map movement
+  }, [cacheApiUrl, fetchAndCacheAds, debouncedBounds])
+
   // Загружаем кеш при изменении bounds (движение карты)
   useEffect(() => {
     if (cacheApiUrl) {
-      fetchAndCacheAds().then(() => {
-        // Автоматически обновляем статусы после загрузки данных из БД
-        setTimeout(() => {
-          updateAdsStatuses()
-        }, 500)
-      })
+      debouncedFetchAndCacheAds()
     } else {
       setCachedAds([])
       setError(null)
     }
-  }, [cacheApiUrl])
+
+    // Cleanup timeout on unmount
+    return () => {
+      if (debouncedTimeoutRef.current) {
+        clearTimeout(debouncedTimeoutRef.current)
+      }
+    }
+  }, [cacheApiUrl, debouncedFetchAndCacheAds])
 
   // Обновляем отображаемые объявления при изменении выбранного дома
   useEffect(() => {

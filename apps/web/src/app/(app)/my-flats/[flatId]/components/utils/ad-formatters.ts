@@ -45,15 +45,15 @@ export const getDomainFromUrl = (url: string): string => {
   try {
     const domain = new URL(url).hostname.toLowerCase()
 
-    if (domain.includes('avito.ru')) return 'avito'
+    if (domain.includes('avito.ru')) return 'A'
     if (
       domain.includes('yandex.ru') ||
       domain.includes('realty.yandex.ru') ||
       domain.includes('ya.ru') ||
       domain.includes('realty.ya.ru')
     )
-      return 'yandex'
-    if (domain.includes('cian.ru')) return 'cian'
+      return 'Y'
+    if (domain.includes('cian.ru')) return 'C'
 
     // Fallback to domain without www
     return domain.replace('www.', '')
@@ -126,13 +126,13 @@ export const formatSourceType = (
   if (sourceType === null || sourceType === undefined) return '\u00A0'
   switch (sourceType) {
     case 1:
-      return 'Avito'
+      return 'A'
     case 3:
-      return 'Яндекс'
+      return 'Y'
     case 4:
-      return 'Cian'
+      return 'C'
     default:
-      return 'Неизвестно'
+      return 'N'
   }
 }
 
@@ -262,4 +262,44 @@ export const isUpdatedTodayFromSource = (ad: any): boolean => {
 export const isStatusOldFromSource = (ad: any): boolean => {
   const displayDate = getDisplayUpdatedDate(ad)
   return isStatusOld(displayDate)
+}
+
+// Deduplicate ads by identical parameters with source priority
+export const deduplicateAdsBySourcePriority = (ads: any[]): any[] => {
+  const getSourcePriority = (url: string): number => {
+    if (url.includes('cian.ru')) return 1 // Highest priority
+    if (url.includes('yandex.ru')) return 2
+    if (url.includes('avito.ru')) return 3
+    return 4 // Lowest priority for other sources
+  }
+
+  const createAdKey = (ad: any): string => {
+    const area = ad.area ? Number(ad.area).toFixed(1) : '—'
+    const kitchen = ad.kitchen_area ? Number(ad.kitchen_area).toFixed(1) : '—'
+    const floor = ad.total_floors ? `${ad.floor}/${ad.total_floors}` : ad.floor
+    const price = ad.price || 0
+
+    return `${ad.rooms}-${area}-${floor}-${kitchen}-${price}`
+  }
+
+  const adMap = new Map<string, any>()
+
+  ads.forEach((ad) => {
+    const key = createAdKey(ad)
+    const existing = adMap.get(key)
+
+    if (!existing) {
+      adMap.set(key, ad)
+    } else {
+      // Keep ad with higher priority (lower number = higher priority)
+      const currentPriority = getSourcePriority(ad.url || '')
+      const existingPriority = getSourcePriority(existing.url || '')
+
+      if (currentPriority < existingPriority) {
+        adMap.set(key, ad)
+      }
+    }
+  })
+
+  return Array.from(adMap.values())
 }

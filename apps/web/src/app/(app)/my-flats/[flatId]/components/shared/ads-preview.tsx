@@ -15,6 +15,7 @@ import {
   formatPrice,
   formatDateShort,
   formatUrlForDisplay,
+  deduplicateAdsBySourcePriority,
 } from '../utils/ad-formatters'
 
 interface AdsPreviewProps {
@@ -67,19 +68,19 @@ const AdItem = ({
 
     if (url.includes('cian.ru')) {
       return {
-        text: 'cian',
+        text: 'C',
         className: `bg-blue-100 text-blue-800 ${baseClasses}`,
       }
     }
     if (url.includes('avito.ru')) {
       return {
-        text: 'avito',
+        text: 'A',
         className: `bg-green-100 text-green-800 ${baseClasses}`,
       }
     }
     if (url.includes('yandex.ru')) {
       return {
-        text: 'yandex',
+        text: 'Y',
         className: `bg-red-100 text-red-800 ${baseClasses}`,
       }
     }
@@ -110,7 +111,7 @@ const AdItem = ({
         className={`truncate mr-2 ${textColorClass} cursor-pointer`}
         onClick={handleClick}
       >
-        {ad.rooms}-комн., {area} м², {floor} этаж, {kitchen} кухня
+        {ad.rooms}-к., {area} м², {floor} эт, {kitchen} кух
         {!isActive && (
           <span className='ml-2 text-xs text-gray-400'>(неактивно)</span>
         )}
@@ -122,7 +123,7 @@ const AdItem = ({
           {sourceBadge.text}
         </span>
         <span className={textColorClass}>
-          <span className='font-bold'>{price}</span> млн ₽
+          <span className='font-bold'>{price}</span> млн
         </span>
         {(onAddToComparison || onToggleComparison) && (
           <button
@@ -166,7 +167,7 @@ const FiltersBadges = ({ filters }: { filters: FlatFilters }) => {
       </div>
       {showPrice && (
         <div className='inline-flex items-center px-2 py-1 bg-green-100 text-green-800 text-xs rounded-full'>
-          До: {formatPrice(filters.maxPrice)} млн ₽
+          До: {formatPrice(filters.maxPrice)} млн
         </div>
       )}
       {filters.minArea && (
@@ -279,9 +280,41 @@ export default function AdsPreview({
   comparisonAds = [],
   showInitialLegend = false,
 }: AdsPreviewProps) {
+  // Filter duplicates with source priority: Cian > Yandex > Avito
+  const deduplicatedAds = useMemo(() => {
+    const originalCount = ads.length
+    const deduplicated = deduplicateAdsBySourcePriority(ads)
+
+    if (
+      process.env.NODE_ENV === 'development' &&
+      originalCount !== deduplicated.length
+    ) {
+      const timestamp = new Date().toISOString().slice(11, 23)
+      console.log(
+        `🔄 [${timestamp}] DEDUPLICATION - Original: ${originalCount}, After: ${deduplicated.length}`,
+      )
+
+      // Показываем какие объявления были удалены
+      const removedCount = originalCount - deduplicated.length
+      if (removedCount > 0) {
+        console.log(`❌ [${timestamp}] REMOVED ${removedCount} duplicate ads`)
+
+        // Группируем по ценам для понимания что удалилось
+        const priceGroups = ads.reduce((groups: Record<number, number>, ad) => {
+          groups[ad.price] = (groups[ad.price] || 0) + 1
+          return groups
+        }, {})
+
+        console.log(`💰 [${timestamp}] Price distribution:`, priceGroups)
+      }
+    }
+
+    return deduplicated
+  }, [ads])
+
   // Sort ads: active first, then by price (cheapest first)
   const sortedAds = useMemo(() => {
-    return [...ads].sort((a, b) => {
+    return [...deduplicatedAds].sort((a, b) => {
       // Проверяем активность
       const aActive = a.is_active === true || a.is_active === 1
       const bActive = b.is_active === true || b.is_active === 1
@@ -293,7 +326,7 @@ export default function AdsPreview({
       // В рамках одной группы (активные или неактивные) сортируем по цене
       return a.price - b.price
     })
-  }, [ads])
+  }, [deduplicatedAds])
 
   const handleAdHover = (ad: AdData) => {
     onAdHover?.(ad)
