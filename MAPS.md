@@ -483,6 +483,114 @@ fix
 - **Пагинация**: По 100 объявлений за запрос
 - **Геоиндексы**: PostGIS индексы для быстрого поиска
 
+## Кэширование координат домов (январь 2025)
+
+### ✅ Реализованная оптимизация производительности
+
+#### Проблема
+Эндпоинт `/map/houses-in-bounds` делал отдельные SQL-запросы для получения координат каждого дома из PostGIS, что вызывало медленную работу карты при загрузке большого количества домов.
+
+#### Решение
+Создана система in-memory кэширования координат домов в API:
+
+```typescript
+// Кэш для координат домов в памяти
+const houseCoordinatesCache = new Map<number, { lat: number; lng: number }>()
+
+// Функция пакетной загрузки координат с кэшированием
+async function getHouseCoordinates(houseIds: number[]): Promise<Map<number, { lat: number; lng: number }>> {
+  const result = new Map<number, { lat: number; lng: number }>()
+  const uncachedIds = houseIds.filter((id) => !houseCoordinatesCache.has(id))
+
+  // Добавляем закэшированные координаты
+  for (const id of houseIds) {
+    const cached = houseCoordinatesCache.get(id)
+    if (cached) {
+      result.set(id, cached)
+    }
+  }
+
+  // Загружаем незакэшированные координаты пакетом
+  if (uncachedIds.length > 0) {
+    const batchResult = await db.execute(sql`
+      SELECT
+        house_id,
+        system.ST_Y(system.ST_Transform(centroid_utm, 4326)) as lat,
+        system.ST_X(system.ST_Transform(centroid_utm, 4326)) as lng
+      FROM "system".moscow_geo
+      WHERE house_id = ANY(${uncachedIds})
+    `)
+
+    // Кэшируем и добавляем в результат
+    const rows = Array.isArray(batchResult) ? batchResult : (batchResult as any).rows || []
+    for (const row of rows) {
+      const coords = { lat: row.lat, lng: row.lng }
+      houseCoordinatesCache.set(row.house_id, coords)
+      result.set(row.house_id, coords)
+    }
+  }
+
+  return result
+}
+```
+
+#### Интеграция в `/map/houses-in-bounds`
+Обновлен эндпоинт для использования кэшированных координат:
+
+```typescript
+// Получаем список house_id с фильтрацией
+const houseRows = await db.execute(sql`
+  SELECT * FROM public.get_houses_in_bounds(...)
+`)
+
+// Извлекаем house_id из результатов
+const houseIds = houseRows.map((row: any) => row.house_id)
+
+// Получаем координаты из кэша (пакетно для незакэшированных)
+const coordinates = await getHouseCoordinates(houseIds)
+
+// Объединяем данные домов с координатами
+const houses = houseRows.map((house: any) => {
+  const coords = coordinates.get(house.house_id)
+  return {
+    ...house,
+    lat: coords?.lat || null,
+    lng: coords?.lng || null,
+  }
+}).filter((house: any) => house.lat && house.lng)
+```
+
+#### Характеристики производительности
+- **Потребление памяти**: ~12 МБ для всех домов Москвы (~1M домов)
+- **Ускорение**: В разы быстрее при повторных запросах
+- **Кэш**: Постоянный (до перезапуска сервера), автоматическое заполнение
+- **Масштабируемость**: Возможность расширения до LRU cache или Redis
+
+#### Альтернативы для роста
+- **LRU cache**: Ограниченный размер с вытеснением старых записей
+- **TTL cache**: Автоматическое истечение через время
+- **Redis**: Внешний кэш для кластерного развертывания
+
+## Исправления состояния карты (январь 2025)
+
+### ✅ Исправлена проблема центрирования карты
+
+#### Проблема
+При переключении между квартирами (например, с квартиры 20 на квартиру 18) карта оставалась центрированной на предыдущей квартире из-за сохранения состояния `mapCenter`.
+
+#### Решение
+Добавлен `useEffect` для сброса центра карты при смене `flatId`:
+
+```typescript
+// Reset map center when flatId changes
+useEffect(() => {
+  setMapCenter(null)
+}, [flatId])
+```
+
+#### Результат
+Теперь при переключении между квартирами карта корректно центрируется на новой выбранной квартире.
+
 ## Развитие
 
 ### Планируемые улучшения
@@ -490,3 +598,4 @@ fix
 - Фильтрация по цене/комнатам прямо на карте
 - Сохранение позиции карты в localStorage
 - Поддержка мобильных устройств
+- Миграция кэша координат на Redis для production

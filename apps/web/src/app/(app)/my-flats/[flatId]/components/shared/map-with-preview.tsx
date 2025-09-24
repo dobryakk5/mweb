@@ -96,6 +96,11 @@ export default function MapWithPreview({
     loadFlatData()
   }, [flatId])
 
+  // Reset map center when flatId changes
+  useEffect(() => {
+    setMapCenter(null)
+  }, [flatId])
+
   // Create filters based on external filters or current flat parameters
   const flatFilters: FlatFilters = useMemo(() => {
     // If external filters are provided, use them
