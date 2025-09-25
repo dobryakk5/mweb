@@ -846,9 +846,9 @@ export default async (fastify: FastifyInstance) => {
       }
 
       // Извлекаем уникальные house_id из объявлений
-      const uniqueHouseIds = [
-        ...new Set(adsRows.map((ad: any) => ad.house_id)),
-      ].filter((id) => id != null)
+      const uniqueHouseIds = Array.from(
+        new Set(adsRows.map((ad: any) => ad.house_id)),
+      ).filter((id): id is number => id != null && typeof id === 'number')
 
       // Получаем координаты из кэша
       const coordinates = await getHouseCoordinates(uniqueHouseIds)
