@@ -45,3 +45,41 @@
   0%   { left: -100%; }
   100% { left: 100%; }
 }
+
+/* Touch-friendly styles for mobile devices */
+@media (max-width: 1024px) {
+  /* Increase touch targets on mobile */
+  .leaflet-control-zoom-in,
+  .leaflet-control-zoom-out {
+    width: 44px !important;
+    height: 44px !important;
+    line-height: 44px !important;
+  }
+
+  /* Improve map marker visibility */
+  .leaflet-marker-icon {
+    filter: drop-shadow(0 2px 4px rgba(0,0,0,0.3));
+  }
+
+  /* Better popup positioning on mobile */
+  .leaflet-popup-content {
+    max-width: 280px !important;
+    font-size: 14px;
+  }
+}
+
+/* Smooth scrolling for mobile */
+@media (max-width: 768px) {
+  html {
+    -webkit-overflow-scrolling: touch;
+  }
+
+  /* Prevent zoom on input focus */
+  input[type="text"],
+  input[type="number"],
+  input[type="email"],
+  textarea,
+  select {
+    font-size: 16px;
+  }
+}

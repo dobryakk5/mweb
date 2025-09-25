@@ -52,6 +52,9 @@ export const useFlatAdsState = () => {
   const [isSendingToTelegram, setIsSendingToTelegram] = useState(false)
   const [telegramSendSuccess, setTelegramSendSuccess] = useState(false)
 
+  // My flat ad states
+  const [isAddingMyFlat, setIsAddingMyFlat] = useState(false)
+
   // Computed states
   const updateStates: UpdateStates = {
     flatCian: isUpdatingFlatCian,
@@ -196,6 +199,10 @@ export const useFlatAdsState = () => {
     setIsSendingToTelegram,
     telegramSendSuccess,
     setTelegramSendSuccess,
+
+    // My flat ad states
+    isAddingMyFlat,
+    setIsAddingMyFlat,
 
     // Helper functions
     setFlatUpdateStates,

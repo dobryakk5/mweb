@@ -25,17 +25,12 @@ export default function FlatFormFields({
   form,
   onSubmit,
   onDelete,
-  isLoading = false
+  isLoading = false,
 }: FlatFormFieldsProps) {
   return (
     <Form {...form}>
       <form onSubmit={form.handleSubmit(onSubmit)}>
         <div className='flex flex-col lg:flex-row lg:items-end gap-6'>
-          {/* Заголовок */}
-          <div className='lg:w-48 flex-shrink-0'>
-            <h3 className='text-lg font-medium text-gray-900'>Информация о квартире</h3>
-          </div>
-
           {/* Поля формы */}
           <div className='flex-1 grid grid-cols-1 md:grid-cols-12 gap-4 items-end'>
             <div className='md:col-span-6'>
@@ -46,10 +41,7 @@ export default function FlatFormFields({
                   <Form.Item>
                     <Form.Label>Адрес</Form.Label>
                     <Form.Control>
-                      <Input
-                        placeholder='Введите адрес квартиры'
-                        {...field}
-                      />
+                      <Input placeholder='Введите адрес квартиры' {...field} />
                     </Form.Control>
                     <Form.Message />
                   </Form.Item>
@@ -71,7 +63,9 @@ export default function FlatFormFields({
                         min='1'
                         max='10'
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value) || 1)
+                        }
                       />
                     </Form.Control>
                     <Form.Message />
@@ -94,7 +88,9 @@ export default function FlatFormFields({
                         min='1'
                         max='50'
                         {...field}
-                        onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                        onChange={(e) =>
+                          field.onChange(parseInt(e.target.value) || 1)
+                        }
                       />
                     </Form.Control>
                     <Form.Message />
@@ -105,11 +101,7 @@ export default function FlatFormFields({
 
             {/* Кнопки */}
             <div className='md:col-span-2 flex items-end gap-2'>
-              <Button
-                type='submit'
-                size='sm'
-                disabled={isLoading}
-              >
+              <Button type='submit' size='sm' disabled={isLoading}>
                 {isLoading ? 'Сохранение...' : 'Сохранить'}
               </Button>
 

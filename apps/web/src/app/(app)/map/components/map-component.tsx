@@ -7,6 +7,7 @@ import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
 import 'leaflet-defaulticon-compatibility'
 import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility.css'
+import { useMapCache } from '@/hooks/use-map-cache'
 
 interface UserFlat {
   id: number
@@ -130,6 +131,14 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
   const [selectedFlatId, setSelectedFlatId] = useState<number | null>(null)
   const [tgUserId, setTgUserId] = useState<number | null>(null)
 
+  // Инициализируем кэш карты
+  const {
+    getFilteredData,
+    invalidateCache,
+    getCacheInfo,
+    loading: cacheLoading,
+  } = useMapCache()
+
   // Состояние для чекбоксов POI
   const [showSchools, setShowSchools] = useState(false)
   const [showKindergartens, setShowKindergartens] = useState(false)
@@ -181,10 +190,17 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
     iconAnchor: [10, 10],
   })
 
-  // Иконка для домов с объявлениями
-  const houseIcon = new L.DivIcon({
-    className: 'marker-house',
+  // Иконки для домов с объявлениями - оранжевые (активные) и серые (неактивные)
+  const activeHouseIcon = new L.DivIcon({
+    className: 'marker-house-active',
     html: `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#f59e0b;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,.6);font-size:12px;color:white;text-align:center;line-height:16px;font-weight:bold;">🏠</span>`,
+    iconSize: [28, 28],
+    iconAnchor: [14, 14],
+  })
+
+  const inactiveHouseIcon = new L.DivIcon({
+    className: 'marker-house-inactive',
+    html: `<span style="display:inline-block;width:22px;height:22px;border-radius:50%;background:#6b7280;border:3px solid white;box-shadow:0 0 6px rgba(0,0,0,.6);font-size:12px;color:white;text-align:center;line-height:16px;font-weight:bold;">🏠</span>`,
     iconSize: [28, 28],
     iconAnchor: [14, 14],
   })
@@ -372,55 +388,58 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
 
     try {
       if (zoom >= 16) {
-        // На зуме 16+ загружаем дома с объявлениями
+        // На зуме 16+ загружаем дома с объявлениями через кэш
         console.log(
-          'Зум 16+, загружаем дома с объявлениями для области',
+          'Зум 16+, загружаем дома с объявлениями для области через кэш',
           center,
         )
-        const apiUrl = `${process.env.NEXT_PUBLIC_API_URL}/map/houses?lat=${center[0]}&lng=${center[1]}&radius=1000`
-        console.log('API URL:', apiUrl)
 
-        const response = await fetch(apiUrl)
-
-        if (!response.ok) {
-          console.error(
-            'Response not ok:',
-            response.status,
-            response.statusText,
-          )
-          throw new Error(
-            `Failed to fetch houses: ${response.status} ${response.statusText}`,
-          )
+        // Вычисляем bounds для текущей видимой области (примерно 1000м радиус)
+        const RADIUS_IN_DEGREES = 0.009 // Примерно 1км в градусах широты/долготы для Москвы
+        const bounds = {
+          north: center[0] + RADIUS_IN_DEGREES,
+          south: center[0] - RADIUS_IN_DEGREES,
+          east: center[1] + RADIUS_IN_DEGREES,
+          west: center[1] - RADIUS_IN_DEGREES,
         }
 
-        const data = await response.json()
+        // Используем кэш для загрузки данных
+        const cachedData = await getFilteredData(bounds, {})
 
-        // Конвертируем данные в формат House
-        const newHouses: House[] = data.houses
-          .filter((house: any) => house.lat && house.lng)
-          .map((house: any) => ({
+        if (cachedData) {
+          // Конвертируем данные из кэша, сохраняя информацию об активности
+          const newHouses: (House & {
+            has_active_ads: boolean
+            active_ads_count: number
+          })[] = cachedData.houses.map((house) => ({
             house_id: house.house_id,
             address: house.address,
             lat: house.lat,
             lng: house.lng,
-            ads_count: house.ads_count,
-            dist_m: house.dist_m,
+            ads_count: house.total_ads_count,
+            dist_m: 0, // Не используется в данном контексте
+            // Добавляем информацию об активности для правильного окрашивания
+            has_active_ads: house.has_active_ads,
+            active_ads_count: house.active_ads_count,
           }))
 
-        // Заменяем дома полностью
-        setHouses(newHouses)
-        setAds([]) // Очищаем объявления
+          setHouses(newHouses as House[])
+          setAds([]) // Объявления управляются отдельно
 
-        console.log(`Загружено ${newHouses.length} домов с объявлениями`)
-        console.log('Houses state after update:', newHouses)
+          console.log(`✅ Загружено ${newHouses.length} домов через кэш`)
+          console.log(
+            `🟠 Активных домов: ${newHouses.filter((h) => h.has_active_ads).length}`,
+          )
+          console.log(
+            `⚪ Неактивных домов: ${newHouses.filter((h) => !h.has_active_ads).length}`,
+          )
+        }
       } else {
         // На зуме меньше 16 очищаем дома
         console.log('Зум меньше 16, очищаем дома с объявлениями')
         setHouses([])
         setAds([])
       }
-
-      // Пользовательские квартиры загружаются отдельно в loadUserFlatsAndCenter
 
       // Перезагружаем POI если соответствующие чекбоксы включены
       if (showSchools) {
@@ -502,6 +521,23 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
             Приблизьте до зума 16+ для просмотра домов с объявлениями
           </span>
         )}
+        {(() => {
+          const cacheInfo = getCacheInfo()
+          if (cacheInfo.hasCache) {
+            return (
+              <span className='ml-4 text-xs text-green-600'>
+                📦 Кэш: {cacheInfo.adsCount} объявлений,{' '}
+                {Math.round(cacheInfo.age / 1000)}с назад
+              </span>
+            )
+          }
+          return null
+        })()}
+        {cacheLoading && (
+          <span className='ml-4 text-xs text-blue-600'>
+            🔄 Загрузка данных в кэш...
+          </span>
+        )}
         {flats.length > 0 && (
           <span className='ml-4 text-muted-foreground'>
             Моих квартир: {flats.length}
@@ -519,7 +555,7 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
         )}
       </div>
 
-      {/* Чекбоксы для POI */}
+      {/* Чекбоксы для POI и управление кэшем */}
       <div
         style={{
           marginBottom: 12,
@@ -527,7 +563,7 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
           borderBottom: '1px solid #e5e7eb',
         }}
       >
-        <div className='flex gap-6 text-sm'>
+        <div className='flex gap-6 text-sm items-center'>
           <label className='flex items-center cursor-pointer'>
             <input
               type='checkbox'
@@ -546,6 +582,42 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
             />
             🧸 Детские сады
           </label>
+
+          {/* Кнопка для очистки кэша */}
+          {getCacheInfo().hasCache && (
+            <button
+              onClick={() => {
+                invalidateCache()
+                // Принудительно перезагружаем данные после очистки кэша
+                setTimeout(() => {
+                  if (currentZoom >= 16) {
+                    handleZoomChange(currentZoom, currentCenter)
+                  }
+                }, 100)
+              }}
+              className='px-2 py-1 text-xs bg-red-100 text-red-600 rounded hover:bg-red-200 transition-colors'
+              title='Очистить кэш карты и перезагрузить данные'
+            >
+              🗑️ Очистить кэш
+            </button>
+          )}
+
+          {/* Кнопка для отладки API */}
+          <button
+            onClick={async () => {
+              const testUrl = `${process.env.NEXT_PUBLIC_API_URL}/map/ads?north=55.767&south=55.765&east=37.629&west=37.627&limit=3`
+              console.log('🔍 Testing API:', testUrl)
+              const response = await fetch(testUrl)
+              const data = await response.json()
+              console.log('🔍 API Test Response:', data)
+              alert(
+                `API Test: ${data.ads?.length} ads, первое: is_actual=${data.ads?.[0]?.is_actual}`,
+              )
+            }}
+            className='px-2 py-1 text-xs bg-blue-100 text-blue-600 rounded hover:bg-blue-200 transition-colors'
+          >
+            🔍 Тест API
+          </button>
         </div>
       </div>
 
@@ -660,19 +732,33 @@ export default function MapComponent({ onObjectSelect }: MapComponentProps) {
             />
           ))}
 
-        {/* Маркеры домов с объявлениями (зум 16+) */}
+        {/* Маркеры домов с объявлениями (зум 16+) - окрашенные по активности */}
         {(() => {
           console.log('Rendering houses:', houses.length, houses)
-          return houses.map((house, index) => (
-            <Marker
-              key={`house-${house.house_id}-${index}`}
-              position={[house.lat, house.lng]}
-              icon={houseIcon}
-              eventHandlers={{
-                click: () => onObjectSelect?.({ type: 'house', data: house }),
-              }}
-            />
-          ))
+          return houses.map((house, index) => {
+            // Определяем иконку на основе наличия активных объявлений среди отфильтрованных
+            const hasActiveAds =
+              (house as any).has_active_ads !== undefined
+                ? (house as any).has_active_ads
+                : house.ads_count > 0 // Fallback для совместимости
+
+            const icon = hasActiveAds ? activeHouseIcon : inactiveHouseIcon
+
+            console.log(
+              `🏠 House ${house.house_id}: has_active_ads=${hasActiveAds}, using ${hasActiveAds ? 'orange' : 'gray'} icon`,
+            )
+
+            return (
+              <Marker
+                key={`house-${house.house_id}-${index}`}
+                position={[house.lat, house.lng]}
+                icon={icon}
+                eventHandlers={{
+                  click: () => onObjectSelect?.({ type: 'house', data: house }),
+                }}
+              />
+            )
+          })
         })()}
 
         {/* Маркеры близлежащих объявлений */}

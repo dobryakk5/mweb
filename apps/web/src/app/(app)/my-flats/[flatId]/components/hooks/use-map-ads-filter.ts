@@ -1,5 +1,6 @@
-import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useDebounce } from '../../../../../../hooks/use-debounce'
+import { useMapCache } from '../../../../../../hooks/use-map-cache'
 
 interface MapBounds {
   north: number
@@ -48,7 +49,7 @@ interface UseMapAdsFilterReturn {
   refetch: () => void
   adsCount: number
   selectedHouseId: number | null
-  setSelectedHouseId: (houseId: number | null) => void
+  setSelectedHouseId: (id: number | null) => void
   updateAdsStatuses: () => Promise<void>
   isUpdatingStatuses: boolean
   cachedAdsCount: number // Количество объявлений в кеше
@@ -61,253 +62,75 @@ export const useMapAdsFilter = ({
   selectedHouseId = null,
 }: UseMapAdsFilterOptions): UseMapAdsFilterReturn => {
   const [bounds, setBounds] = useState<MapBounds | null>(null)
-  const [ads, setAds] = useState<AdData[]>([]) // Отображаемые объявления (для preview)
-  const [cachedAds, setCachedAds] = useState<AdData[]>([]) // КЕШ всех объявлений в области
-  const [loading, setLoading] = useState(false)
+  const [allAds, setAllAds] = useState<AdData[]>([]) // Все загруженные объявления
   const [error, setError] = useState<string | null>(null)
   const [currentSelectedHouseId, setCurrentSelectedHouseId] = useState<
     number | null
   >(selectedHouseId)
   const [isUpdatingStatuses, setIsUpdatingStatuses] = useState(false)
 
-  // Ref to prevent duplicate requests
-  const activeRequestRef = useRef<string | null>(null)
+  // Используем новый кэширующий хук
+  const { getFilteredData, loading, invalidateCache } = useMapCache()
 
-  // Debounce bounds changes to avoid too many API calls
+  // Debounce bounds changes
   const debouncedBounds = useDebounce(bounds, debounceMs)
 
-  // Add bounds comparison to prevent unnecessary updates
-  const boundsChangedRef = useRef<string>('')
-
-  // Debounce house selection to avoid multiple requests
-  const debouncedSelectedHouseId = useDebounce(currentSelectedHouseId, 100)
-
-  // URL для загрузки ВСЕХ объявлений в области (для кеша)
-  const cacheApiUrl = useMemo(() => {
-    if (!enabled || !debouncedBounds) return null
-
-    const params = new URLSearchParams({
-      north: debouncedBounds.north.toString(),
-      south: debouncedBounds.south.toString(),
-      east: debouncedBounds.east.toString(),
-      west: debouncedBounds.west.toString(),
-      rooms: flatFilters.rooms.toString(),
-      maxPrice: flatFilters.maxPrice.toString(),
-      limit: '500', // Максимальный лимит для кеша
-    })
-
-    if (flatFilters.minArea) {
-      params.append('minArea', flatFilters.minArea.toString())
+  // Фильтрация объявлений по выбранному дому
+  const ads = useMemo(() => {
+    if (!currentSelectedHouseId) {
+      console.log(`🔍 No house selected, showing all ${allAds.length} ads`)
+      return allAds
     }
+    const filteredAds = allAds.filter(
+      (ad) => ad.house_id === currentSelectedHouseId,
+    )
+    console.log(
+      `🔍 House ${currentSelectedHouseId} selected, filtered ${filteredAds.length} ads from ${allAds.length} total`,
+    )
+    return filteredAds
+  }, [allAds, currentSelectedHouseId])
 
-    if (flatFilters.minKitchenArea) {
-      params.append('minKitchenArea', flatFilters.minKitchenArea.toString())
-    }
+  // Основная логика загрузки данных из кэша
+  useEffect(() => {
+    const loadData = async () => {
+      if (!enabled || !debouncedBounds) return
 
-    return `${process.env.NEXT_PUBLIC_API_URL}/map/ads?${params}`
-  }, [debouncedBounds, flatFilters, enabled])
+      try {
+        console.log('🔄 Loading data from cache with filters:', flatFilters)
+        const result = await getFilteredData(debouncedBounds, flatFilters)
 
-  // Функция для применения фильтров к кешу (для отображения в preview)
-  const applyFiltersToCache = useCallback(
-    (houseId?: number | null): AdData[] => {
-      let filtered = cachedAds
+        if (result) {
+          // Преобразуем данные в нужный формат
+          const adsData = result.ads.map((ad) => ({
+            price: ad.price,
+            lat: ad.lat,
+            lng: ad.lng,
+            rooms: ad.rooms,
+            area: ad.area,
+            kitchen_area: ad.kitchen_area,
+            floor: ad.floor,
+            total_floors: ad.total_floors,
+            house_id: ad.house_id,
+            url: ad.url,
+            updated_at: ad.updated_at,
+            distance_m: ad.distance_m,
+            is_active: ad.is_active,
+          }))
 
-      // Если выбран дом - фильтруем по house_id
-      if (houseId) {
-        filtered = filtered.filter((ad) => ad.house_id === houseId)
-      }
-
-      // Применяем дополнительные фильтры
-      filtered = filtered.filter((ad) => {
-        // Фильтр по комнатам
-        if (ad.rooms < flatFilters.rooms) return false
-
-        // Фильтр по цене (include ads with price <= maxPrice)
-        if (ad.price > flatFilters.maxPrice) return false
-
-        // Фильтр по общей площади
-        if (flatFilters.minArea && ad.area && ad.area < flatFilters.minArea)
-          return false
-
-        // Фильтр по кухне (включаем null значения)
-        if (
-          flatFilters.minKitchenArea &&
-          ad.kitchen_area &&
-          ad.kitchen_area < flatFilters.minKitchenArea
-        )
-          return false
-
-        return true
-      })
-
-      return filtered
-    },
-    [cachedAds, flatFilters],
-  )
-
-  // mapAds - всегда все объявления из кеша (для карты)
-  const mapAds = useMemo(() => {
-    return applyFiltersToCache() // Без фильтра по дому
-  }, [applyFiltersToCache])
-
-  // Функция для загрузки объявлений в кеш
-  const fetchAndCacheAds = useCallback(async () => {
-    if (!cacheApiUrl) return
-
-    // Check if the same request is already in progress
-    if (activeRequestRef.current === cacheApiUrl) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🚫 [CACHE] Skipping duplicate request:', cacheApiUrl)
-      }
-      return
-    }
-
-    // Set the active request
-    activeRequestRef.current = cacheApiUrl
-
-    setLoading(true)
-    setError(null)
-
-    try {
-      if (process.env.NODE_ENV === 'development') {
-        const timestamp = new Date().toISOString().slice(11, 23)
-        console.log(
-          `🗂️ [${timestamp}] CACHE_LOAD - Fetching all ads for bounds:`,
-          cacheApiUrl,
-        )
-      }
-
-      const response = await fetch(cacheApiUrl)
-
-      if (!response.ok) {
-        throw new Error(`HTTP error! status: ${response.status}`)
-      }
-
-      const data = await response.json()
-
-      if (data.error) {
-        throw new Error(data.error)
-      }
-
-      const responseAds = data.ads || []
-      setCachedAds(responseAds)
-
-      if (process.env.NODE_ENV === 'development') {
-        const timestamp = new Date().toISOString().slice(11, 23)
-        console.log(
-          `✅ [${timestamp}] CACHE_LOADED - ${responseAds.length} ads cached`,
-        )
-      }
-    } catch (err) {
-      const errorMessage =
-        err instanceof Error ? err.message : 'Unknown error occurred'
-      setError(errorMessage)
-      console.error('Error fetching and caching ads:', err)
-    } finally {
-      setLoading(false)
-      // Clear the active request ref
-      if (activeRequestRef.current === cacheApiUrl) {
-        activeRequestRef.current = null
-      }
-    }
-  }, [cacheApiUrl])
-
-  // Refetch function for manual refresh
-  const refetch = useCallback(() => {
-    fetchAndCacheAds()
-  }, [fetchAndCacheAds])
-
-  // Improved debounced version to prevent rapid calls during map movement
-  const debouncedTimeoutRef = useRef<NodeJS.Timeout | null>(null)
-
-  const debouncedFetchAndCacheAds = useCallback(() => {
-    // Create a unique key for bounds comparison
-    const boundsKey = debouncedBounds
-      ? `${debouncedBounds.north}-${debouncedBounds.south}-${debouncedBounds.east}-${debouncedBounds.west}`
-      : 'no-bounds'
-
-    // Skip if bounds haven't actually changed
-    if (boundsChangedRef.current === boundsKey) {
-      if (process.env.NODE_ENV === 'development') {
-        console.log('🚫 [BOUNDS] Skipping identical bounds:', boundsKey)
-      }
-      return
-    }
-
-    // Clear any existing timeout
-    if (debouncedTimeoutRef.current) {
-      clearTimeout(debouncedTimeoutRef.current)
-    }
-
-    // Set new timeout
-    debouncedTimeoutRef.current = setTimeout(() => {
-      if (cacheApiUrl && activeRequestRef.current !== cacheApiUrl) {
-        boundsChangedRef.current = boundsKey
-
-        if (process.env.NODE_ENV === 'development') {
-          console.log('🗺️ [BOUNDS] New bounds detected, fetching:', boundsKey)
+          setAllAds(adsData)
+          setError(null)
+          console.log(`✅ Loaded ${adsData.length} ads from cache`)
         }
-
-        fetchAndCacheAds()
-      }
-    }, 300) // Increased debounce time for map movement
-  }, [cacheApiUrl, fetchAndCacheAds, debouncedBounds])
-
-  // Загружаем кеш при изменении bounds (движение карты)
-  useEffect(() => {
-    if (cacheApiUrl) {
-      debouncedFetchAndCacheAds()
-    } else {
-      setCachedAds([])
-      setError(null)
-    }
-
-    // Cleanup timeout on unmount
-    return () => {
-      if (debouncedTimeoutRef.current) {
-        clearTimeout(debouncedTimeoutRef.current)
-      }
-    }
-  }, [cacheApiUrl, debouncedFetchAndCacheAds])
-
-  // Обновляем отображаемые объявления при изменении выбранного дома
-  useEffect(() => {
-    if (process.env.NODE_ENV === 'development') {
-      const timestamp = new Date().toISOString().slice(11, 23)
-      if (debouncedSelectedHouseId) {
-        console.log(
-          `🏠 [${timestamp}] HOUSE_FILTER - Filtering cache for house ${debouncedSelectedHouseId}`,
-        )
-      } else {
-        console.log(
-          `🗺️ [${timestamp}] BOUNDS_FILTER - Showing all ads in bounds`,
-        )
+      } catch (err) {
+        console.error('Failed to load data from cache:', err)
+        setError(err instanceof Error ? err.message : 'Unknown error')
       }
     }
 
-    // Фильтруем кеш в зависимости от выбранного дома
-    const filteredAds = applyFiltersToCache(debouncedSelectedHouseId)
-    setAds(filteredAds)
+    loadData()
+  }, [debouncedBounds, flatFilters, enabled, getFilteredData])
 
-    if (process.env.NODE_ENV === 'development') {
-      const timestamp = new Date().toISOString().slice(11, 23)
-      console.log(
-        `📊 [${timestamp}] FILTERED - Showing ${filteredAds.length} ads from cache of ${cachedAds.length}`,
-      )
-    }
-  }, [debouncedSelectedHouseId, applyFiltersToCache, cachedAds.length])
-
-  // Clear data when disabled
-  useEffect(() => {
-    if (!enabled) {
-      setAds([])
-      setCachedAds([])
-      setError(null)
-      setLoading(false)
-    }
-  }, [enabled])
-
-  // Function to update ads statuses via Python API
+  // Функция обновления статусов объявлений
   const updateAdsStatuses = useCallback(async () => {
     if (!debouncedBounds || isUpdatingStatuses) return
 
@@ -319,46 +142,68 @@ export const useMapAdsFilter = ({
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
           body: JSON.stringify({
-            north: debouncedBounds.north,
-            south: debouncedBounds.south,
-            east: debouncedBounds.east,
-            west: debouncedBounds.west,
-            rooms: Number(flatFilters.rooms),
-            maxPrice: Number(flatFilters.maxPrice),
-            minArea: flatFilters.minArea
-              ? Number(flatFilters.minArea)
-              : undefined,
-            minKitchenArea: flatFilters.minKitchenArea
-              ? Number(flatFilters.minKitchenArea)
-              : undefined,
+            ...debouncedBounds,
+            ...flatFilters,
           }),
         },
       )
 
       if (response.ok) {
-        const result = await response.json()
-        console.log('Ads status update result:', result)
+        // Инвалидируем кэш и перезагружаем данные
+        invalidateCache()
+        console.log('🔄 Updated ads statuses, invalidated cache')
 
-        // Refetch cache to get updated statuses
-        fetchAndCacheAds()
+        // Перезагружаем данные
+        const result = await getFilteredData(debouncedBounds, flatFilters)
+        if (result) {
+          const adsData = result.ads.map((ad) => ({
+            price: ad.price,
+            lat: ad.lat,
+            lng: ad.lng,
+            rooms: ad.rooms,
+            area: ad.area,
+            kitchen_area: ad.kitchen_area,
+            floor: ad.floor,
+            total_floors: ad.total_floors,
+            house_id: ad.house_id,
+            url: ad.url,
+            updated_at: ad.updated_at,
+            distance_m: ad.distance_m,
+            is_active: ad.is_active,
+          }))
+          setAllAds(adsData)
+        }
       }
     } catch (error) {
       console.error('Error updating ads statuses:', error)
     } finally {
       setIsUpdatingStatuses(false)
     }
-  }, [debouncedBounds, flatFilters, isUpdatingStatuses, fetchAndCacheAds])
+  }, [
+    debouncedBounds,
+    flatFilters,
+    isUpdatingStatuses,
+    invalidateCache,
+    getFilteredData,
+  ])
+
+  const refetch = useCallback(() => {
+    invalidateCache()
+    if (debouncedBounds) {
+      // Данные перезагрузятся автоматически через useEffect
+    }
+  }, [invalidateCache, debouncedBounds])
 
   return {
-    ads,
-    mapAds,
+    ads, // Filtered ads for preview (by selectedHouseId)
+    mapAds: allAds, // All ads for map markers (unfiltered)
     loading,
     error,
     bounds,
     setBounds,
     refetch,
-    adsCount: ads.length,
-    cachedAdsCount: cachedAds.length,
+    adsCount: ads.length, // Filtered count
+    cachedAdsCount: allAds.length, // Total count
     selectedHouseId: currentSelectedHouseId,
     setSelectedHouseId: setCurrentSelectedHouseId,
     updateAdsStatuses,

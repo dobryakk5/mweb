@@ -65,6 +65,8 @@ export type AdsTableProps = {
   showDelete?: boolean
   isBulkUpdating?: boolean
   updatedTodayAdIds?: Set<number>
+  onToggleMyFlat?: (adId: number) => Promise<void>
+  showMyFlat?: boolean
 }
 
 // Flat ads block specific types
@@ -79,6 +81,9 @@ export type FlatAdsBlockProps = BaseBlockProps & {
   isLoadingSimilar: boolean
   onUpdateAllOld: () => Promise<void>
   isUpdatingAllOld: boolean
+  onAddMyFlatAd?: (url: string) => Promise<void>
+  isAddingMyFlat?: boolean
+  onToggleMyFlat?: (adId: number) => Promise<void>
   updatedTodayAdIds?: Set<number>
 }
 

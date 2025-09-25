@@ -192,7 +192,9 @@ export default function EditFlatFormRefactored({
   }, [broaderAdsFromFindAds, flat?.id, refetch])
 
   // Separate ads by type - with safety checks
-  const flatAds = ads.filter((ad) => ad && ad.id && ad.from === 1) // По этой квартире (найдено автоматически)
+  const flatAds = ads.filter(
+    (ad) => ad && ad.id && (ad.from === 1 || ad.from === 0),
+  ) // По этой квартире (найдено автоматически + моя квартира)
   const houseAds = ads.filter((ad) => ad && ad.id && ad.from === 2) // Объявления по дому
   const comparisonAds = ads.filter((ad) => ad && ad.id && ad.sma === 1) // Сравнение квартир (отмеченные для сравнения)
 
@@ -356,6 +358,61 @@ export default function EditFlatFormRefactored({
     }
   }
 
+  const handleAddMyFlatAd = async (url: string) => {
+    if (!flat?.id) return
+
+    state.setIsAddingMyFlat(true)
+    try {
+      const response = await fetch(`/api/ads/my-flat/${flat.id}`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({ url }),
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to add my flat ad')
+      }
+
+      const result = await response.json()
+      console.log('My flat ad added successfully:', result)
+
+      // Refresh ads data to include the new ad
+      await refetch()
+    } catch (error) {
+      console.error('Error adding my flat ad:', error)
+      throw error // Re-throw to let the component handle the error
+    } finally {
+      state.setIsAddingMyFlat(false)
+    }
+  }
+
+  const handleToggleMyFlat = async (adId: number) => {
+    state.startUpdatingAd(adId)
+    try {
+      const response = await fetch(`/api/ads/${adId}/toggle-my-flat`, {
+        method: 'PUT',
+      })
+
+      if (!response.ok) {
+        const errorData = await response.json()
+        throw new Error(errorData.error || 'Failed to toggle my flat')
+      }
+
+      const result = await response.json()
+      console.log('My flat toggle result:', result)
+
+      // Refresh ads data to reflect the change
+      await refetch()
+    } catch (error) {
+      console.error('Error toggling my flat:', error)
+    } finally {
+      state.stopUpdatingAd(adId)
+    }
+  }
+
   return (
     <>
       <Page className={cn('w-full', className)} {...props}>
@@ -402,6 +459,9 @@ export default function EditFlatFormRefactored({
               isLoadingSimilar={state.isLoadingSimilar}
               onUpdateAllOld={handleUpdateAllOldAds}
               isUpdatingAllOld={state.isUpdatingAllOldAds}
+              onAddMyFlatAd={handleAddMyFlatAd}
+              isAddingMyFlat={state.isAddingMyFlat}
+              onToggleMyFlat={handleToggleMyFlat}
               updatedTodayAdIds={state.updatedTodayAdIds}
             />
           )}

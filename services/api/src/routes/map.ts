@@ -7,36 +7,43 @@ import { sql } from 'drizzle-orm'
 const houseCoordinatesCache = new Map<number, { lat: number; lng: number }>()
 
 // Функция для пакетной загрузки координат
-async function getHouseCoordinates(houseIds: number[]) {
+async function getHouseCoordinates(
+  houseIds: number[],
+): Promise<Map<number, { lat: number; lng: number }>> {
+  const result = new Map<number, { lat: number; lng: number }>()
   const uncachedIds = houseIds.filter((id) => !houseCoordinatesCache.has(id))
 
+  // Добавляем закэшированные координаты
+  for (const id of houseIds) {
+    const cached = houseCoordinatesCache.get(id)
+    if (cached) {
+      result.set(id, cached)
+    }
+  }
+
+  // Загружаем незакэшированные координаты пакетом
   if (uncachedIds.length > 0) {
     const coordinates = await db.execute(sql`
       SELECT house_id,
              system.ST_Y(system.ST_Transform(centroid_utm, 4326)) as lat,
              system.ST_X(system.ST_Transform(centroid_utm, 4326)) as lng
       FROM system.moscow_geo
-      WHERE house_id = ANY(${uncachedIds})
+      WHERE house_id = ANY(${sql.raw(`ARRAY[${uncachedIds.join(',')}]`)})
     `)
 
     const rows = Array.isArray(coordinates)
       ? coordinates
       : (coordinates as any).rows || []
 
+    // Кэшируем и добавляем в результат
     rows.forEach((coord: any) => {
-      houseCoordinatesCache.set(coord.house_id, {
-        lat: coord.lat,
-        lng: coord.lng,
-      })
+      const coords = { lat: coord.lat, lng: coord.lng }
+      houseCoordinatesCache.set(coord.house_id, coords)
+      result.set(coord.house_id, coords)
     })
   }
 
-  return houseIds
-    .map((id) => ({
-      house_id: id,
-      ...houseCoordinatesCache.get(id),
-    }))
-    .filter((house) => house.lat && house.lng)
+  return result
 }
 
 const getMapAdsSchema = z.object({
@@ -66,33 +73,6 @@ const getUserFlatsSchema = z.object({
 
 export default async (fastify: FastifyInstance) => {
   console.log('[map.ts] Регистрация маршрутов начата')
-
-  // Get houses with coordinates by coordinates
-  fastify.get('/map/houses', async (request, reply) => {
-    try {
-      const { lat, lng, radius } = getMapAdsSchema.parse(request.query)
-
-      const result = await db.execute(
-        sql`SELECT * FROM public.get_house_near_coordinates(${lat}, ${lng}, ${radius})`,
-      )
-
-      // Handle the result structure properly (same as ads endpoint)
-      const houses = Array.isArray(result) ? result : (result as any).rows || []
-
-      return {
-        houses,
-        count: houses.length,
-        center: { lat, lng },
-        radius,
-      }
-    } catch (error) {
-      fastify.log.error(error)
-      return reply.status(500).send({
-        error: 'Failed to fetch map houses',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      })
-    }
-  })
 
   // Get POI (schools, kindergartens) by coordinates
   fastify.get('/map/poi', async (request, reply) => {
@@ -222,7 +202,7 @@ export default async (fastify: FastifyInstance) => {
           limit: z
             .string()
             .transform(Number)
-            .pipe(z.number().int().min(1).max(500))
+            .pipe(z.number().int().min(1).max(10000))
             .optional(),
         })
         .parse(request.query)
@@ -249,24 +229,18 @@ export default async (fastify: FastifyInstance) => {
       if (houseId) {
         // Use same logic as ads-in-bounds but filter by house_id
         let baseQuery = sql`SELECT DISTINCT ON (fh.rooms, fh.floor, fh.price)
-          fh.id,
-          fh.avitoid,
           fh.price,
-          fh.rooms,
-          fh.floor,
-          fh.description,
-          fh.url,
-          fh.time_source_created as created,
-          fh.time_source_updated as updated,
-          fh.is_actual as is_active,
-          fh.person as person_type,
-          fh.house_id,
-          CONCAT(mg.street, ', ', mg.housenum) as address,
-          f.total_floors,
-          f.area,
-          f.kitchen_area,
           system.ST_Y(system.ST_Transform(mg.centroid_utm, 4326)) as lat,
           system.ST_X(system.ST_Transform(mg.centroid_utm, 4326)) as lng,
+          fh.rooms,
+          f.area,
+          f.kitchen_area,
+          fh.floor,
+          f.total_floors,
+          fh.house_id,
+          fh.url,
+          fh.time_source_updated as updated_at,
+          fh.is_actual,
           0 as distance_m
         FROM public.flats_history fh
         JOIN system.moscow_geo mg ON fh.house_id = mg.house_id
@@ -303,20 +277,56 @@ export default async (fastify: FastifyInstance) => {
 
         result = await db.execute(finalQuery)
       } else {
-        // Use get_ads_in_bounds function for bounds-based search
-        result = await db.execute(
-          sql`SELECT * FROM public.get_ads_in_bounds(
-            ${north},
-            ${south},
-            ${east},
-            ${west},
-            ${rooms || 1},
-            ${maxPrice || 999999999},
-            ${minArea || null},
-            ${minKitchenArea || null},
-            ${limit}
-          )`,
-        )
+        // Use same SQL approach for bounds-based search
+        let baseQuery = sql`SELECT DISTINCT ON (fh.rooms, fh.floor, fh.price)
+          fh.price,
+          system.ST_Y(system.ST_Transform(mg.centroid_utm, 4326))::real as lat,
+          system.ST_X(system.ST_Transform(mg.centroid_utm, 4326))::real as lng,
+          fh.rooms,
+          f.area,
+          f.kitchen_area,
+          fh.floor,
+          f.total_floors,
+          fh.house_id,
+          fh.url,
+          fh.time_source_updated as updated_at,
+          fh.is_actual,
+          0 as distance_m
+        FROM public.flats_history fh
+        JOIN system.moscow_geo mg ON fh.house_id = mg.house_id
+        LEFT JOIN public.flats f ON fh.house_id = f.house_id AND fh.floor = f.floor AND fh.rooms = f.rooms
+        WHERE system.ST_Y(system.ST_Transform(mg.centroid_utm, 4326)) BETWEEN ${south} AND ${north}
+          AND system.ST_X(system.ST_Transform(mg.centroid_utm, 4326)) BETWEEN ${west} AND ${east}`
+
+        // Apply filters
+        if (maxPrice !== undefined) {
+          baseQuery = sql`${baseQuery} AND fh.price < ${maxPrice}`
+        }
+
+        if (rooms !== undefined) {
+          baseQuery = sql`${baseQuery} AND fh.rooms >= ${rooms}`
+        }
+
+        if (minArea !== undefined) {
+          baseQuery = sql`${baseQuery} AND (f.area IS NULL OR f.area >= ${minArea})`
+        }
+
+        if (minKitchenArea !== undefined) {
+          baseQuery = sql`${baseQuery} AND (f.kitchen_area IS NULL OR f.kitchen_area >= ${minKitchenArea})`
+        }
+
+        const finalQuery = sql`${baseQuery}
+          ORDER BY fh.rooms, fh.floor, fh.price,
+                   CASE
+                     WHEN fh.url LIKE '%cian.ru%' THEN 1
+                     WHEN fh.url LIKE '%yandex.ru%' THEN 2
+                     ELSE 3
+                   END,
+                   fh.is_actual DESC,
+                   fh.time_source_updated DESC
+          LIMIT ${limit}`
+
+        result = await db.execute(finalQuery)
       }
 
       const ads = Array.isArray(result) ? result : (result as any).rows || []
@@ -325,6 +335,28 @@ export default async (fastify: FastifyInstance) => {
         fastify.log.info(`🏠 Found ${ads.length} ads for house ${houseId}`)
       } else {
         fastify.log.info(`🗺️ Found ${ads.length} ads in bounds`)
+      }
+
+      // Отладочная информация по is_actual
+      const isActualStats = ads.reduce(
+        (acc: Record<string, number>, ad: any) => {
+          const key = String(ad.is_actual)
+          acc[key] = (acc[key] || 0) + 1
+          return acc
+        },
+        {},
+      )
+      fastify.log.info(`📊 API Response is_actual distribution:`, isActualStats)
+
+      // Показываем пример неактивного объявления для проверки
+      const inactiveAd = ads.find((ad: any) => ad.is_actual === 0)
+      if (inactiveAd) {
+        fastify.log.info(`❌ Sample inactive ad in API response:`, {
+          house_id: inactiveAd.house_id,
+          floor: inactiveAd.floor,
+          price: inactiveAd.price,
+          is_actual: inactiveAd.is_actual,
+        })
       }
 
       return {
@@ -418,149 +450,6 @@ export default async (fastify: FastifyInstance) => {
     }
   })
 
-  // Get coordinates for specific house IDs from find_nearby_apartments
-  fastify.get('/map/houses-by-ids', async (request, reply) => {
-    try {
-      const { houseIds } = z
-        .object({
-          houseIds: z.string(), // comma-separated house IDs
-        })
-        .parse(request.query)
-
-      const houseIdArray = houseIds
-        .split(',')
-        .map((id) => parseInt(id.trim()))
-        .filter((id) => !isNaN(id))
-
-      if (houseIdArray.length === 0) {
-        return reply.status(400).send({ error: 'No valid house IDs provided' })
-      }
-
-      // Use cached coordinates for better performance
-      const coordinatesData = await getHouseCoordinates(houseIdArray)
-
-      // Get additional address data for houses that have coordinates
-      const houseIdsWithCoords = coordinatesData.map((h) => h.house_id)
-
-      let addressData: any[] = []
-      if (houseIdsWithCoords.length > 0) {
-        const addressResult = await db.execute(
-          sql`SELECT
-            g.house_id,
-            CONCAT(g.street, ', ', g.housenum) as address
-          FROM "system".moscow_geo g
-          WHERE g.house_id = ANY(${houseIdsWithCoords})`,
-        )
-        addressData = Array.isArray(addressResult)
-          ? addressResult
-          : (addressResult as any).rows || []
-      }
-
-      // Combine coordinates with address data
-      const housesData = coordinatesData.map((house) => {
-        const addressInfo = addressData.find(
-          (addr) => addr.house_id === house.house_id,
-        )
-        return {
-          house_id: house.house_id,
-          address: addressInfo?.address || `Дом ${house.house_id}`,
-          lat: house.lat,
-          lng: house.lng,
-        }
-      })
-
-      return {
-        houses: housesData,
-        count: housesData.length,
-      }
-    } catch (error) {
-      fastify.log.error(error)
-      return reply.status(500).send({
-        error: 'Failed to fetch houses by IDs',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      })
-    }
-  })
-
-  // Get minimum prices for houses
-  fastify.get('/map/house-prices', async (request, reply) => {
-    try {
-      const { houseIds } = z
-        .object({
-          houseIds: z.string(), // comma-separated house IDs
-        })
-        .parse(request.query)
-
-      const houseIdArray = houseIds
-        .split(',')
-        .map((id) => parseInt(id.trim()))
-        .filter((id) => !isNaN(id))
-
-      if (houseIdArray.length === 0) {
-        return reply.status(400).send({ error: 'No valid house IDs provided' })
-      }
-
-      // Limit the number of house IDs to prevent timeout
-      if (houseIdArray.length > 100) {
-        return reply.status(400).send({
-          error: 'Too many house IDs provided. Maximum is 100.',
-        })
-      }
-
-      fastify.log.info(`Getting prices for ${houseIdArray.length} houses`)
-
-      // Process in batches of 20 to avoid overwhelming the database
-      const batchSize = 20
-      const allResults: any[] = []
-
-      for (let i = 0; i < houseIdArray.length; i += batchSize) {
-        const batch = houseIdArray.slice(i, i + batchSize)
-
-        const batchPromises = batch.map(async (houseId) => {
-          try {
-            const result = await db.execute(
-              sql`SELECT
-                ${houseId} as house_id,
-                MIN(price) as min_price
-              FROM public.flats_history
-              WHERE house_id = ${houseId} AND price > 0 AND is_actual = 1
-              LIMIT 1`,
-            )
-
-            const rows = Array.isArray(result)
-              ? result
-              : (result as any).rows || []
-            return rows[0] || { house_id: houseId, min_price: null }
-          } catch (error) {
-            fastify.log.error(
-              `Error getting price for house ${houseId}:`,
-              error,
-            )
-            return { house_id: houseId, min_price: null }
-          }
-        })
-
-        const batchResults = await Promise.all(batchPromises)
-        allResults.push(...batchResults)
-      }
-
-      fastify.log.info(
-        `Successfully got prices for ${allResults.length} houses`,
-      )
-
-      return {
-        prices: allResults,
-        count: allResults.length,
-      }
-    } catch (error) {
-      fastify.log.error(error)
-      return reply.status(500).send({
-        error: 'Failed to fetch house prices',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      })
-    }
-  })
-
   // Get house_id by address
   fastify.get('/map/address-to-house-id', async (request, reply) => {
     try {
@@ -628,17 +517,53 @@ export default async (fastify: FastifyInstance) => {
       }
 
       // Get house_id by address
-      const houseResult = await db.execute(
-        sql`SELECT result_id as house_id FROM public.get_house_id_by_address(${flatData.address})`,
-      )
-      const houseData = Array.isArray(houseResult)
-        ? houseResult[0]
-        : (houseResult as any).rows?.[0]
+      let houseData: { house_id: any } | undefined
+      try {
+        const houseResult = await db.execute(
+          sql`SELECT result_id as house_id FROM public.get_house_id_by_address(${flatData.address})`,
+        )
+        houseData = Array.isArray(houseResult)
+          ? houseResult[0]
+          : (houseResult as any).rows?.[0]
+      } catch (error) {
+        // Handle database errors (like permission denied for fias_houses INSERT)
+        fastify.log.error(
+          `Database error getting house_id for address ${flatData.address}:`,
+          error,
+        )
+
+        // Check if it's a permission error
+        const errorMessage =
+          error instanceof Error ? error.message : String(error)
+        if (
+          errorMessage.includes('permission denied') &&
+          errorMessage.includes('fias_houses')
+        ) {
+          fastify.log.warn(
+            `Permission denied for fias_houses INSERT, address: ${flatData.address}`,
+          )
+          return reply.status(404).send({
+            error: 'Адрес не найден, используйте другой',
+            message:
+              'Address not found in database and cannot create new house record',
+            flatData: {
+              ...flatData,
+              house_id: null,
+              area: null,
+              kitchen_area: null,
+              price: null,
+            },
+          })
+        }
+
+        // Re-throw other errors
+        throw error
+      }
 
       if (!houseData?.house_id) {
         fastify.log.warn(`House ID not found for address: ${flatData.address}`)
         return reply.status(404).send({
-          error: 'House ID not found for flat address',
+          error: 'Адрес не найден, используйте другой',
           flatData: {
             ...flatData,
             house_id: null,
@@ -772,6 +697,51 @@ export default async (fastify: FastifyInstance) => {
         )
       }
 
+      // Try to get coordinates for this address
+      let coordinates = null
+      try {
+        const addressParts = flatData.address.split(',').map((s) => s.trim())
+        const streetPart = addressParts[0]
+        const houseNumber = addressParts[1] || ''
+
+        // Handle common address variations
+        const streetVariations = [
+          streetPart,
+          streetPart.replace(' пер.', ' переулок'),
+          streetPart.replace(' ул.', ' улица'),
+          streetPart.replace(' бул.', ' бульвар'),
+          streetPart.replace(' пр.', ' проспект'),
+        ]
+
+        for (const streetVariation of streetVariations) {
+          const coordsResult = await db.execute(
+            sql`SELECT
+              system.ST_Y(system.ST_Transform(centroid_utm, 4326)) as lat,
+              system.ST_X(system.ST_Transform(centroid_utm, 4326)) as lng
+            FROM "system".moscow_geo
+            WHERE street = ${streetVariation} AND housenum = ${houseNumber}
+            LIMIT 1`,
+          )
+          const coordsData = Array.isArray(coordsResult)
+            ? coordsResult[0]
+            : (coordsResult as any).rows?.[0]
+
+          if (coordsData?.lat && coordsData?.lng) {
+            coordinates = { lat: coordsData.lat, lng: coordsData.lng }
+            fastify.log.info(
+              `Found coordinates for address ${flatData.address} using variation "${streetVariation}":`,
+              coordinates,
+            )
+            break
+          }
+        }
+      } catch (coordsError) {
+        fastify.log.warn(
+          `Failed to get coordinates for ${flatData.address}:`,
+          coordsError,
+        )
+      }
+
       const fullFlatData = {
         ...flatData,
         house_id: houseData.house_id,
@@ -779,6 +749,7 @@ export default async (fastify: FastifyInstance) => {
         kitchen_area: finalDetailsData?.kitchen_area || null,
         total_floors: finalDetailsData?.total_floors || null,
         price: minPrice,
+        coordinates,
       }
 
       fastify.log.info(`Full flat data:`, fullFlatData)
@@ -844,26 +815,28 @@ export default async (fastify: FastifyInstance) => {
         `Getting houses in bounds: north=${north}, south=${south}, east=${east}, west=${west}, rooms=${rooms}, maxPrice=${maxPrice}, minArea=${minArea}, minKitchenArea=${minKitchenArea}`,
       )
 
-      // Сначала получаем список house_id с фильтрацией
-      const result = await db.execute(
-        sql`SELECT * FROM public.get_houses_in_bounds(
+      // Сначала получаем объявления с фильтрами, а затем извлекаем уникальные house_id
+      // Используем backup функцию которая возвращает is_active
+      const adsResult = await db.execute(
+        sql`SELECT * FROM public.get_ads_in_bounds_bak(
           ${north},
           ${south},
           ${east},
           ${west},
-          ${rooms || null},
-          ${maxPrice || null},
+          ${rooms || 1},
+          ${maxPrice || 999999999},
           ${minArea || null},
-          ${minKitchenArea || null}
+          ${minKitchenArea || null},
+          1000
         )`,
       )
 
-      const houseRows = Array.isArray(result)
-        ? result
-        : (result as any).rows || []
+      const adsRows = Array.isArray(adsResult)
+        ? adsResult
+        : (adsResult as any).rows || []
 
-      if (houseRows.length === 0) {
-        fastify.log.info('No houses found in bounds with filters')
+      if (adsRows.length === 0) {
+        fastify.log.info('No ads found in bounds with filters')
         return {
           houses: [],
           count: 0,
@@ -872,26 +845,62 @@ export default async (fastify: FastifyInstance) => {
         }
       }
 
-      // Извлекаем house_id из результатов
-      const houseIds = houseRows.map((row: any) => row.house_id)
+      // Извлекаем уникальные house_id из объявлений
+      const uniqueHouseIds = [
+        ...new Set(adsRows.map((ad: any) => ad.house_id)),
+      ].filter((id) => id != null)
 
       // Получаем координаты из кэша
-      const coordinates = await getHouseCoordinates(houseIds)
+      const coordinates = await getHouseCoordinates(uniqueHouseIds)
 
-      // Объединяем данные домов с координатами
-      const houses = houseRows
-        .map((house: any) => {
-          const coords = coordinates.get(house.house_id)
+      // Подсчитываем статистику объявлений по домам
+      const houseStats = new Map<number, { active: number; total: number }>()
+      adsRows.forEach((ad: any) => {
+        const houseId = ad.house_id
+        if (!houseStats.has(houseId)) {
+          houseStats.set(houseId, { active: 0, total: 0 })
+        }
+        const stats = houseStats.get(houseId)!
+        stats.total++
+        if (ad.is_active) stats.active++
+      })
+
+      // Получаем адреса домов
+      const addressResult = await db.execute(
+        sql`SELECT
+          house_id,
+          CONCAT(street, ', ', housenum) as address
+        FROM "system".moscow_geo
+        WHERE house_id = ANY(${sql.raw(`ARRAY[${uniqueHouseIds.join(',')}]`)})`,
+      )
+      const addressData = Array.isArray(addressResult)
+        ? addressResult
+        : (addressResult as any).rows || []
+
+      // Создаем итоговые данные домов
+      const houses = uniqueHouseIds
+        .map((houseId) => {
+          const coords = coordinates.get(houseId)
+          const stats = houseStats.get(houseId)!
+          const addressInfo = addressData.find(
+            (addr: any) => addr.house_id === houseId,
+          )
+
           return {
-            ...house,
+            house_id: houseId,
             lat: coords?.lat || null,
             lng: coords?.lng || null,
+            address: addressInfo?.address || `Дом ${houseId}`,
+            active_ads_count: stats.active,
+            total_ads_count: stats.total,
+            has_active_ads: stats.active > 0,
+            dist_m: 0, // TODO: calculate actual distance if needed
           }
         })
         .filter((house: any) => house.lat && house.lng) // Убираем дома без координат
 
       fastify.log.info(
-        `Found ${houses.length} houses in bounds with filters (${houseRows.length} before coordinate filtering)`,
+        `Found ${houses.length} houses with ads in bounds (${uniqueHouseIds.length} before coordinate filtering)`,
       )
 
       return {
@@ -1136,41 +1145,6 @@ export default async (fastify: FastifyInstance) => {
       fastify.log.error(error)
       return reply.status(500).send({
         error: 'Failed to get house info',
-        message: error instanceof Error ? error.message : 'Unknown error',
-      })
-    }
-  })
-
-  // Batch endpoint for house coordinates
-  fastify.post('/map/houses-coordinates', async (request, reply) => {
-    try {
-      const { houseIds } = z
-        .object({
-          houseIds: z.array(z.number().int()).max(1000), // Максимум 1000 домов за раз
-        })
-        .parse(request.body)
-
-      if (houseIds.length === 0) {
-        return { houses: [], count: 0 }
-      }
-
-      fastify.log.info(`Getting coordinates for ${houseIds.length} houses`)
-
-      const houses = await getHouseCoordinates(houseIds)
-
-      fastify.log.info(
-        `Returned ${houses.length} houses with coordinates (${houseCoordinatesCache.size} in cache)`,
-      )
-
-      return {
-        houses,
-        count: houses.length,
-        cached: houseCoordinatesCache.size,
-      }
-    } catch (error) {
-      fastify.log.error(error)
-      return reply.status(500).send({
-        error: 'Failed to get house coordinates',
         message: error instanceof Error ? error.message : 'Unknown error',
       })
     }

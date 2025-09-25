@@ -11,6 +11,7 @@ import {
   ChevronDownIcon,
   FilterIcon,
   XIcon,
+  HeartIcon,
 } from '@acme/ui/components/icon'
 // import AdChangesHistory from '@/components/ad-changes-history' // Временно отключено
 import type {
@@ -52,6 +53,8 @@ export default function AdsTable({
   showDelete = false,
   isBulkUpdating = false,
   updatedTodayAdIds = new Set(),
+  onToggleMyFlat,
+  showMyFlat = false,
 }: AdsTableProps) {
   const [sortConfig, setSortConfig] = useState<SortConfig>(null)
   const [filters, setFilters] = useState<FilterConfig>({})
@@ -377,15 +380,25 @@ export default function AdsTable({
 
       case 'url':
         const { domain, url } = formatUrlForDisplay(ad.url)
+        const isActive =
+          ad.is_active === true ||
+          ad.is_active === 1 ||
+          ad.status === true ||
+          ad.status === 1
         return (
-          <a
-            href={url}
-            target='_blank'
-            rel='noopener noreferrer'
-            className='text-blue-600 hover:underline'
-          >
-            {domain}
-          </a>
+          <div className='flex items-center gap-1'>
+            {!isActive && (
+              <XIcon className='h-3 w-3 text-gray-400 flex-shrink-0' />
+            )}
+            <a
+              href={url}
+              target='_blank'
+              rel='noopener noreferrer'
+              className='text-blue-600 hover:underline'
+            >
+              {domain}
+            </a>
+          </div>
         )
 
       case 'price':
@@ -676,7 +689,7 @@ export default function AdsTable({
 
                   {showComparison && (
                     <td className='p-1 sm:p-2 align-middle text-xs sm:text-sm'>
-                      <div className='flex items-center justify-center'>
+                      <div className='flex items-center justify-center gap-1'>
                         <button
                           type='button'
                           className={buttonVariants({
@@ -706,6 +719,24 @@ export default function AdsTable({
                   {showActions && (
                     <td className='p-1 sm:p-2 align-middle text-xs sm:text-sm'>
                       <div className='flex gap-2'>
+                        {/* Heart button - only show for flat ads with from=0 */}
+                        {showMyFlat && ad.id && typeof ad.id === 'number' && (
+                          <button
+                            type='button'
+                            className={buttonVariants({
+                              variant: 'outline',
+                              size: 'sm',
+                            })}
+                            onClick={() => onToggleMyFlat?.(ad.id)}
+                            disabled={updatingAdIds.has(ad.id)}
+                          >
+                            <HeartIcon
+                              className={`h-4 w-4 ${
+                                ad.from === 0 ? 'fill-red-500 text-red-500' : ''
+                              }`}
+                            />
+                          </button>
+                        )}
                         {/* Update button - hide during bulk update or show checkmark if updated today */}
                         {!isBulkUpdating && (
                           <>

@@ -49,6 +49,8 @@ export default function MapWithPreview({
   } | null>(null)
   const [currentFlat, setCurrentFlat] = useState<any>(null)
   const [loadingFlat, setLoadingFlat] = useState(true)
+  const [addressNotFound, setAddressNotFound] = useState(false)
+  const [addressError, setAddressError] = useState<string | null>(null)
   const [viewedHouses, setViewedHouses] = useState<Set<number>>(new Set())
 
   // Load current flat data from API
@@ -56,11 +58,24 @@ export default function MapWithPreview({
     const loadFlatData = async () => {
       try {
         setLoadingFlat(true)
+        setAddressNotFound(false)
+        setAddressError(null)
+
         const response = await fetch(
           `${process.env.NEXT_PUBLIC_API_URL}/map/flat-full-data/${flatId}`,
         )
 
         if (!response.ok) {
+          // Handle specific "address not found" error
+          if (response.status === 404) {
+            const errorData = await response.json().catch(() => null)
+            if (errorData?.error === 'Адрес не найден, используйте другой') {
+              setAddressNotFound(true)
+              setAddressError(errorData.error)
+              setCurrentFlat(errorData.flatData)
+              return
+            }
+          }
           throw new Error(`Failed to load flat data: ${response.status}`)
         }
 
@@ -220,17 +235,38 @@ export default function MapWithPreview({
 
   if (loadingFlat) {
     return (
-      <div className={`flex gap-4 ${className}`}>
-        <div className='w-[600px] h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
-        <div className='w-[28rem] min-h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
+      <div className={`flex flex-col lg:flex-row gap-4 ${className}`}>
+        <div className='w-full lg:w-[600px] h-[400px] lg:h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
+        <div className='w-full lg:w-[28rem] min-h-[400px] lg:min-h-[600px] bg-gray-100 animate-pulse rounded-lg'></div>
+      </div>
+    )
+  }
+
+  // Handle address not found error - don't show map at all
+  if (addressNotFound) {
+    return (
+      <div
+        className={`flex flex-col items-center justify-center gap-4 p-8 ${className}`}
+      >
+        <div className='text-center max-w-md'>
+          <div className='text-lg font-medium text-red-600 mb-2'>
+            {addressError || 'Адрес не найден, используйте другой'}
+          </div>
+          <div className='text-sm text-gray-600 mb-4'>
+            Адрес "{currentFlat?.address}" не найден в базе адресов. Пожалуйста,
+            проверьте правильность написания адреса или используйте другой
+            адрес.
+          </div>
+          <div className='text-xs text-gray-500'>Квартира ID: {flatId}</div>
+        </div>
       </div>
     )
   }
 
   if (!currentFlat) {
     return (
-      <div className={`flex gap-4 ${className}`}>
-        <div className='w-[600px] h-[600px] flex items-center justify-center bg-gray-50 rounded-lg'>
+      <div className={`flex flex-col lg:flex-row gap-4 ${className}`}>
+        <div className='w-full lg:w-[600px] h-[400px] lg:h-[600px] flex items-center justify-center bg-gray-50 rounded-lg'>
           <div className='text-center'>
             <div className='text-lg text-gray-600 mb-2'>
               Ошибка загрузки данных квартиры
@@ -240,16 +276,16 @@ export default function MapWithPreview({
             </div>
           </div>
         </div>
-        <div className='w-[28rem] min-h-[600px] bg-gray-50 rounded-lg'></div>
+        <div className='w-full lg:w-[28rem] min-h-[400px] lg:min-h-[600px] bg-gray-50 rounded-lg'></div>
       </div>
     )
   }
 
   return (
-    <div className={`flex gap-4 ${className}`}>
+    <div className={`flex flex-col lg:flex-row gap-4 ${className}`}>
       {/* Map Container - Left side */}
-      <div className='w-[600px] h-[600px]'>
-        <div className='h-[600px] w-[600px] rounded-lg border border-gray-200'>
+      <div className='w-full lg:w-[600px] h-[400px] lg:h-[600px]'>
+        <div className='h-full w-full rounded-lg border border-gray-200'>
           <NearbyMapComponent
             flatAddress={currentFlat.address}
             nearbyAds={mapAds}
@@ -260,12 +296,18 @@ export default function MapWithPreview({
             onBoundsChange={handleMapBoundsChange}
             onHouseClick={handleHouseClick}
             mapAds={mapAds}
+            flatCoordinates={
+              currentFlat?.coordinates ||
+              (currentFlat?.house_id
+                ? { houseId: currentFlat.house_id }
+                : undefined)
+            }
           />
         </div>
       </div>
 
       {/* Preview Panel - Right side */}
-      <div className='w-[28rem] min-h-[600px]'>
+      <div className='w-full lg:w-[28rem] min-h-[400px] lg:min-h-[600px]'>
         <AdsPreview
           ads={ads}
           loading={loading}
@@ -279,7 +321,7 @@ export default function MapWithPreview({
           onToggleComparison={handleToggleMapAdComparison}
           comparisonAds={mapComparisonAds}
           showInitialLegend={false}
-          className='h-[600px] sticky top-4'
+          className='h-[400px] lg:h-[600px] lg:sticky lg:top-4'
         />
 
         {/* Debug info in development */}

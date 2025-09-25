@@ -107,7 +107,7 @@ const createAdSchema = z.object({
   address: z.string().min(1),
   price: z.number().min(0), // Изменено с .positive() на .min(0)
   rooms: z.number().positive(),
-  from: z.number().int().min(1).max(2).default(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
+  from: z.number().int().min(0).max(3).default(2).optional(), // 0 - моя квартира, 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma: z.number().int().min(0).max(1).default(0).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
   sourceCreated: z.string().optional(), // Время создания из источника
   sourceUpdated: z.string().optional(), // Время обновления из источника
@@ -142,7 +142,7 @@ const updateAdSchema = z.object({
   source: z.number().optional(),
   status: z.boolean().optional(),
   viewsToday: z.number().optional(),
-  from: z.number().int().min(1).max(2).optional(), // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
+  from: z.number().int().min(0).max(3).optional(), // 0 - моя квартира, 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma: z.number().int().min(0).max(1).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
 
   // Временные метки из источника
@@ -1341,6 +1341,256 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         error instanceof Error ? error.message : String(error)
       fastify.log.error(
         `Error saving house ads for flat ${flatId || 'unknown'}: ${errorMessage}`,
+      )
+      return reply.status(500).send({
+        error: 'Internal server error',
+        details: errorMessage,
+      })
+    }
+  })
+
+  // POST /ads/my-flat/:flatId - добавить объявление "Моя квартира" с парсингом данных
+  fastify.post('/ads/my-flat/:flatId', async (request, reply) => {
+    let flatId: string | undefined
+    try {
+      const params = z.object({ flatId: z.string() }).parse(request.params)
+      const body = z.object({ url: z.string().url() }).parse(request.body)
+      flatId = params.flatId
+
+      const flatIdNum = parseInt(flatId)
+      if (isNaN(flatIdNum)) {
+        return reply.status(400).send({ error: 'Invalid flat ID' })
+      }
+
+      // Получаем данные квартиры
+      const flats = await db
+        .select()
+        .from(userFlats)
+        .where(eq(userFlats.id, flatIdNum))
+        .limit(1)
+
+      if (flats.length === 0) {
+        return reply.status(404).send({ error: 'Flat not found' })
+      }
+
+      const currentFlat = flats[0]
+
+      fastify.log.info(`Adding my flat ad for flat ${flatId}, URL: ${body.url}`)
+
+      // Парсим данные объявления через Python API
+      let parsedData: any = {}
+      try {
+        const parseResult = await pythonApiClient.parseSingle(body.url)
+
+        if (parseResult && parseResult.success && parseResult.data) {
+          const data = parseResult.data
+          fastify.log.info('Python API parse result for my flat:', data)
+
+          // Маппим данные из Python API в формат БД
+          if (data.price !== undefined) parsedData.price = Number(data.price)
+          if (data.rooms !== undefined) parsedData.rooms = Number(data.rooms)
+          if (data.status !== undefined)
+            parsedData.status = Boolean(data.status)
+          if (data.views_today !== undefined)
+            parsedData.viewsToday = Number(data.views_today)
+          if (data.total_area !== undefined && data.total_area !== null)
+            parsedData.totalArea = String(data.total_area)
+          if (data.living_area !== undefined && data.living_area !== null)
+            parsedData.livingArea = String(data.living_area)
+          if (data.kitchen_area !== undefined && data.kitchen_area !== null)
+            parsedData.kitchenArea = String(data.kitchen_area)
+          if (data.floor !== undefined) parsedData.floor = Number(data.floor)
+          if (data.total_floors !== undefined)
+            parsedData.totalFloors = Number(data.total_floors)
+          if (data.bathroom !== undefined)
+            parsedData.bathroom = String(data.bathroom)
+          if (data.balcony !== undefined)
+            parsedData.balcony = String(data.balcony)
+          if (data.renovation !== undefined)
+            parsedData.renovation = String(data.renovation)
+          if (data.furniture !== undefined)
+            parsedData.furniture = String(data.furniture)
+          if (data.construction_year !== undefined)
+            parsedData.constructionYear = Number(data.construction_year)
+          if (data.house_type !== undefined)
+            parsedData.houseType = String(data.house_type)
+          if (data.ceiling_height !== undefined && data.ceiling_height !== null)
+            parsedData.ceilingHeight = String(data.ceiling_height)
+          if (data.metro_station !== undefined)
+            parsedData.metroStation = String(data.metro_station)
+          if (data.metro_time !== undefined && data.metro_time !== null)
+            parsedData.metroTime = String(data.metro_time)
+          if (data.tags !== undefined) parsedData.tags = String(data.tags)
+          if (data.description !== undefined)
+            parsedData.description = String(data.description)
+
+          // Обрабатываем source
+          if (data.source !== undefined) {
+            if (data.source === 'avito') {
+              parsedData.source = 1
+            } else if (data.source === 'yandex') {
+              parsedData.source = 3
+            } else if (data.source === 'cian') {
+              parsedData.source = 4
+            } else {
+              parsedData.source = Number(data.source) || 4
+            }
+          }
+
+          // Обрабатываем photo_urls
+          if (data.photo_urls !== undefined && data.photo_urls !== null) {
+            if (Array.isArray(data.photo_urls)) {
+              parsedData.photoUrls = data.photo_urls.map(String)
+            } else if (typeof data.photo_urls === 'string') {
+              parsedData.photoUrls = data.photo_urls.includes(',')
+                ? data.photo_urls.split(',').map((s) => s.trim())
+                : [data.photo_urls]
+            }
+          }
+        } else {
+          fastify.log.warn(
+            `Python API parsing failed for my flat ad:`,
+            parseResult,
+          )
+        }
+      } catch (parseError) {
+        fastify.log.error(
+          `Error calling Python API for my flat ad:`,
+          parseError,
+        )
+        // Продолжаем создание объявления без данных парсинга
+      }
+
+      // Проверяем, есть ли уже объявление "Моя квартира" для этой квартиры
+      const existingMyAd = await db
+        .select()
+        .from(ads)
+        .where(and(eq(ads.flatId, flatIdNum), eq(ads.from, 0)))
+        .limit(1)
+
+      if (existingMyAd.length > 0) {
+        return reply.status(409).send({
+          error: 'My flat ad already exists for this flat',
+          existingAd: existingMyAd[0],
+        })
+      }
+
+      // Создаем новое объявление "Моя квартира"
+      const adData = {
+        flatId: flatIdNum,
+        url: body.url,
+        address: parsedData.address || currentFlat.address,
+        price: parsedData.price || 0,
+        rooms: parsedData.rooms || currentFlat.rooms,
+        views: 0,
+        from: 0, // 0 - моя квартира
+        sma: 0, // 0 - обычное объявление
+        totalArea: parsedData.totalArea,
+        livingArea: parsedData.livingArea,
+        kitchenArea: parsedData.kitchenArea,
+        floor: parsedData.floor || currentFlat.floor,
+        totalFloors: parsedData.totalFloors,
+        bathroom: parsedData.bathroom,
+        balcony: parsedData.balcony,
+        renovation: parsedData.renovation,
+        furniture: parsedData.furniture,
+        constructionYear: parsedData.constructionYear,
+        houseType: parsedData.houseType,
+        ceilingHeight: parsedData.ceilingHeight,
+        metroStation: parsedData.metroStation,
+        metroTime: parsedData.metroTime,
+        tags: parsedData.tags,
+        description: parsedData.description,
+        photoUrls: parsedData.photoUrls,
+        source: parsedData.source,
+        status: parsedData.status || true,
+        viewsToday: parsedData.viewsToday,
+      }
+
+      const result = await db.insert(ads).values(adData).returning()
+
+      fastify.log.info(
+        `Successfully added my flat ad for flat ${flatId}:`,
+        result[0],
+      )
+
+      return reply.status(201).send({
+        message: 'My flat ad added successfully',
+        ad: result[0],
+      })
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      fastify.log.error(
+        `Error adding my flat ad for flat ${flatId || 'unknown'}: ${errorMessage}`,
+      )
+      return reply.status(500).send({
+        error: 'Internal server error',
+        details: errorMessage,
+      })
+    }
+  })
+
+  // PUT /ads/:id/toggle-my-flat - отметить/снять отметку "Моя квартира" (from = 0)
+  fastify.put('/ads/:id/toggle-my-flat', async (request, reply) => {
+    let adId: string | undefined
+    try {
+      const params = z.object({ id: z.string() }).parse(request.params)
+      adId = params.id
+
+      const adIdNum = parseInt(adId)
+      if (isNaN(adIdNum)) {
+        return reply.status(400).send({ error: 'Invalid ad ID' })
+      }
+
+      fastify.log.info(`Toggling my flat for ad ${adId}`)
+
+      // Получаем текущее объявление
+      const currentAd = await db
+        .select()
+        .from(ads)
+        .where(eq(ads.id, adIdNum))
+        .limit(1)
+
+      if (currentAd.length === 0) {
+        return reply.status(404).send({ error: 'Ad not found' })
+      }
+
+      const ad = currentAd[0]
+      const isCurrentlyMyFlat = ad.from === 0
+
+      if (isCurrentlyMyFlat) {
+        // Убираем отметку "моя квартира" - устанавливаем from = 1 (найдено автоматически)
+        await db.update(ads).set({ from: 1 }).where(eq(ads.id, adIdNum))
+
+        fastify.log.info(`Removed my flat mark from ad ${adId}`)
+
+        return reply.send({
+          message: 'My flat mark removed',
+          isMyFlat: false,
+        })
+      } else {
+        // Сначала снимаем отметку "моя квартира" со всех объявлений этой квартиры
+        await db
+          .update(ads)
+          .set({ from: 1 })
+          .where(and(eq(ads.flatId, ad.flatId), eq(ads.from, 0)))
+
+        // Затем устанавливаем отметку "моя квартира" для текущего объявления
+        await db.update(ads).set({ from: 0 }).where(eq(ads.id, adIdNum))
+
+        fastify.log.info(`Set my flat mark for ad ${adId}`)
+
+        return reply.send({
+          message: 'My flat mark set',
+          isMyFlat: true,
+        })
+      }
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      fastify.log.error(
+        `Error toggling my flat for ad ${adId || 'unknown'}: ${errorMessage}`,
       )
       return reply.status(500).send({
         error: 'Internal server error',

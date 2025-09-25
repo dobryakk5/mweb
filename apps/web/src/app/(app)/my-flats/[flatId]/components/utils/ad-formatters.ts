@@ -126,11 +126,11 @@ export const formatSourceType = (
   if (sourceType === null || sourceType === undefined) return '\u00A0'
   switch (sourceType) {
     case 1:
-      return 'A'
+      return 'avito'
     case 3:
-      return 'Y'
+      return 'yandex'
     case 4:
-      return 'C'
+      return 'cian'
     default:
       return 'N'
   }

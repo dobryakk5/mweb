@@ -1,6 +1,6 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import { buttonVariants } from '@acme/ui/components/button'
 import {
   Loader2Icon,
@@ -63,6 +63,13 @@ const AdItem = ({
   // Проверяем активность объявления (API может возвращать 0/1 или true/false)
   const isActive = ad.is_active === true || ad.is_active === 1
 
+  // Отладочное логирование активности
+  if (!isActive) {
+    console.log(
+      `🚫 PREVIEW INACTIVE: house_id=${ad.house_id}, floor=${ad.floor}, is_active=${ad.is_active} (${typeof ad.is_active}) -> isActive=${isActive}`,
+    )
+  }
+
   // Определяем источник для бейджа
   const getSourceBadge = (url: string) => {
     const baseClasses = isActive ? '' : 'opacity-60'
@@ -104,31 +111,36 @@ const AdItem = ({
 
   return (
     <div
-      className={`border-b border-gray-200 px-3 py-2 ${hoverClass} transition-colors text-sm flex justify-between items-center ${isActive ? '' : 'opacity-75'}`}
+      className={`border-b border-gray-200 px-3 md:px-3 py-3 md:py-2 ${hoverClass} transition-colors text-sm flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2 sm:gap-0 ${isActive ? '' : 'opacity-75'}`}
       onMouseEnter={onHover}
       onMouseLeave={onLeave}
     >
       <span
-        className={`truncate mr-2 ${textColorClass} cursor-pointer`}
+        className={`truncate sm:mr-2 ${textColorClass} cursor-pointer flex-1`}
         onClick={handleClick}
       >
         {ad.rooms}-к., {area} м², {floor} эт, {kitchen} кух
       </span>
-      <div className='flex items-center gap-2 whitespace-nowrap'>
-        <span
-          className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${sourceBadge.className}`}
-        >
-          {sourceBadge.text}
-        </span>
+      <div className='flex items-center gap-2 whitespace-nowrap w-full sm:w-auto justify-between sm:justify-end'>
+        <div className='flex items-center gap-1'>
+          {!isActive && (
+            <XIcon className='h-3 w-3 text-gray-400 flex-shrink-0' />
+          )}
+          <span
+            className={`inline-flex items-center px-2 py-1 rounded-full text-xs font-medium ${sourceBadge.className}`}
+          >
+            {sourceBadge.text}
+          </span>
+        </div>
         <span className={textColorClass}>
           <span className='font-bold'>{price}</span> млн
         </span>
         {(onAddToComparison || onToggleComparison) && (
           <button
-            className={buttonVariants({
+            className={`${buttonVariants({
               variant: 'outline',
               size: 'sm',
-            })}
+            })} min-w-[44px] min-h-[44px] md:min-w-auto md:min-h-auto`}
             onClick={(e) => {
               e.stopPropagation()
               if (isInComparison && onToggleComparison) {
@@ -239,11 +251,11 @@ const EmptyState = () => {
   )
 }
 
-const LoadingState = () => {
+const LoadingState = ({ isProcessing = false }: { isProcessing?: boolean }) => {
   return (
     <div className='flex items-center justify-center py-8'>
       <Loader2Icon className='w-6 h-6 animate-spin text-blue-600 mr-2' />
-      <span className='text-sm text-gray-600'>Загрузка объявлений...</span>
+      <span className='text-sm text-gray-600'>Загрузка...</span>
     </div>
   )
 }
@@ -278,6 +290,15 @@ export default function AdsPreview({
   comparisonAds = [],
   showInitialLegend = false,
 }: AdsPreviewProps) {
+  // Отслеживаем первую загрузку для правильного отображения состояний
+  const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+
+  // Помечаем что первая загрузка завершена
+  useEffect(() => {
+    if (!loading && !hasLoadedOnce) {
+      setHasLoadedOnce(true)
+    }
+  }, [loading, hasLoadedOnce])
   // Fetch house info when a specific house is selected
   const {
     houseInfo,
@@ -364,7 +385,7 @@ export default function AdsPreview({
             {selectedHouseId && onClearHouseSelection && (
               <button
                 onClick={onClearHouseSelection}
-                className='p-1 text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors'
+                className='p-2 md:p-1 min-w-[44px] min-h-[44px] md:min-w-auto md:min-h-auto text-gray-400 hover:text-gray-600 hover:bg-gray-100 rounded transition-colors flex items-center justify-center'
                 title='Показать все объявления в области'
               >
                 <XIcon className='w-4 h-4' />
@@ -403,13 +424,13 @@ export default function AdsPreview({
       </div>
 
       {/* Content */}
-      <div className='max-h-96 overflow-y-auto'>
+      <div className='max-h-80 md:max-h-96 overflow-y-auto'>
         {showInitialLegend ? (
           <MapLegend />
         ) : error ? (
           <ErrorState error={error} />
         ) : loading ? (
-          <LoadingState />
+          <LoadingState isProcessing={hasLoadedOnce} />
         ) : sortedAds.length === 0 ? (
           <EmptyState />
         ) : (

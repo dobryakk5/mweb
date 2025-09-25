@@ -137,7 +137,7 @@ export default function ComparisonAdsBlock({
         })}
         onClick={onToggleAddAdForm}
       >
-        {showAddAdForm ? 'Скрыть форму' : 'Добавить в сравнение'}
+        {showAddAdForm ? 'Скрыть форму' : 'Добавить новую ссылку'}
       </button>
     </>
   )

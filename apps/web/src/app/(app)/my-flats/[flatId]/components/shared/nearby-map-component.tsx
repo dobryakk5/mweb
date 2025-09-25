@@ -14,6 +14,7 @@ import {
   Marker,
   Popup,
   useMapEvents,
+  useMap,
 } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
@@ -22,7 +23,7 @@ import 'leaflet-defaulticon-compatibility/dist/leaflet-defaulticon-compatibility
 
 interface NearbyMapComponentProps {
   flatAddress: string
-  flatCoordinates?: { lat: number; lng: number }
+  flatCoordinates?: { lat: number; lng: number } | { houseId: number }
   nearbyAds: any[]
   currentFlat?: any
   selectedHouseId?: number | null
@@ -66,6 +67,32 @@ function MapEventHandler({
   return null
 }
 
+// Component to handle map centering
+function MapCenterController({
+  center,
+}: {
+  center: { lat: number; lng: number } | null
+}) {
+  const map = useMap()
+
+  useEffect(() => {
+    if (center && map) {
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(
+          `🎯 [${timestamp}] MAP_CENTER - Recentering map to:`,
+          center,
+        )
+      }
+
+      // Smooth pan to new center
+      map.setView([center.lat, center.lng], 15, { animate: true })
+    }
+  }, [center, map])
+
+  return null
+}
+
 const NearbyMapComponent = memo(function NearbyMapComponent({
   flatAddress,
   flatCoordinates,
@@ -78,6 +105,10 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   filters,
   mapAds = [],
 }: NearbyMapComponentProps) {
+  console.log(
+    `🗺️ NearbyMapComponent render: mapAds=${mapAds?.length || 0}, nearbyAds=${nearbyAds?.length || 0}`,
+  )
+
   const [housePrices, setHousePrices] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(false)
   const [loadingPrices, setLoadingPrices] = useState(false)
@@ -147,11 +178,34 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
 
   // Получаем координаты адреса и house_id
   useEffect(() => {
-    if (flatAddress) {
+    if (
+      flatCoordinates &&
+      'lat' in flatCoordinates &&
+      'lng' in flatCoordinates
+    ) {
+      // If we have direct coordinates from props, use them
+      setAddressCoordinates({
+        lat: flatCoordinates.lat,
+        lng: flatCoordinates.lng,
+      })
+      console.log(
+        'Using direct coordinates from flatCoordinates:',
+        flatCoordinates,
+      )
+      // Still need to get house_id for the current flat
+      if (flatAddress) {
+        loadCurrentFlatHouseId()
+      }
+    } else if (flatCoordinates && 'houseId' in flatCoordinates) {
+      // If we have house_id from props, use it to get coordinates
+      setCurrentFlatHouseId(flatCoordinates.houseId)
+      loadCoordinatesFromHouseId(flatCoordinates.houseId)
+    } else if (flatAddress) {
+      // Fallback to address-based lookup
       loadAddressCoordinates()
       loadCurrentFlatHouseId()
     }
-  }, [flatAddress])
+  }, [flatAddress, flatCoordinates])
 
   const loadAddressCoordinates = async () => {
     try {
@@ -180,13 +234,55 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
         }
       } else {
         console.error('Failed to get address coordinates:', response.status)
-        // Fallback to specific address coordinates
-        setAddressCoordinates({ lat: 55.7729, lng: 37.5897 })
+        // No fallback - let map show without centering
+        setAddressCoordinates(null)
       }
     } catch (error) {
       console.error('Error loading address coordinates:', error)
-      // Fallback to specific address coordinates
-      setAddressCoordinates({ lat: 55.7729, lng: 37.5897 })
+      // No fallback - let map show without centering
+      setAddressCoordinates(null)
+    }
+  }
+
+  const loadCoordinatesFromHouseId = async (houseId: number) => {
+    try {
+      if (process.env.NODE_ENV === 'development') {
+        const timestamp = new Date().toISOString().slice(11, 23)
+        console.log(
+          `🗺️ [${timestamp}] MAP_CENTER - Loading coordinates for house_id:`,
+          houseId,
+        )
+      }
+
+      // Use existing houses-in-bounds endpoint to get coordinates for this house
+      // We'll search in a large area and filter for our specific house_id
+      const response = await fetch(
+        `${process.env.NEXT_PUBLIC_API_URL}/map/houses-in-bounds?north=56&south=55&east=38&west=37&rooms=1&maxPrice=100000000&houseIds=${houseId}`,
+      )
+
+      if (response.ok) {
+        const data = await response.json()
+        const house = data.houses?.find((h: any) => h.id === houseId)
+        if (house?.lat && house?.lng) {
+          console.log('House coordinates from house_id:', {
+            lat: house.lat,
+            lng: house.lng,
+          })
+          setAddressCoordinates({
+            lat: house.lat,
+            lng: house.lng,
+          })
+        } else {
+          console.warn('No coordinates found for house_id:', houseId)
+          setAddressCoordinates(null)
+        }
+      } else {
+        console.error('Failed to get house coordinates:', response.status)
+        setAddressCoordinates(null)
+      }
+    } catch (error) {
+      console.error('Error loading house coordinates:', error)
+      setAddressCoordinates(null)
     }
   }
 
@@ -436,8 +532,12 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
     if (group.length === 1 || isOneLogicalHouse) {
       // Один дом или один логический дом (один house_id) - обычный маркер
       const house = group[0]
+      // Проверяем активность объявлений с учетом разных форматов данных
       const hasActiveAds = Boolean(
-        house.has_active_ads === true || house.active_ads_count > 0,
+        house.has_active_ads || house.active_ads_count > 0,
+      )
+      console.log(
+        `🏠 House ${house.house_id}: has_active_ads=${house.has_active_ads}, active_ads_count=${house.active_ads_count}, result=${hasActiveAds}`,
       )
       const housePrice = housePrices[house.house_id]
       const isCurrentUserHouse = Boolean(
@@ -455,9 +555,9 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
         : isCurrentUserHouse
           ? new L.DivIcon({
               className: 'marker-current-house',
-              html: `<span style="display:inline-block;width:32px;height:32px;border-radius:50%;background:#ef4444;border:${getBorderStyle(house.house_id)};box-shadow:0 0 6px rgba(0,0,0,.8);"></span>`,
-              iconSize: [32, 32],
-              iconAnchor: [16, 16],
+              html: `<span style="display:inline-block;width:26px;height:26px;border-radius:50%;background:#ef4444;border:${getBorderStyle(house.house_id)};box-shadow:0 0 6px rgba(0,0,0,.8);"></span>`,
+              iconSize: [26, 26],
+              iconAnchor: [13, 13],
             })
           : hasActiveAds
             ? new L.DivIcon({
@@ -493,7 +593,15 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
         0,
       )
       const hasActiveAds = Boolean(
-        group.some((h) => h.has_active_ads === true || h.active_ads_count > 0),
+        group.some((h) => h.has_active_ads || h.active_ads_count > 0),
+      )
+      console.log(
+        `🏠 Group: hasActiveAds=${hasActiveAds}, houses:`,
+        group.map((h) => ({
+          id: h.house_id,
+          has_active: h.has_active_ads,
+          count: h.active_ads_count,
+        })),
       )
 
       // Определяем адрес группы в зависимости от того, одинаковые ли house_id
@@ -572,8 +680,6 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   // State для хранения выбранного дома
   const [selectedHouseData, setSelectedHouseData] = useState<any>(null)
 
-  // State для домов из API
-  const [housesFromAPI, setHousesFromAPI] = useState<any[]>([])
   const [loadingHouses, setLoadingHouses] = useState(false)
   const [currentBounds, setCurrentBounds] = useState<any>(null)
 
@@ -619,7 +725,7 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
       const data = await response.json()
       const houses = data.houses || []
 
-      setHousesFromAPI(houses)
+      // Дома теперь создаются из mapAds в housesFromAds
 
       if (process.env.NODE_ENV === 'development') {
         const timestamp = new Date().toISOString().slice(11, 23)
@@ -627,28 +733,77 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
       }
     } catch (error) {
       console.error('Error fetching houses:', error)
-      setHousesFromAPI([])
+      // Дома теперь создаются из mapAds в housesFromAds
     } finally {
       setLoadingHouses(false)
     }
   }, [])
 
-  // Загружаем дома когда изменяются bounds или фильтры
-  useEffect(() => {
-    if (currentBounds && filters) {
-      const boundsObj = {
-        north: currentBounds.getNorth(),
-        south: currentBounds.getSouth(),
-        east: currentBounds.getEast(),
-        west: currentBounds.getWest(),
-      }
-      fetchHousesInBounds(boundsObj, filters)
-    }
-  }, [currentBounds, filters, fetchHousesInBounds])
+  // Старая логика загрузки домов отключена - теперь дома поступают через mapAds из кэша
+  // useEffect(() => {
+  //   if (currentBounds && filters) {
+  //     const boundsObj = {
+  //       north: currentBounds.getNorth(),
+  //       south: currentBounds.getSouth(),
+  //       east: currentBounds.getEast(),
+  //       west: currentBounds.getWest(),
+  //     }
+  //     fetchHousesInBounds(boundsObj, filters)
+  //   }
+  // }, [currentBounds, filters, fetchHousesInBounds])
 
-  // Добавляем текущий дом пользователя и выбранный дом, если их нет в housesFromAPI
+  // Создаем дома из кэшированных объявлений с правильной логикой активности
+  const housesFromAds = useMemo(() => {
+    const adsToUse = mapAds && mapAds.length > 0 ? mapAds : nearbyAds
+    if (!adsToUse || adsToUse.length === 0) return []
+
+    console.log(
+      `🏠 Creating houses from ${mapAds && mapAds.length > 0 ? 'cached mapAds' : 'nearbyAds'}: ${adsToUse.length} ads (mapAds: ${mapAds?.length || 0}, nearbyAds: ${nearbyAds?.length || 0})`,
+    )
+
+    // Группируем объявления по house_id
+    const houseGroups = adsToUse.reduce((acc: any, ad: any) => {
+      if (!acc[ad.house_id]) {
+        acc[ad.house_id] = []
+      }
+      acc[ad.house_id].push(ad)
+      return acc
+    }, {})
+
+    // Создаем дома с правильными полями активности
+    return Object.entries(houseGroups).map(([houseIdStr, ads]) => {
+      const houseId = Number(houseIdStr)
+      const adsArray = ads as any[]
+      const firstAd = adsArray[0]
+
+      // Определяем активность: is_active может быть boolean, number (0/1) или undefined
+      const activeAds = adsArray.filter((ad: any) => {
+        return (
+          ad.is_active === true || ad.is_active === 1 || ad.is_active === '1'
+        )
+      })
+
+      console.log(
+        `🏠 Creating house ${houseId}: ${adsArray.length} ads, ${activeAds.length} active, sample is_active:`,
+        adsArray.slice(0, 2).map((a: any) => a.is_active),
+      )
+
+      return {
+        house_id: houseId,
+        lat: firstAd.lat,
+        lng: firstAd.lng,
+        address: firstAd.address || `Дом ${houseId}`,
+        active_ads_count: activeAds.length,
+        total_ads_count: adsArray.length,
+        has_active_ads: activeAds.length > 0,
+        dist_m: firstAd.distance_m || 0,
+      }
+    })
+  }, [mapAds, nearbyAds])
+
+  // Добавляем текущий дом пользователя и выбранный дом, если их нет в housesFromAds
   const allHouses = useMemo(() => {
-    let houses = [...housesFromAPI]
+    let houses = [...housesFromAds]
 
     // Проверяем, есть ли дом пользователя в отфильтрованных домах
     const hasCurrentUserHouse =
@@ -696,7 +851,7 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
 
     return houses
   }, [
-    housesFromAPI,
+    housesFromAds,
     currentFlatHouseId,
     addressCoordinates,
     flatAddress,
@@ -720,16 +875,44 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   const houseGroups = groupNearbyHouses(allHouses, 50) // 50 метров минимальное расстояние
   const markers = houseGroups.map((group) => createGroupMarker(group))
 
-  // Определяем центр и зум карты
-  const getMapCenter = (): [number, number] => {
+  // Определяем центр карты - только реальные координаты, без fallback
+  const getMapCenter = (): [number, number] | null => {
+    // Приоритет: координаты из пропсов, затем координаты по адресу
+    if (
+      flatCoordinates &&
+      'lat' in flatCoordinates &&
+      'lng' in flatCoordinates
+    ) {
+      return [flatCoordinates.lat, flatCoordinates.lng]
+    }
     if (addressCoordinates) {
       return [addressCoordinates.lat, addressCoordinates.lng]
     }
-    // Центр по адресу "1-я Тверская-Ямская улица, 13с1А" как fallback
-    return [55.7729, 37.5897]
+    // Нет fallback! Если координаты не найдены - карта не должна отображаться
+    return null
   }
 
   const mapCenter = getMapCenter()
+
+  // Для динамического центрирования используем те же координаты
+  const dynamicCenter =
+    flatCoordinates && 'lat' in flatCoordinates && 'lng' in flatCoordinates
+      ? flatCoordinates
+      : addressCoordinates
+
+  // Если координаты не найдены - не показываем карту
+  if (!mapCenter) {
+    return (
+      <div className='h-full w-full flex items-center justify-center'>
+        <div className='text-center'>
+          <div className='text-lg font-medium text-red-600 mb-2'>
+            Адрес не найден
+          </div>
+          <div className='text-sm text-gray-600'>Используйте другой адрес</div>
+        </div>
+      </div>
+    )
+  }
 
   return (
     <div className='h-full w-full relative'>
@@ -753,6 +936,9 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
 
         {/* Map event handler for bounds tracking */}
         <MapEventHandler onBoundsChange={handleMapBoundsChange} />
+
+        {/* Map center controller for dynamic recentering */}
+        <MapCenterController center={dynamicCenter} />
 
         {/* Сгруппированные маркеры домов в видимой области */}
         {markers.map((marker, index) => {
