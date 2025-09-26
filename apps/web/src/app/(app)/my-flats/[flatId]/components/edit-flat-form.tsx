@@ -92,22 +92,47 @@ export default function EditFlatFormRefactored({
 
   const { mutateAsync: updateFlat } = useUpdateFlat(flat?.id || 0)
 
-  // Data fetching hooks
-  const { data: flatSpecificData, refetch: refetchFlatSpecific } =
-    useFlatSpecificAds(flat?.id || 0)
-  const { data: allAds = [], refetch } = useAds({ flatId: flat?.id })
+  // Sequential data fetching hooks
+  // 1. Сначала загружаем объявления по квартире
+  const {
+    data: flatSpecificData,
+    refetch: refetchFlatSpecific,
+    isLoading: isLoadingFlatSpecific,
+  } = useFlatSpecificAds(flat?.id || 0)
 
   // Extract data from flat specific response
   const flatSpecificAds = flatSpecificData?.all || []
   const savedAds = flatSpecificData?.saved || []
   const newAds = flatSpecificData?.new || []
-  const { data: broaderAdsFromFindAds = [], refetch: refetchBroaderAds } =
-    useBroaderAdsFromFindAds(flat?.id || 0)
+
+  // 2. Загружаем объявления по дому только после загрузки объявлений по квартире
+  const {
+    data: allAds = [],
+    refetch,
+    isLoading: isLoadingAllAds,
+  } = useAds({
+    flatId: flat?.id,
+    enabled: !!flatSpecificData && !isLoadingFlatSpecific, // Ждем загрузки объявлений по квартире
+  })
+  const {
+    data: broaderAdsFromFindAds = [],
+    refetch: refetchBroaderAds,
+    isLoading: isLoadingBroaderAds,
+  } = useBroaderAdsFromFindAds(flat?.id || 0, {
+    enabled: !!flatSpecificData && !isLoadingFlatSpecific, // Ждем загрузки объявлений по квартире
+  })
+
+  // 3. Загружаем близлежащие объявления только после загрузки объявлений по дому
   const {
     data: nearbyAdsData,
     refetch: refetchNearbyAds,
     isLoading: isLoadingNearbyAds,
-  } = useNearbyAdsFromFindAds(flat?.id || 0, nearbyFilters)
+  } = useNearbyAdsFromFindAds(flat?.id || 0, nearbyFilters, {
+    enabled:
+      (!!allAds.length || !!broaderAdsFromFindAds.length) &&
+      !isLoadingAllAds &&
+      !isLoadingBroaderAds, // Ждем загрузки объявлений по дому
+  })
 
   // Extract ads from new API structure
   const nearbyAdsFromFindAds = nearbyAdsData?.ads || []
@@ -465,6 +490,7 @@ export default function EditFlatFormRefactored({
                 state.updateStates.flatAvito ||
                 state.updateStates.flatYandex
               }
+              isLoading={isLoadingFlatSpecific}
               onToggleComparison={actions.handleToggleComparison}
               onUpdateAd={(adId) =>
                 actions.handleUpdateAdFromSource(adId, 'cian')
@@ -494,6 +520,7 @@ export default function EditFlatFormRefactored({
                 state.updateStates.houseAvito ||
                 state.updateStates.houseYandex
               }
+              isLoading={isLoadingAllAds || isLoadingBroaderAds}
               onToggleComparison={actions.handleToggleComparison}
               onAddToComparison={actions.handleAddToComparison}
               onUpdateAd={(adId) =>

@@ -18,6 +18,7 @@ export default function HouseAdsBlock({
   onToggleCollapse,
   onUpdate,
   isUpdating,
+  isLoading = false,
   onToggleComparison,
   onAddToComparison,
   onUpdateAd,
@@ -103,6 +104,15 @@ export default function HouseAdsBlock({
     </div>
   )
 
+  const loadingContent = (
+    <div className='flex justify-center items-center py-8'>
+      <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+      <span className='ml-2 text-sm text-gray-600'>
+        Загружаем объявления по дому...
+      </span>
+    </div>
+  )
+
   return (
     <CollapsibleBlock
       title='Объявления по этому дому'
@@ -110,19 +120,23 @@ export default function HouseAdsBlock({
       onToggle={onToggleCollapse}
       headerActions={headerActions}
     >
-      <AdsTable
-        ads={ads}
-        columns={columns}
-        onToggleComparison={onToggleComparison}
-        onAddToComparison={onAddToComparison}
-        onUpdateAd={onUpdateAd}
-        updatingAdIds={updatingAdIds || new Set()}
-        showActions={true}
-        showComparison={true}
-        showDelete={false}
-        isBulkUpdating={isUpdatingStatuses}
-        updatedTodayAdIds={updatedTodayAdIds}
-      />
+      {isLoading ? (
+        loadingContent
+      ) : (
+        <AdsTable
+          ads={ads}
+          columns={columns}
+          onToggleComparison={onToggleComparison}
+          onAddToComparison={onAddToComparison}
+          onUpdateAd={onUpdateAd}
+          updatingAdIds={updatingAdIds || new Set()}
+          showActions={true}
+          showComparison={true}
+          showDelete={false}
+          isBulkUpdating={isUpdatingStatuses}
+          updatedTodayAdIds={updatedTodayAdIds}
+        />
+      )}
     </CollapsibleBlock>
   )
 }

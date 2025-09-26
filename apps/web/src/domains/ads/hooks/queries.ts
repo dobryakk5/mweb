@@ -17,11 +17,14 @@ export function useAds(
     sortBy?: string
     page?: number
     flatId?: number
+    enabled?: boolean
   } = {},
 ) {
+  const { enabled = true, ...queryFilters } = filters
   return useQuery({
-    queryKey: adKeys.list(filters),
-    queryFn: () => fetchAds(filters),
+    queryKey: adKeys.list(queryFilters),
+    queryFn: () => fetchAds(queryFilters),
+    enabled,
   })
 }
 
@@ -70,11 +73,14 @@ export function useFlatAdsFromFindAds(flatId: number) {
 }
 
 // Хук для получения других объявлений по адресу из find_ads (без точного этажа и комнат)
-export function useBroaderAdsFromFindAds(flatId: number) {
+export function useBroaderAdsFromFindAds(
+  flatId: number,
+  options?: { enabled?: boolean },
+) {
   return useQuery({
     queryKey: ['findAds', 'broader', flatId],
     queryFn: () => findBroaderAdsByAddress(flatId),
-    enabled: !!flatId,
+    enabled: (options?.enabled ?? true) && !!flatId,
   })
 }
 
@@ -88,11 +94,12 @@ export function useNearbyAdsFromFindAds(
     minKitchenArea?: number
     radius?: number
   },
+  options?: { enabled?: boolean },
 ) {
   return useQuery({
     queryKey: ['findAds', 'nearby', flatId, filters],
     queryFn: () => findNearbyAdsByFlat(flatId, filters),
-    enabled: !!flatId,
+    enabled: (options?.enabled ?? true) && !!flatId,
     select: (data) => ({
       ads: data.ads,
       filters: data.filters,

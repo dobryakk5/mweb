@@ -507,11 +507,19 @@ export default async function adsRoutes(fastify: FastifyInstance) {
 
       // Статус уже boolean в БД, конвертация не нужна
 
+      // Обновляем updatedAt если изменяется статус или происходит принудительное обновление данных
+      // НО только если нет timestamp'ов из источника - приоритет у sourceUpdated
+      const shouldUpdateTimestamp =
+        (updateData.status !== undefined ||
+          updateData.parseUrl !== undefined) &&
+        !updateData.sourceUpdated
+
       const result = await db
         .update(ads)
         .set({
           ...updateData,
-          // Не обновляем updatedAt при ручном редактировании - сохраняем временные метки источника
+          // Обновляем updatedAt только при изменении статуса или принудительном обновлении данных
+          ...(shouldUpdateTimestamp && { updatedAt: new Date() }),
         })
         .where(eq(ads.id, adId))
         .returning()

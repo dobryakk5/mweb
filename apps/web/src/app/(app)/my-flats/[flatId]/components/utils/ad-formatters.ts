@@ -45,15 +45,15 @@ export const getDomainFromUrl = (url: string): string => {
   try {
     const domain = new URL(url).hostname.toLowerCase()
 
-    if (domain.includes('avito.ru')) return 'A'
+    if (domain.includes('avito.ru')) return 'avito'
     if (
       domain.includes('yandex.ru') ||
       domain.includes('realty.yandex.ru') ||
       domain.includes('ya.ru') ||
       domain.includes('realty.ya.ru')
     )
-      return 'Y'
-    if (domain.includes('cian.ru')) return 'C'
+      return 'yandex'
+    if (domain.includes('cian.ru')) return 'cian'
 
     // Fallback to domain without www
     return domain.replace('www.', '')

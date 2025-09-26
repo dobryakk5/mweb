@@ -18,6 +18,7 @@ export default function FlatAdsBlock({
   onToggleCollapse,
   onUpdate,
   isUpdating,
+  isLoading = false,
   onToggleComparison,
   onUpdateAd,
   updatingAdIds,
@@ -129,6 +130,15 @@ export default function FlatAdsBlock({
   // Если нет объявлений - показываем кнопку добавления
   const hasAds = ads && ads.length > 0
 
+  const loadingContent = (
+    <div className='flex justify-center items-center py-8'>
+      <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+      <span className='ml-2 text-sm text-gray-600'>
+        Загружаем объявления...
+      </span>
+    </div>
+  )
+
   const emptyStateContent = (
     <div className='flex flex-col items-center justify-center py-8 px-4'>
       {!showAddForm ? (
@@ -215,7 +225,9 @@ export default function FlatAdsBlock({
       onToggle={onToggleCollapse}
       headerActions={hasAds ? headerActions : null}
     >
-      {hasAds ? (
+      {isLoading ? (
+        loadingContent
+      ) : hasAds ? (
         <AdsTable
           ads={ads || []}
           columns={columns}

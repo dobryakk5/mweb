@@ -218,45 +218,60 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
     }
   }
 
+  const loadingContent = (
+    <div className='flex justify-center items-center py-8'>
+      <div className='animate-spin rounded-full h-8 w-8 border-b-2 border-blue-600'></div>
+      <span className='ml-2 text-sm text-gray-600'>
+        Загружаем объявления рядом...
+      </span>
+    </div>
+  )
+
   return (
     <CollapsibleBlock
       title='Объявления рядом'
       isCollapsed={isCollapsed}
       onToggle={onToggleCollapse}
     >
-      {/* Фильтры поиска - теперь сверху и в одну строку */}
-      {nearbyAds && nearbyAds.length > 0 && nearbyFilters && (
-        <div className='mb-4'>
-          <NearbyAdsFilter
-            currentFilters={{
-              maxPrice:
-                nearbyFilters?.currentPrice ||
-                nearbyFilters?.maxPrice ||
-                defaultFiltersFromFlatAds.maxPrice,
-              rooms: nearbyFilters?.rooms || flat.rooms || 3, // ≥ комнат текущей квартиры
-              minArea:
-                nearbyFilters?.minArea || defaultFiltersFromFlatAds.minArea, // 90% от площади текущей квартиры
-              minKitchenArea:
-                nearbyFilters?.minKitchenArea ||
-                defaultFiltersFromFlatAds.minKitchenArea, // 90% от кухни текущей квартиры
-              radius: nearbyFilters?.radius || 500,
-            }}
-            onSearch={handleFilterUpdate}
-            isLoading={isLoading}
-            inline={true}
-          />
-        </div>
-      )}
+      {isLoading ? (
+        loadingContent
+      ) : (
+        <>
+          {/* Фильтры поиска - теперь сверху и в одну строку */}
+          {nearbyAds && nearbyAds.length > 0 && nearbyFilters && (
+            <div className='mb-4'>
+              <NearbyAdsFilter
+                currentFilters={{
+                  maxPrice:
+                    nearbyFilters?.currentPrice ||
+                    nearbyFilters?.maxPrice ||
+                    defaultFiltersFromFlatAds.maxPrice,
+                  rooms: nearbyFilters?.rooms || flat.rooms || 3, // ≥ комнат текущей квартиры
+                  minArea:
+                    nearbyFilters?.minArea || defaultFiltersFromFlatAds.minArea, // 90% от площади текущей квартиры
+                  minKitchenArea:
+                    nearbyFilters?.minKitchenArea ||
+                    defaultFiltersFromFlatAds.minKitchenArea, // 90% от кухни текущей квартиры
+                  radius: nearbyFilters?.radius || 500,
+                }}
+                onSearch={handleFilterUpdate}
+                isLoading={isLoading}
+                inline={true}
+              />
+            </div>
+          )}
 
-      {/* Карта с preview панелью для объявлений в видимой области */}
-      <MapWithPreview
-        flatId={flat.id.toString()}
-        className='w-full'
-        externalFilters={mapFilters}
-        onAddToComparison={onAddToComparison}
-        onToggleComparison={onToggleComparison}
-        comparisonAds={comparisonAds}
-      />
+          {/* Карта с preview панелью для объявлений в видимой области */}
+          <MapWithPreview
+            flatId={flat.id.toString()}
+            className='w-full'
+            externalFilters={mapFilters}
+            onAddToComparison={onAddToComparison}
+            onToggleComparison={onToggleComparison}
+            comparisonAds={comparisonAds}
+          />
+        </>
+      )}
     </CollapsibleBlock>
   )
 })
