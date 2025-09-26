@@ -107,6 +107,7 @@ const createAdSchema = z.object({
   address: z.string().min(1),
   price: z.number().min(0), // Изменено с .positive() на .min(0)
   rooms: z.number().positive(),
+  floor: z.number().optional(), // Этаж
   from: z.number().int().min(0).max(3).default(2).optional(), // 0 - моя квартира, 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma: z.number().int().min(0).max(1).default(0).optional(), // 0 - обычное объявление, 1 - в сравнении квартир
   sourceCreated: z.string().optional(), // Время создания из источника
@@ -418,6 +419,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
           address: body.address,
           price: body.price,
           rooms: body.rooms,
+          floor: body.floor, // Добавляем этаж
           views: 0, // Добавляем views по умолчанию
           from: body.from || 2, // По умолчанию - добавлено вручную
           sma: body.sma || 0, // По умолчанию - обычное объявление
@@ -858,11 +860,18 @@ export default async function adsRoutes(fastify: FastifyInstance) {
 
       const currentFlat = flats[0]
 
-      // 1. Получаем старые сохраненные объявления (from = 0 или 1)
+      // 1. Получаем старые сохраненные объявления (from = 0 или 1) с соответствующими параметрами квартиры
       const savedAds = await db
         .select()
         .from(ads)
-        .where(and(eq(ads.flatId, flatId), inArray(ads.from, [0, 1])))
+        .where(
+          and(
+            eq(ads.flatId, flatId),
+            inArray(ads.from, [0, 1]),
+            eq(ads.rooms, currentFlat.rooms), // Фильтруем по количеству комнат
+            eq(ads.floor, currentFlat.floor), // Фильтруем по этажу
+          ),
+        )
         .orderBy(desc(ads.updatedAt))
 
       // 2. Получаем новые объявления из внешних источников (без дедупликации для квартиры)
@@ -1572,6 +1581,21 @@ export default async function adsRoutes(fastify: FastifyInstance) {
           parseError,
         )
         // Продолжаем создание объявления без данных парсинга
+      }
+
+      // Валидация: проверяем соответствие спарсенных данных параметрам квартиры
+      if (parsedData.rooms && parsedData.rooms !== currentFlat.rooms) {
+        fastify.log.warn(
+          `Rooms mismatch for my flat ad: parsed ${parsedData.rooms}, expected ${currentFlat.rooms}. Using flat data.`,
+        )
+        parsedData.rooms = currentFlat.rooms // Принудительно используем параметры квартиры
+      }
+
+      if (parsedData.floor && parsedData.floor !== currentFlat.floor) {
+        fastify.log.warn(
+          `Floor mismatch for my flat ad: parsed ${parsedData.floor}, expected ${currentFlat.floor}. Using flat data.`,
+        )
+        parsedData.floor = currentFlat.floor // Принудительно используем параметры квартиры
       }
 
       // Проверяем, есть ли уже объявление "Моя квартира" для этой квартиры

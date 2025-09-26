@@ -192,9 +192,18 @@ export default function EditFlatFormRefactored({
           updatedTodayIds.add(ad.id)
         }
       })
-      state.setUpdatedTodayAdIds(updatedTodayIds)
+
+      // Только обновляем состояние, если набор ID действительно изменился
+      const currentIds = state.updatedTodayAdIds
+      const hasChanged =
+        updatedTodayIds.size !== currentIds.size ||
+        [...updatedTodayIds].some((id) => !currentIds.has(id))
+
+      if (hasChanged) {
+        state.setUpdatedTodayAdIds(updatedTodayIds)
+      }
     }
-  }, [flatSpecificAds, allAds, state.setUpdatedTodayAdIds])
+  }, [flatSpecificAds, allAds, state.updatedTodayAdIds])
 
   // Auto-save house ads to users.ads when broaderAdsFromFindAds loads
   useEffect(() => {
@@ -419,7 +428,36 @@ export default function EditFlatFormRefactored({
       const result = await response.json()
       console.log('My flat ad added successfully:', result)
 
-      // Refresh ads data to include the new ad
+      // Автоматически запускаем парсинг через Python API для добавленного объявления
+      if (result.id) {
+        try {
+          console.log(
+            'Starting automatic parsing for new my-flat ad:',
+            result.id,
+          )
+          const parseResponse = await fetch(`/api/ads/${result.id}`, {
+            method: 'PUT',
+            headers: {
+              'Content-Type': 'application/json',
+            },
+            body: JSON.stringify({
+              parseUrl: url,
+              parseType: 'extended', // Используем расширенный парсинг для получения максимума данных
+            }),
+          })
+
+          if (parseResponse.ok) {
+            console.log('Automatic parsing completed successfully')
+          } else {
+            console.warn('Automatic parsing failed, but ad was created')
+          }
+        } catch (parseError) {
+          console.warn('Error during automatic parsing:', parseError)
+          // Не прерываем выполнение, т.к. объявление уже создано
+        }
+      }
+
+      // Refresh ads data to include the new ad with parsed data
       await Promise.all([refetch(), refetchFlatSpecific()])
     } catch (error) {
       console.error('Error adding my flat ad:', error)
@@ -503,6 +541,7 @@ export default function EditFlatFormRefactored({
               onAddMyFlatAd={handleAddMyFlatAd}
               isAddingMyFlat={state.isAddingMyFlat}
               onToggleMyFlat={handleToggleMyFlat}
+              onDeleteAd={actions.handleDeleteAd}
               updatedTodayAdIds={state.updatedTodayAdIds}
             />
           )}

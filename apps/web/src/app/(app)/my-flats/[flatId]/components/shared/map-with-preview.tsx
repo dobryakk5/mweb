@@ -21,7 +21,7 @@ const NearbyMapComponent = dynamic(() => import('./nearby-map-component'), {
 interface MapWithPreviewProps {
   flatId: string
   className?: string
-  externalFilters?: FlatFilters // Optional external filters to override automatic ones
+  externalFilters?: FlatFilters | null // Optional external filters to override automatic ones
   onAddToComparison?: (ad: AdData) => void
   onToggleComparison?: (adId: number, inComparison: boolean) => Promise<void>
   comparisonAds?: any[]
@@ -118,8 +118,8 @@ export default function MapWithPreview({
 
   // Create filters based on external filters or current flat parameters
   const flatFilters: FlatFilters = useMemo(() => {
-    // If external filters are provided, use them
-    if (externalFilters) {
+    // If external filters are provided and not null, use them
+    if (externalFilters && externalFilters !== null) {
       return externalFilters
     }
 

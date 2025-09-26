@@ -141,18 +141,11 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
   }, [flatAds]) // Зависит только от flatAds, не от flat.rooms
 
   // State for map filters - используем параметры текущей квартиры согласно MAPS.md
-  const [mapFilters, setMapFilters] = useState<FlatFilters>(() => {
-    return {
-      rooms: 3,
-      maxPrice: 50000000,
-      minArea: undefined,
-      minKitchenArea: undefined,
-    }
-  })
+  const [mapFilters, setMapFilters] = useState<FlatFilters | null>(null)
 
-  // Обновляем mapFilters ТОЛЬКО при первой инициализации или изменении nearbyFilters пользователем
+  // Инициализируем mapFilters когда defaultFilters готовы
   useEffect(() => {
-    // Обновляем только если defaultFilters уже установлены (не начальные значения)
+    // Устанавливаем фильтры когда defaultFilters готовы (не дефолтные значения)
     if (defaultFiltersFromFlatAds.maxPrice === 50000000) return
 
     const initialMaxPrice =
@@ -170,6 +163,18 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
     }
 
     setMapFilters((prevFilters) => {
+      // Если первая инициализация (prevFilters === null), просто устанавливаем
+      if (!prevFilters) {
+        if (process.env.NODE_ENV === 'development') {
+          const timestamp = new Date().toISOString().slice(11, 23)
+          console.log(
+            `🗺️ [${timestamp}] INIT - Map filters initialized:`,
+            newFilters,
+          )
+        }
+        return newFilters
+      }
+
       // Проверяем изменились ли фильтры перед обновлением
       const hasChanged =
         prevFilters.rooms !== newFilters.rooms ||
@@ -181,7 +186,7 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
         const timestamp = new Date().toISOString().slice(11, 23)
         console.log(`📝 [${timestamp}] Updating mapFilters:`, {
           newFilters,
-          trigger: nearbyFilters ? 'user_input' : 'initial',
+          trigger: nearbyFilters ? 'user_input' : 'update',
         })
       }
 
@@ -262,14 +267,20 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
           )}
 
           {/* Карта с preview панелью для объявлений в видимой области */}
-          <MapWithPreview
-            flatId={flat.id.toString()}
-            className='w-full'
-            externalFilters={mapFilters}
-            onAddToComparison={onAddToComparison}
-            onToggleComparison={onToggleComparison}
-            comparisonAds={comparisonAds}
-          />
+          {mapFilters ? (
+            <MapWithPreview
+              flatId={flat.id.toString()}
+              className='w-full'
+              externalFilters={mapFilters}
+              onAddToComparison={onAddToComparison}
+              onToggleComparison={onToggleComparison}
+              comparisonAds={comparisonAds}
+            />
+          ) : (
+            <div className='w-full h-[500px] bg-gray-100 animate-pulse rounded-lg flex items-center justify-center'>
+              <div className='text-sm text-gray-600'>Загрузка карты...</div>
+            </div>
+          )}
         </>
       )}
     </CollapsibleBlock>

@@ -67,9 +67,23 @@ const boundsContainsBounds = (
 
 // Функция для фильтрации объявлений по заданным параметрам
 const filterAds = (ads: Ad[], filters: MapFilters): Ad[] => {
-  return ads.filter((ad) => {
+  if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
+    console.log('🔍 FILTER_DEBUG - Applied filters:', filters)
+    console.log('🔍 FILTER_DEBUG - Total ads before filtering:', ads.length)
+  }
+
+  const filteredAds = ads.filter((ad) => {
+    // Debug price filtering specifically
+    if (filters.maxPrice && ad.price > filters.maxPrice) {
+      if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
+        console.log(
+          `🚫 PRICE_FILTER_DEBUG: Excluding ad ${ad.price} > ${filters.maxPrice}`,
+        )
+      }
+      return false
+    }
+
     if (filters.rooms && ad.rooms < filters.rooms) return false
-    if (filters.maxPrice && ad.price >= filters.maxPrice) return false
     if (filters.minArea && ad.area && ad.area < filters.minArea) return false
     if (
       filters.minKitchenArea &&
@@ -79,6 +93,12 @@ const filterAds = (ads: Ad[], filters: MapFilters): Ad[] => {
       return false
     return true
   })
+
+  if (process.env.NODE_ENV === 'development' && Math.random() < 0.01) {
+    console.log('🔍 FILTER_DEBUG - Ads after filtering:', filteredAds.length)
+  }
+
+  return filteredAds
 }
 
 // Функция для фильтрации домов на основе ОТФИЛЬТРОВАННЫХ объявлений в области и окрашивания маркеров
@@ -312,6 +332,12 @@ export const useMapCache = () => {
         console.log(
           '✅ Using cached data for bounds, applying filters:',
           filters,
+        )
+        console.log(
+          '✅ CACHE_DEBUG - Cache has',
+          cache!.ads.length,
+          'ads, filters.maxPrice =',
+          filters.maxPrice,
         )
 
         // Фильтруем объявления на клиентской стороне

@@ -6,6 +6,7 @@ export interface CreateAdData {
   address: string
   price: number
   rooms: number
+  floor?: number // Этаж
   from?: number // 1 - найдено по кнопке "Объявления", 2 - добавлено вручную
   sma?: number // 0 - обычное объявление, 1 - в сравнении квартир
   sourceCreated?: string // Время создания из источника
@@ -255,6 +256,7 @@ export async function createAdFromSimilar(
     address: flatAddress || '', // Используем адрес квартиры если передан
     price: parseInt(similarAd.price.toString()),
     rooms: similarAd.rooms,
+    floor: similarAd.floor, // Добавляем этаж из похожего объявления
     sourceUpdated: similarAd.updated, // Время обновления из источника
   }
 

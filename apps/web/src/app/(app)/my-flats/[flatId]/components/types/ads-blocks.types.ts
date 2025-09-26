@@ -85,6 +85,7 @@ export type FlatAdsBlockProps = BaseBlockProps & {
   onAddMyFlatAd?: (url: string) => Promise<void>
   isAddingMyFlat?: boolean
   onToggleMyFlat?: (adId: number) => Promise<void>
+  onDeleteAd?: (adId: number) => Promise<void>
   updatedTodayAdIds?: Set<number>
 }
 

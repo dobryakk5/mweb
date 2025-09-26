@@ -29,6 +29,7 @@ export default function FlatAdsBlock({
   onAddMyFlatAd,
   isAddingMyFlat = false,
   onToggleMyFlat,
+  onDeleteAd,
   updatedTodayAdIds = new Set(),
 }: FlatAdsBlockProps) {
   const [showAddForm, setShowAddForm] = useState(false)
@@ -223,7 +224,7 @@ export default function FlatAdsBlock({
       title='Объявления по этой квартире'
       isCollapsed={isCollapsed}
       onToggle={onToggleCollapse}
-      headerActions={hasAds ? headerActions : null}
+      headerActions={headerActions}
     >
       {isLoading ? (
         loadingContent
@@ -233,10 +234,11 @@ export default function FlatAdsBlock({
           columns={columns}
           onToggleComparison={onToggleComparison}
           onUpdateAd={onUpdateAd}
+          onDeleteAd={onDeleteAd}
           updatingAdIds={updatingAdIds || new Set()}
           showActions={true}
           showComparison={true}
-          showDelete={false}
+          showDelete={true}
           isBulkUpdating={isUpdatingAllOld}
           updatedTodayAdIds={updatedTodayAdIds}
           onToggleMyFlat={onToggleMyFlat}
