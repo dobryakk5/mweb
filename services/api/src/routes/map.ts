@@ -697,47 +697,31 @@ export default async (fastify: FastifyInstance) => {
         )
       }
 
-      // Try to get coordinates for this address
+      // Get coordinates using house_id (more reliable than parsing address)
       let coordinates = null
       try {
-        const addressParts = flatData.address.split(',').map((s) => s.trim())
-        const streetPart = addressParts[0]
-        const houseNumber = addressParts[1] || ''
+        const coordsResult = await db.execute(
+          sql`SELECT
+            system.ST_Y(system.ST_Transform(centroid_utm, 4326)) as lat,
+            system.ST_X(system.ST_Transform(centroid_utm, 4326)) as lng
+          FROM "system".moscow_geo
+          WHERE house_id = ${houseData.house_id}
+          LIMIT 1`,
+        )
+        const coordsData = Array.isArray(coordsResult)
+          ? coordsResult[0]
+          : (coordsResult as any).rows?.[0]
 
-        // Handle common address variations
-        const streetVariations = [
-          streetPart,
-          streetPart.replace(' пер.', ' переулок'),
-          streetPart.replace(' ул.', ' улица'),
-          streetPart.replace(' бул.', ' бульвар'),
-          streetPart.replace(' пр.', ' проспект'),
-        ]
-
-        for (const streetVariation of streetVariations) {
-          const coordsResult = await db.execute(
-            sql`SELECT
-              system.ST_Y(system.ST_Transform(centroid_utm, 4326)) as lat,
-              system.ST_X(system.ST_Transform(centroid_utm, 4326)) as lng
-            FROM "system".moscow_geo
-            WHERE street = ${streetVariation} AND housenum = ${houseNumber}
-            LIMIT 1`,
+        if (coordsData?.lat && coordsData?.lng) {
+          coordinates = { lat: coordsData.lat, lng: coordsData.lng }
+          fastify.log.info(
+            `Found coordinates for house_id ${houseData.house_id}:`,
+            coordinates,
           )
-          const coordsData = Array.isArray(coordsResult)
-            ? coordsResult[0]
-            : (coordsResult as any).rows?.[0]
-
-          if (coordsData?.lat && coordsData?.lng) {
-            coordinates = { lat: coordsData.lat, lng: coordsData.lng }
-            fastify.log.info(
-              `Found coordinates for address ${flatData.address} using variation "${streetVariation}":`,
-              coordinates,
-            )
-            break
-          }
         }
       } catch (coordsError) {
         fastify.log.warn(
-          `Failed to get coordinates for ${flatData.address}:`,
+          `Failed to get coordinates for house_id ${houseData.house_id}:`,
           coordsError,
         )
       }

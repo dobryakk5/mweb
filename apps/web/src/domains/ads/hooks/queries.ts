@@ -4,9 +4,11 @@ import { adKeys } from '../query-keys'
 import {
   fetchAds,
   fetchAd,
+  fetchFlatSpecificAds,
   findSimilarAdsByFlat,
   findBroaderAdsByAddress,
   findNearbyAdsByFlat,
+  type Ad,
 } from '../fetchers'
 
 export function useAds(
@@ -28,6 +30,33 @@ export function useAd(id: number) {
     queryKey: adKeys.detail(id),
     queryFn: () => fetchAd(id),
     enabled: !!id,
+  })
+}
+
+// Хук для получения объявлений конкретно по этой квартире (старые + новые)
+export function useFlatSpecificAds(flatId: number) {
+  return useQuery({
+    queryKey: ['ads', 'flat-specific', flatId],
+    queryFn: () => fetchFlatSpecificAds(flatId),
+    enabled: !!flatId,
+    select: (data) => ({
+      saved: data.saved, // Ad[] - сохраненные объявления
+      new: data.new, // SimilarAd[] - новые объявления
+      total: data.total,
+      all: [
+        ...data.saved,
+        ...data.new.map((ad) => ({
+          ...ad,
+          id: 0, // Временный ID для новых объявлений
+          flatId: flatId,
+          views: null,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+          from: 1, // Помечаем как найденные
+          sma: 0,
+        })),
+      ] as Ad[], // Объединенный массив для обратной совместимости
+    }),
   })
 }
 

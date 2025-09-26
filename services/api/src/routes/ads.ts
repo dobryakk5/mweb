@@ -2,7 +2,7 @@ import { type FastifyInstance } from 'fastify'
 import { z } from 'zod'
 
 import { db, ads, userFlats, adHistory } from '@acme/db'
-import { eq, sql, inArray, and } from 'drizzle-orm'
+import { eq, sql, inArray, and, desc } from 'drizzle-orm'
 
 // Python API client class
 class PythonApiClient {
@@ -821,6 +821,72 @@ export default async function adsRoutes(fastify: FastifyInstance) {
       fastify.log.error(
         `Error finding broader ads for flat ${flatId || 'unknown'}: ${errorMessage}`,
       )
+      return reply
+        .status(500)
+        .send({ error: 'Internal server error', details: errorMessage })
+    }
+  })
+
+  // GET /ads/flat-ads/:flatId - получить объявления конкретно по этой квартире (старые + новые)
+  fastify.get('/ads/flat-ads/:flatId', async (request, reply) => {
+    try {
+      const params = z.object({ flatId: z.string() }).parse(request.params)
+      const flatId = parseInt(params.flatId)
+
+      if (isNaN(flatId)) {
+        return reply.status(400).send({ error: 'Invalid flat ID' })
+      }
+
+      // Получаем данные квартиры
+      const flats = await db
+        .select()
+        .from(userFlats)
+        .where(eq(userFlats.id, flatId))
+        .limit(1)
+
+      if (flats.length === 0) {
+        return reply.status(404).send({ error: 'Flat not found' })
+      }
+
+      const currentFlat = flats[0]
+
+      // 1. Получаем старые сохраненные объявления (from = 0 или 1)
+      const savedAds = await db
+        .select()
+        .from(ads)
+        .where(and(eq(ads.flatId, flatId), inArray(ads.from, [0, 1])))
+        .orderBy(desc(ads.updatedAt))
+
+      // 2. Получаем новые объявления из внешних источников (без дедупликации для квартиры)
+      const newAdsResult = await db.transaction(async (tx) => {
+        await tx.execute(sql`SET search_path TO users,public`)
+        return await tx.execute(
+          sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
+              FROM public.find_flat_ads_exact(${currentFlat.address}, ${currentFlat.floor}, ${currentFlat.rooms})`,
+        )
+      })
+
+      const foundAds = Array.isArray(newAdsResult)
+        ? newAdsResult
+        : (newAdsResult as any).rows || []
+
+      // 3. Фильтруем новые объявления: исключаем уже сохраненные URL
+      const savedUrls = new Set(savedAds.map((ad) => ad.url))
+      const newAds = foundAds.filter((ad: any) => !savedUrls.has(ad.url))
+
+      fastify.log.info(
+        `Found ${savedAds.length} saved ads and ${newAds.length} new ads for flat ${flatId}`,
+      )
+
+      return reply.send({
+        saved: savedAds, // Старые из users.ads
+        new: newAds, // Новые из SimilarAd (которых нет в базе)
+        total: savedAds.length + newAds.length,
+      })
+    } catch (error) {
+      const errorMessage =
+        error instanceof Error ? error.message : String(error)
+      fastify.log.error(`Error fetching flat ads: ${errorMessage}`)
       return reply
         .status(500)
         .send({ error: 'Internal server error', details: errorMessage })

@@ -155,6 +155,20 @@ export async function findSimilarAds(id: number): Promise<SimilarAd[]> {
   return response.data
 }
 
+// Получить объявления конкретно по этой квартире (старые + новые)
+export async function fetchFlatSpecificAds(flatId: number): Promise<{
+  saved: Ad[]
+  new: SimilarAd[]
+  total: number
+}> {
+  const response = await api.get<{
+    saved: Ad[]
+    new: SimilarAd[]
+    total: number
+  }>(`/ads/flat-ads/${flatId}`)
+  return response.data
+}
+
 export async function findSimilarAdsByFlat(
   flatId: number,
 ): Promise<SimilarAd[]> {

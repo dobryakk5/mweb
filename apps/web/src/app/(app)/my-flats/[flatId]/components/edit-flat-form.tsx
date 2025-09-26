@@ -33,6 +33,7 @@ import { ArrowLeftIcon } from '@acme/ui/components/icon'
 import { useUpdateFlat } from '@/domains/flats/hooks/mutations'
 import {
   useAds,
+  useFlatSpecificAds,
   useNearbyAdsFromFindAds,
   useBroaderAdsFromFindAds,
 } from '@/domains/ads'
@@ -92,7 +93,14 @@ export default function EditFlatFormRefactored({
   const { mutateAsync: updateFlat } = useUpdateFlat(flat?.id || 0)
 
   // Data fetching hooks
-  const { data: ads = [], refetch } = useAds({ flatId: flat?.id })
+  const { data: flatSpecificData, refetch: refetchFlatSpecific } =
+    useFlatSpecificAds(flat?.id || 0)
+  const { data: allAds = [], refetch } = useAds({ flatId: flat?.id })
+
+  // Extract data from flat specific response
+  const flatSpecificAds = flatSpecificData?.all || []
+  const savedAds = flatSpecificData?.saved || []
+  const newAds = flatSpecificData?.new || []
   const { data: broaderAdsFromFindAds = [], refetch: refetchBroaderAds } =
     useBroaderAdsFromFindAds(flat?.id || 0)
   const {
@@ -113,7 +121,9 @@ export default function EditFlatFormRefactored({
   // Actions hook
   const actions = useFlatAdsActions({
     flat,
-    refetch,
+    refetch: async () => {
+      await Promise.all([refetch(), refetchFlatSpecific()])
+    },
     refetchNearbyAds,
     refetchBroaderAds,
     startUpdatingAd: state.startUpdatingAd,
@@ -149,16 +159,17 @@ export default function EditFlatFormRefactored({
 
   // Initialize ads updated today state when ads data loads
   useEffect(() => {
-    if (ads && ads.length > 0) {
+    const allRelevantAds = [...flatSpecificAds, ...allAds]
+    if (allRelevantAds && allRelevantAds.length > 0) {
       const updatedTodayIds = new Set<number>()
-      ads.forEach((ad) => {
+      allRelevantAds.forEach((ad) => {
         if (isUpdatedTodayFromSource(ad)) {
           updatedTodayIds.add(ad.id)
         }
       })
       state.setUpdatedTodayAdIds(updatedTodayIds)
     }
-  }, [ads, state.setUpdatedTodayAdIds])
+  }, [flatSpecificAds, allAds, state.setUpdatedTodayAdIds])
 
   // Auto-save house ads to users.ads when broaderAdsFromFindAds loads
   useEffect(() => {
@@ -179,7 +190,7 @@ export default function EditFlatFormRefactored({
 
             // Refresh ads data to include newly saved ads
             if (result.savedCount > 0) {
-              await refetch()
+              await Promise.all([refetch(), refetchFlatSpecific()])
             }
           }
         } catch (error) {
@@ -192,16 +203,21 @@ export default function EditFlatFormRefactored({
   }, [broaderAdsFromFindAds, flat?.id, refetch])
 
   // Separate ads by type - with safety checks
-  const flatAds = ads.filter(
-    (ad) => ad && ad.id && (ad.from === 1 || ad.from === 0),
-  ) // По этой квартире (найдено автоматически + моя квартира)
-  const houseAds = ads.filter((ad) => ad && ad.id && ad.from === 2) // Объявления по дому
-  const comparisonAds = ads.filter((ad) => ad && ad.id && ad.sma === 1) // Сравнение квартир (отмеченные для сравнения)
+  const flatAds = flatSpecificAds.filter((ad) => ad && ad.id) // По этой квартире (только from = 0 или 1)
+  const houseAds = allAds.filter((ad) => ad && ad.id && ad.from === 2) // Объявления по дому
+  const comparisonAds = allAds.filter((ad) => ad && ad.id && ad.sma === 1) // Сравнение квартир (отмеченные для сравнения)
 
   // Log if any ads are filtered out
-  const invalidAds = ads.filter((ad) => !ad || !ad.id)
-  if (invalidAds.length > 0) {
-    console.warn('Found ads with invalid/missing IDs:', invalidAds)
+  const invalidFlatAds = flatSpecificAds.filter((ad) => !ad || !ad.id)
+  const invalidAllAds = allAds.filter((ad) => !ad || !ad.id)
+  if (invalidFlatAds.length > 0) {
+    console.warn(
+      'Found flat specific ads with invalid/missing IDs:',
+      invalidFlatAds,
+    )
+  }
+  if (invalidAllAds.length > 0) {
+    console.warn('Found all ads with invalid/missing IDs:', invalidAllAds)
   }
 
   // Form submission handlers
@@ -294,8 +310,8 @@ export default function EditFlatFormRefactored({
     state.setFlatUpdateStates(true, true, true)
     try {
       // Update logic here
-      await refetch()
-      // Data will be refreshed automatically through useAds
+      await Promise.all([refetch(), refetchFlatSpecific()])
+      // Data will be refreshed automatically through hooks
     } finally {
       state.setFlatUpdateStates(false, false, false)
     }
@@ -305,8 +321,7 @@ export default function EditFlatFormRefactored({
     state.setHouseUpdateStates(true, true, true)
     try {
       // Update logic here
-      await refetch()
-      await refetchBroaderAds() // Refresh broader ads data
+      await Promise.all([refetch(), refetchFlatSpecific(), refetchBroaderAds()])
     } finally {
       state.setHouseUpdateStates(false, false, false)
     }
@@ -316,7 +331,7 @@ export default function EditFlatFormRefactored({
     state.setIsUpdatingHouseStatuses(true)
     try {
       await actions.handleUpdateHouseStatuses(houseAds, state.setUpdatingAdIds)
-      await refetch()
+      await Promise.all([refetch(), refetchFlatSpecific()])
     } finally {
       state.setIsUpdatingHouseStatuses(false)
     }
@@ -329,7 +344,7 @@ export default function EditFlatFormRefactored({
         comparisonAds,
         state.setUpdatingAdIds,
       )
-      await refetch()
+      await Promise.all([refetch(), refetchFlatSpecific()])
     } finally {
       state.setComparisonUpdateStates(false, false, false)
     }
@@ -352,7 +367,7 @@ export default function EditFlatFormRefactored({
     state.setIsUpdatingAllOldAds(true)
     try {
       await actions.handleUpdateAllOldAds(flatAds, state.setUpdatingAdIds)
-      await refetch()
+      await Promise.all([refetch(), refetchFlatSpecific()])
     } finally {
       state.setIsUpdatingAllOldAds(false)
     }
@@ -380,7 +395,7 @@ export default function EditFlatFormRefactored({
       console.log('My flat ad added successfully:', result)
 
       // Refresh ads data to include the new ad
-      await refetch()
+      await Promise.all([refetch(), refetchFlatSpecific()])
     } catch (error) {
       console.error('Error adding my flat ad:', error)
       throw error // Re-throw to let the component handle the error
@@ -405,7 +420,7 @@ export default function EditFlatFormRefactored({
       console.log('My flat toggle result:', result)
 
       // Refresh ads data to reflect the change
-      await refetch()
+      await Promise.all([refetch(), refetchFlatSpecific()])
     } catch (error) {
       console.error('Error toggling my flat:', error)
     } finally {
