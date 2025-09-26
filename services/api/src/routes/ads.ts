@@ -1306,25 +1306,56 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         })
       }
 
+      // Находим минимальную цену среди CIAN объявлений
+      const cianAds = newAds.filter(
+        (ad) => ad.url && ad.url.includes('cian.ru'),
+      )
+      const minCianPrice =
+        cianAds.length > 0
+          ? Math.min(...cianAds.map((ad) => parseInt(ad.price) || Infinity))
+          : null
+
+      fastify.log.info(
+        `Found ${cianAds.length} CIAN ads, min price: ${minCianPrice}`,
+      )
+
       // Сохраняем новые объявления в users.ads
-      const adsToInsert = newAds.map((ad) => ({
-        flatId: parseInt(flatId!),
-        url: ad.url,
-        address: currentFlat.address,
-        price: parseInt(ad.price) || 0,
-        rooms: parseInt(ad.rooms) || 1,
-        totalArea: ad.area ? String(ad.area) : null,
-        kitchenArea: ad.kitchen_area ? String(ad.kitchen_area) : null,
-        floor: ad.floor ? parseInt(ad.floor) : null,
-        from: 2, // 2 = объявления по дому
-        sma: 0, // 0 = обычное объявление
-        status: ad.is_active || false,
-      }))
+      const adsToInsert = newAds.map((ad) => {
+        const price = parseInt(ad.price) || 0
+        const isCian = ad.url && ad.url.includes('cian.ru')
+        const isMinPriceCian =
+          isCian && minCianPrice !== null && price === minCianPrice
+
+        return {
+          flatId: parseInt(flatId!),
+          url: ad.url,
+          address: currentFlat.address,
+          price,
+          rooms: parseInt(ad.rooms) || 1,
+          totalArea: ad.area ? String(ad.area) : null,
+          kitchenArea: ad.kitchen_area ? String(ad.kitchen_area) : null,
+          floor: ad.floor ? parseInt(ad.floor) : null,
+          from: isMinPriceCian ? 0 : 2, // 0 = моя квартира (CIAN с мин ценой), 2 = объявления по дому
+          sma: 0, // 0 = обычное объявление
+          status: ad.is_active || false,
+          sourceCreated: ad.created ? new Date(ad.created) : null,
+          sourceUpdated: ad.updated ? new Date(ad.updated) : null,
+        }
+      })
 
       const insertResult = await db
         .insert(ads)
         .values(adsToInsert)
         .returning({ id: ads.id })
+
+      // Логируем какие объявления помечены как "моя квартира"
+      const myFlatAds = adsToInsert.filter((ad) => ad.from === 0)
+      if (myFlatAds.length > 0) {
+        fastify.log.info(
+          `Marked ${myFlatAds.length} CIAN ads with min price ${minCianPrice} as "my flat" (from=0):`,
+          myFlatAds.map((ad) => ({ url: ad.url, price: ad.price })),
+        )
+      }
 
       fastify.log.info(
         `Saved ${insertResult.length} house ads for flat ${flatId} (${houseAds.length} total found, ${existingAds.length} already existed)`,
@@ -1447,6 +1478,14 @@ export default async function adsRoutes(fastify: FastifyInstance) {
                 : [data.photo_urls]
             }
           }
+
+          // Обрабатываем времена создания и обновления из источника
+          if (data.created !== undefined && data.created !== null) {
+            parsedData.sourceCreated = new Date(data.created)
+          }
+          if (data.updated !== undefined && data.updated !== null) {
+            parsedData.sourceUpdated = new Date(data.updated)
+          }
         } else {
           fastify.log.warn(
             `Python API parsing failed for my flat ad:`,
@@ -1505,6 +1544,8 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         source: parsedData.source,
         status: parsedData.status || true,
         viewsToday: parsedData.viewsToday,
+        sourceCreated: parsedData.sourceCreated,
+        sourceUpdated: parsedData.sourceUpdated,
       }
 
       const result = await db.insert(ads).values(adData).returning()
