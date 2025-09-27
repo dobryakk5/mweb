@@ -955,9 +955,9 @@ export default async (fastify: FastifyInstance) => {
         : (adsResult as any).rows || []
 
       // Separate ads by source for different update strategies
-      const cianAds = allAds.filter(
-        (ad) => ad.url && ad.url.includes('cian.ru'),
-      )
+      const cianAds = allAds
+        .filter((ad) => ad.url && ad.url.includes('cian.ru'))
+        .sort((a, b) => a.price - b.price) // Sort by price: cheapest first
       const yandexAds = allAds.filter(
         (ad) => ad.url && ad.url.includes('yandex.ru'),
       )

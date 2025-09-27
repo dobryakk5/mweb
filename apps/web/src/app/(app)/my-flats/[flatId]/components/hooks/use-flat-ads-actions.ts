@@ -537,17 +537,34 @@ export const useFlatAdsActions = ({
                 continue
               }
 
+              // Add to updating set
+              setUpdatingIds((prev) => new Set([...prev, ad.id]))
+
               await updateAdStatusSingle(ad.id)
               successCount++
 
               // Mark as updated today
               if (markAdAsUpdatedToday) markAdAsUpdatedToday(ad.id)
 
+              // Remove from updating set
+              setUpdatingIds((prev) => {
+                const newSet = new Set(prev)
+                newSet.delete(ad.id)
+                return newSet
+              })
+
               // Small delay to show progress
               await new Promise((resolve) => setTimeout(resolve, 100))
             } catch (error) {
               console.error(`Ошибка обновления объявления ${ad.id}:`, error)
               errorCount++
+
+              // Remove from updating set on error
+              setUpdatingIds((prev) => {
+                const newSet = new Set(prev)
+                newSet.delete(ad.id)
+                return newSet
+              })
             }
           }
 

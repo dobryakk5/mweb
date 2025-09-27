@@ -255,7 +255,9 @@ const LoadingState = ({ isProcessing = false }: { isProcessing?: boolean }) => {
   return (
     <div className='flex items-center justify-center py-8'>
       <Loader2Icon className='w-6 h-6 animate-spin text-blue-600 mr-2' />
-      <span className='text-sm text-gray-600'>Загрузка...</span>
+      <span className='text-sm text-gray-600'>
+        {isProcessing ? 'Обработка...' : 'Загрузка...'}
+      </span>
     </div>
   )
 }
@@ -292,13 +294,18 @@ export default function AdsPreview({
 }: AdsPreviewProps) {
   // Отслеживаем первую загрузку для правильного отображения состояний
   const [hasLoadedOnce, setHasLoadedOnce] = useState(false)
+  const [lastLoadTime, setLastLoadTime] = useState<number | null>(null)
 
-  // Помечаем что первая загрузка завершена
+  // Помечаем что первая загрузка завершена и фиксируем время
   useEffect(() => {
     if (!loading && !hasLoadedOnce) {
       setHasLoadedOnce(true)
+      setLastLoadTime(Date.now())
+    } else if (!loading && hasLoadedOnce) {
+      setLastLoadTime(Date.now())
     }
   }, [loading, hasLoadedOnce])
+
   // Fetch house info when a specific house is selected
   const {
     houseInfo,
@@ -355,6 +362,19 @@ export default function AdsPreview({
       return a.price - b.price
     })
   }, [deduplicatedAds])
+
+  // Определяем находимся ли мы в состоянии обработки данных
+  const isProcessing = useMemo(() => {
+    // Если идет загрузка или еще не загружались - не обработка
+    if (loading || !hasLoadedOnce || !lastLoadTime) return false
+
+    // Если есть объявления - не обработка
+    if (sortedAds.length > 0) return false
+
+    // Если прошло менее 1 секунды с момента загрузки и нет объявлений - это обработка
+    const timeSinceLoad = Date.now() - lastLoadTime
+    return timeSinceLoad < 1000
+  }, [loading, hasLoadedOnce, lastLoadTime, sortedAds.length])
 
   const handleAdHover = (ad: AdData) => {
     onAdHover?.(ad)
@@ -430,7 +450,9 @@ export default function AdsPreview({
         ) : error ? (
           <ErrorState error={error} />
         ) : loading ? (
-          <LoadingState isProcessing={hasLoadedOnce} />
+          <LoadingState isProcessing={false} />
+        ) : isProcessing ? (
+          <LoadingState isProcessing={true} />
         ) : sortedAds.length === 0 ? (
           <EmptyState />
         ) : (

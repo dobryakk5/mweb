@@ -509,19 +509,26 @@ export default async function adsRoutes(fastify: FastifyInstance) {
 
       // Статус уже boolean в БД, конвертация не нужна
 
-      // Обновляем updatedAt если изменяется статус или происходит принудительное обновление данных
-      // НО только если нет timestamp'ов из источника - приоритет у sourceUpdated
+      // Обновляем timestamp'ы при изменении статуса или принудительном обновлении данных
       const shouldUpdateTimestamp =
-        (updateData.status !== undefined ||
-          updateData.parseUrl !== undefined) &&
-        !updateData.sourceUpdated
+        updateData.status !== undefined || updateData.parseUrl !== undefined
+
+      // Подготавливаем обновления timestamp'ов
+      const timestampUpdates: any = {}
+      if (shouldUpdateTimestamp) {
+        const now = new Date()
+        timestampUpdates.updatedAt = now
+        // Если нет sourceUpdated из body (новых данных от парсера), обновляем его тоже
+        if (!updateData.sourceUpdated) {
+          timestampUpdates.sourceUpdated = now
+        }
+      }
 
       const result = await db
         .update(ads)
         .set({
           ...updateData,
-          // Обновляем updatedAt только при изменении статуса или принудительном обновлении данных
-          ...(shouldUpdateTimestamp && { updatedAt: new Date() }),
+          ...timestampUpdates,
         })
         .where(eq(ads.id, adId))
         .returning()
@@ -735,15 +742,19 @@ export default async function adsRoutes(fastify: FastifyInstance) {
 
       // Статус уже boolean в БД, конвертация не нужна
 
-      // Принудительно обновляем все поля, сохраняя source timestamps если они есть
+      // Принудительно обновляем все поля с timestamp'ами
+      const timestampUpdates: any = {}
+      if (!forceUpdateData.sourceCreated && !forceUpdateData.sourceUpdated) {
+        const now = new Date()
+        timestampUpdates.updatedAt = now
+        timestampUpdates.sourceUpdated = now
+      }
+
       const result = await db
         .update(ads)
         .set({
           ...forceUpdateData,
-          // Обновляем updatedAt только если это принудительное обновление без source timestamps
-          ...(forceUpdateData.sourceCreated || forceUpdateData.sourceUpdated
-            ? {}
-            : { updatedAt: new Date() }),
+          ...timestampUpdates,
         })
         .where(eq(ads.id, adIdNum))
         .returning()
@@ -872,7 +883,7 @@ export default async function adsRoutes(fastify: FastifyInstance) {
             eq(ads.floor, currentFlat.floor), // Фильтруем по этажу
           ),
         )
-        .orderBy(desc(ads.updatedAt))
+        .orderBy(desc(ads.status), desc(ads.updatedAt))
 
       // 2. Получаем новые объявления из внешних источников (без дедупликации для квартиры)
       const newAdsResult = await db.transaction(async (tx) => {
@@ -1598,17 +1609,17 @@ export default async function adsRoutes(fastify: FastifyInstance) {
         parsedData.floor = currentFlat.floor // Принудительно используем параметры квартиры
       }
 
-      // Проверяем, есть ли уже объявление "Моя квартира" для этой квартиры
-      const existingMyAd = await db
+      // Проверяем, есть ли уже объявление с таким URL для этой квартиры
+      const existingAd = await db
         .select()
         .from(ads)
-        .where(and(eq(ads.flatId, flatIdNum), eq(ads.from, 0)))
+        .where(and(eq(ads.flatId, flatIdNum), eq(ads.url, body.url)))
         .limit(1)
 
-      if (existingMyAd.length > 0) {
+      if (existingAd.length > 0) {
         return reply.status(409).send({
           error: 'My flat ad already exists for this flat',
-          existingAd: existingMyAd[0],
+          existingAd: existingAd[0],
         })
       }
 

@@ -90,46 +90,6 @@ export const useMapAdsFilter = ({
     return filteredAds
   }, [allAds, currentSelectedHouseId])
 
-  // Основная логика загрузки данных из кэша
-  useEffect(() => {
-    const loadData = async () => {
-      if (!enabled || !debouncedBounds) return
-
-      try {
-        console.log('🔄 Loading data from cache with filters:', flatFilters)
-        const result = await getFilteredData(debouncedBounds, flatFilters)
-
-        if (result) {
-          // Преобразуем данные в нужный формат
-          const adsData = result.ads.map((ad) => ({
-            price: ad.price,
-            lat: ad.lat,
-            lng: ad.lng,
-            rooms: ad.rooms,
-            area: ad.area,
-            kitchen_area: ad.kitchen_area,
-            floor: ad.floor,
-            total_floors: ad.total_floors,
-            house_id: ad.house_id,
-            url: ad.url,
-            updated_at: ad.updated_at,
-            distance_m: ad.distance_m,
-            is_active: ad.is_active,
-          }))
-
-          setAllAds(adsData)
-          setError(null)
-          console.log(`✅ Loaded ${adsData.length} ads from cache`)
-        }
-      } catch (err) {
-        console.error('Failed to load data from cache:', err)
-        setError(err instanceof Error ? err.message : 'Unknown error')
-      }
-    }
-
-    loadData()
-  }, [debouncedBounds, flatFilters, enabled, getFilteredData])
-
   // Функция обновления статусов объявлений
   const updateAdsStatuses = useCallback(async () => {
     if (!debouncedBounds || isUpdatingStatuses) return
@@ -185,6 +145,66 @@ export const useMapAdsFilter = ({
     isUpdatingStatuses,
     invalidateCache,
     getFilteredData,
+  ])
+
+  // Основная логика загрузки данных из кэша
+  useEffect(() => {
+    const loadData = async () => {
+      if (!enabled || !debouncedBounds) return
+
+      try {
+        console.log('🔄 Loading data from cache with filters:', flatFilters)
+        const result = await getFilteredData(debouncedBounds, flatFilters)
+
+        if (result) {
+          // Преобразуем данные в нужный формат
+          const adsData = result.ads.map((ad) => ({
+            price: ad.price,
+            lat: ad.lat,
+            lng: ad.lng,
+            rooms: ad.rooms,
+            area: ad.area,
+            kitchen_area: ad.kitchen_area,
+            floor: ad.floor,
+            total_floors: ad.total_floors,
+            house_id: ad.house_id,
+            url: ad.url,
+            updated_at: ad.updated_at,
+            distance_m: ad.distance_m,
+            is_active: ad.is_active,
+          }))
+
+          setAllAds(adsData)
+          setError(null)
+          console.log(`✅ Loaded ${adsData.length} ads from cache`)
+
+          // Автоматически проверяем статусы Cian объявлений после загрузки
+          if (adsData.length > 0) {
+            const cianAds = adsData.filter((ad) => ad.url?.includes('cian.ru'))
+            if (cianAds.length > 0) {
+              console.log(
+                `🔍 Auto-checking ${cianAds.length} CIAN ads statuses...`,
+              )
+              // Запускаем проверку статусов в фоне без блокировки UI
+              setTimeout(() => {
+                updateAdsStatuses().catch(console.error)
+              }, 1000) // Небольшая задержка для лучшего UX
+            }
+          }
+        }
+      } catch (err) {
+        console.error('Failed to load data from cache:', err)
+        setError(err instanceof Error ? err.message : 'Unknown error')
+      }
+    }
+
+    loadData()
+  }, [
+    debouncedBounds,
+    flatFilters,
+    enabled,
+    getFilteredData,
+    updateAdsStatuses,
   ])
 
   const refetch = useCallback(() => {

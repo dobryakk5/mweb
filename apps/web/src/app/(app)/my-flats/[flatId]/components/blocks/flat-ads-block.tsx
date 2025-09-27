@@ -34,17 +34,47 @@ export default function FlatAdsBlock({
 }: FlatAdsBlockProps) {
   const [showAddForm, setShowAddForm] = useState(false)
   const [adUrl, setAdUrl] = useState('')
+  const [addError, setAddError] = useState<string | null>(null)
 
   const handleAddMyFlat = async (e: React.FormEvent) => {
     e.preventDefault()
     if (!adUrl.trim() || !onAddMyFlatAd) return
 
+    setAddError(null) // Очищаем предыдущие ошибки
+
     try {
       await onAddMyFlatAd(adUrl.trim())
       setAdUrl('')
       setShowAddForm(false)
+      setAddError(null)
     } catch (error) {
       console.error('Failed to add my flat ad:', error)
+
+      // Обрабатываем различные типы ошибок для пользователя
+      const errorMessage =
+        error instanceof Error ? error.message : 'Неизвестная ошибка'
+
+      if (errorMessage.includes('My flat ad already exists')) {
+        setAddError('Объявление для этой квартиры уже существует')
+      } else if (errorMessage.includes('Invalid URL')) {
+        setAddError('Неверная ссылка. Проверьте формат URL')
+      } else if (errorMessage.includes('Failed to parse')) {
+        // Проверяем, что это поддерживаемый сайт
+        const supportedSites = ['avito.ru', 'cian.ru', 'yandex.ru']
+        const isSupportedSite = supportedSites.some((site) =>
+          adUrl.includes(site),
+        )
+
+        if (isSupportedSite) {
+          setAddError('Не удалось обработать ссылку. Попробуйте другую')
+        } else {
+          setAddError(
+            'Данный сайт пока не поддерживается. Используйте Авито, Циан или Яндекс.Недвижимость',
+          )
+        }
+      } else {
+        setAddError('Ошибка при добавлении объявления. Попробуйте еще раз')
+      }
     }
   }
 
@@ -125,6 +155,16 @@ export default function FlatAdsBlock({
         isUpdating={isUpdatingAllOld}
         label='Обновить статусы'
       />
+      <button
+        type='button'
+        className={buttonVariants({
+          variant: 'secondary',
+          size: 'sm',
+        })}
+        onClick={() => setShowAddForm(true)}
+      >
+        {showAddForm ? 'Скрыть форму' : 'Добавить новую ссылку'}
+      </button>
     </div>
   )
 
@@ -203,6 +243,7 @@ export default function FlatAdsBlock({
                 onClick={() => {
                   setShowAddForm(false)
                   setAdUrl('')
+                  setAddError(null)
                 }}
                 disabled={isAddingMyFlat}
                 className={buttonVariants({
@@ -229,21 +270,74 @@ export default function FlatAdsBlock({
       {isLoading ? (
         loadingContent
       ) : hasAds ? (
-        <AdsTable
-          ads={ads || []}
-          columns={columns}
-          onToggleComparison={onToggleComparison}
-          onUpdateAd={onUpdateAd}
-          onDeleteAd={onDeleteAd}
-          updatingAdIds={updatingAdIds || new Set()}
-          showActions={true}
-          showComparison={true}
-          showDelete={true}
-          isBulkUpdating={isUpdatingAllOld}
-          updatedTodayAdIds={updatedTodayAdIds}
-          onToggleMyFlat={onToggleMyFlat}
-          showMyFlat={true}
-        />
+        <>
+          {/* Форма добавления объявления */}
+          {showAddForm && (
+            <div className='mb-6 p-4 border rounded-lg bg-muted/50'>
+              <h4 className='text-md font-medium mb-4'>Новое объявление</h4>
+              {addError && (
+                <div className='mb-4 p-3 bg-red-50 border border-red-200 rounded-md'>
+                  <p className='text-sm text-red-700'>{addError}</p>
+                </div>
+              )}
+              <form onSubmit={handleAddMyFlat} className='flex gap-2'>
+                <input
+                  type='url'
+                  value={adUrl}
+                  onChange={(e) => {
+                    setAdUrl(e.target.value)
+                    if (addError) setAddError(null) // Очищаем ошибку при вводе
+                  }}
+                  placeholder='https://cian.ru/...'
+                  className='flex-1 px-3 py-2 border border-gray-300 rounded-md shadow-sm focus:ring-2 focus:ring-blue-500 focus:border-blue-500 text-sm'
+                  disabled={isAddingMyFlat}
+                  required
+                />
+                <button
+                  type='submit'
+                  disabled={isAddingMyFlat || !adUrl.trim()}
+                  className={buttonVariants({
+                    variant: 'default',
+                    size: 'sm',
+                  })}
+                >
+                  {isAddingMyFlat ? 'Добавление...' : 'Добавить'}
+                </button>
+                <button
+                  type='button'
+                  onClick={() => {
+                    setShowAddForm(false)
+                    setAdUrl('')
+                    setAddError(null)
+                  }}
+                  disabled={isAddingMyFlat}
+                  className={buttonVariants({
+                    variant: 'outline',
+                    size: 'sm',
+                  })}
+                >
+                  <XIcon className='h-4 w-4' />
+                </button>
+              </form>
+            </div>
+          )}
+
+          <AdsTable
+            ads={ads || []}
+            columns={columns}
+            onToggleComparison={onToggleComparison}
+            onUpdateAd={onUpdateAd}
+            onDeleteAd={onDeleteAd}
+            updatingAdIds={updatingAdIds || new Set()}
+            showActions={true}
+            showComparison={true}
+            showDelete={true}
+            isBulkUpdating={isUpdatingAllOld}
+            updatedTodayAdIds={updatedTodayAdIds}
+            onToggleMyFlat={onToggleMyFlat}
+            showMyFlat={true}
+          />
+        </>
       ) : (
         emptyStateContent
       )}
