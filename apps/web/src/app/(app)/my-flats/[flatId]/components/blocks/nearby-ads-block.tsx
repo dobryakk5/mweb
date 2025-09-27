@@ -99,7 +99,17 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
           }
         }
 
-        if (adsToUse.length === 0) return 50000000 // fallback только если вообще нет объявлений
+        // Если нет объявлений о квартире - используем максимальную цену в доме
+        if (adsToUse.length === 0) {
+          const maxHousePrice = getMaxHousePrice()
+          if (process.env.NODE_ENV === 'development') {
+            const timestamp = new Date().toISOString().slice(11, 23)
+            console.log(
+              `🏠 [${timestamp}] No flat ads, using max house price: ${maxHousePrice}`,
+            )
+          }
+          return maxHousePrice
+        }
 
         const minPriceAd = adsToUse.reduce((min, current) =>
           current.price && (!min.price || current.price < min.price)
@@ -117,6 +127,25 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
         }
 
         return finalPrice
+      }
+
+      // Получаем максимальную цену в доме из объявлений по дому
+      const getMaxHousePrice = () => {
+        // flatAds в контексте должны включать объявления по дому (from=2)
+        // Если это не так, используем fallback значение
+        const houseAds = flatAds.filter((ad) => ad.from === 2 && ad.price)
+
+        if (houseAds.length === 0) {
+          return 50000000 // fallback если нет объявлений по дому
+        }
+
+        const maxPriceAd = houseAds.reduce((max, current) =>
+          current.price && (!max.price || current.price > max.price)
+            ? current
+            : max,
+        )
+
+        return maxPriceAd.price || 50000000
       }
 
       const newDefaultFilters = {

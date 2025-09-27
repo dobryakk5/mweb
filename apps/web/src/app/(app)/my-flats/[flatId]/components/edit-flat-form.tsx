@@ -580,7 +580,7 @@ export default function EditFlatFormRefactored({
               flat={flat}
               nearbyAds={nearbyAdsFromFindAds}
               nearbyFilters={nearbyApiFilters}
-              flatAds={flatAds}
+              flatAds={[...flatAds, ...houseAds]}
               onSearchWithFilters={setNearbyFilters}
               isCollapsed={isCollapsed('nearbyAds')}
               onToggleCollapse={() => toggleBlock('nearbyAds')}
