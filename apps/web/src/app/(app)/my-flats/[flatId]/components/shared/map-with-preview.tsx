@@ -61,9 +61,8 @@ export default function MapWithPreview({
         setAddressNotFound(false)
         setAddressError(null)
 
-        const response = await fetch(
-          `${process.env.NEXT_PUBLIC_API_URL}/map/flat-full-data/${flatId}`,
-        )
+        const url = `${process.env.NEXT_PUBLIC_API_URL}/map/flat-full-data/${flatId}`
+        const response = await fetch(url)
 
         if (!response.ok) {
           // Handle specific "address not found" error
@@ -82,11 +81,10 @@ export default function MapWithPreview({
         const data = await response.json()
 
         if (process.env.NODE_ENV === 'development') {
-          console.log(`🏠 [MAP] Loading flat ${flatId}:`, {
+          console.log(`🏠 [MAP] Loaded flat ${flatId}:`, {
             flatId,
             address: data.flat?.address,
-            rooms: data.flat?.rooms,
-            floor: data.flat?.floor,
+            coordinates: data.flat?.coordinates,
           })
         }
 

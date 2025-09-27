@@ -878,17 +878,32 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   // Определяем центр карты - только реальные координаты, без fallback
   const getMapCenter = (): [number, number] | null => {
     // Приоритет: координаты из пропсов, затем координаты по адресу
+    console.log('🗺️ [MAP_CENTER] Debug info:', {
+      flatCoordinates,
+      addressCoordinates,
+      flatAddress,
+    })
+
     if (
       flatCoordinates &&
       'lat' in flatCoordinates &&
       'lng' in flatCoordinates
     ) {
+      console.log(
+        '✅ [MAP_CENTER] Using coordinates from props:',
+        flatCoordinates,
+      )
       return [flatCoordinates.lat, flatCoordinates.lng]
     }
     if (addressCoordinates) {
+      console.log(
+        '✅ [MAP_CENTER] Using coordinates from address:',
+        addressCoordinates,
+      )
       return [addressCoordinates.lat, addressCoordinates.lng]
     }
     // Нет fallback! Если координаты не найдены - карта не должна отображаться
+    console.log('❌ [MAP_CENTER] No coordinates found!')
     return null
   }
 

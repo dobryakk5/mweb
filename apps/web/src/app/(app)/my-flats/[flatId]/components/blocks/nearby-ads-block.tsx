@@ -73,34 +73,35 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
       // Получаем базовые значения площадей
       const baseAreaValues = getBaseAreaValues()
 
-      // Получаем минимальную цену из всех активных объявлений текущей квартиры
+      // Получаем минимальную цену из объявлений текущей квартиры (сначала активные, потом неактивные)
       const getMinPriceFromCurrentFlatAds = () => {
         const allAds = flatAds.length
         const activeAds = flatAds.filter(
           (ad) => (ad.status === true || ad.status === 1) && ad.price,
         )
+        const inactiveAds = flatAds.filter(
+          (ad) => (ad.status === false || ad.status === 0) && ad.price,
+        )
+
+        // Используем активные, если есть, иначе неактивные
+        const adsToUse = activeAds.length > 0 ? activeAds : inactiveAds
 
         if (process.env.NODE_ENV === 'development') {
           const timestamp = new Date().toISOString().slice(11, 23)
-          console.log(
-            `💰 [${timestamp}] PRICE_FILTER - Total ads: ${allAds}, Active ads: ${activeAds.length}`,
-          )
           if (activeAds.length > 0) {
-            const prices = activeAds.map((ad) => ad.price).sort((a, b) => a - b)
-            const sources = activeAds.map((ad) => {
-              if (ad.url?.includes('cian.ru')) return 'cian'
-              if (ad.url?.includes('yandex.ru')) return 'yandex'
-              if (ad.url?.includes('avito.ru')) return 'avito'
-              return 'other'
-            })
-            console.log(`💰 [${timestamp}] Active prices:`, prices)
-            console.log(`💰 [${timestamp}] Active sources:`, sources)
+            console.log(
+              `💰 [${timestamp}] Using ACTIVE ads for filters (${activeAds.length} ads)`,
+            )
+          } else if (inactiveAds.length > 0) {
+            console.log(
+              `💰 [${timestamp}] Using INACTIVE ads for filters (${inactiveAds.length} ads)`,
+            )
           }
         }
 
-        if (activeAds.length === 0) return 50000000 // fallback
+        if (adsToUse.length === 0) return 50000000 // fallback только если вообще нет объявлений
 
-        const minPriceAd = activeAds.reduce((min, current) =>
+        const minPriceAd = adsToUse.reduce((min, current) =>
           current.price && (!min.price || current.price < min.price)
             ? current
             : min,
@@ -125,17 +126,6 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
         minKitchenArea: baseAreaValues.minKitchenArea,
       }
 
-      if (process.env.NODE_ENV === 'development') {
-        const timestamp = new Date().toISOString().slice(11, 23)
-        console.log(
-          `🔄 [${timestamp}] Initial calculation of defaultFilters (flatAds: ${flatAds.length}):`,
-          {
-            baseAreaValues,
-            newDefaultFilters,
-          },
-        )
-      }
-
       setDefaultFiltersFromFlatAds(newDefaultFilters)
     }
   }, [flatAds]) // Зависит только от flatAds, не от flat.rooms
@@ -145,8 +135,7 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
 
   // Инициализируем mapFilters когда defaultFilters готовы
   useEffect(() => {
-    // Устанавливаем фильтры когда defaultFilters готовы (не дефолтные значения)
-    if (defaultFiltersFromFlatAds.maxPrice === 50000000) return
+    // Устанавливаем фильтры даже с дефолтными значениями, чтобы карта всегда загружалась
 
     const initialMaxPrice =
       nearbyFilters?.currentPrice ||
