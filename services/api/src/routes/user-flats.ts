@@ -79,7 +79,7 @@ export default async (fastify: FastifyInstance) => {
                   floor: ad.floor || createdFlat.floor,
                   totalArea: ad.area,
                   kitchenArea: ad.kitchen_area,
-                  status: ad.is_active ? 1 : 0,
+                  status: Boolean(ad.is_active),
                   from: 1, // flat-specific ads
                   sma: 0, // not in comparison by default
                   sourceCreated: ad.created ? new Date(ad.created) : null,
