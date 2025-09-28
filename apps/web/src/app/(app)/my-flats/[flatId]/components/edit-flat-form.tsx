@@ -138,6 +138,50 @@ export default function EditFlatFormRefactored({
   const nearbyAdsFromFindAds = nearbyAdsData?.ads || []
   const nearbyApiFilters = nearbyAdsData?.filters
 
+  // Track search progress and show notifications for sequential loading
+  useEffect(() => {
+    if (
+      flatSpecificData &&
+      !isLoadingFlatSpecific &&
+      flatSpecificData.total > 0
+    ) {
+      // Flat-specific search completed, now loading house ads
+      if (isLoadingBroaderAds) {
+        import('sonner').then(({ toast }) => {
+          toast.info('Поиск объявлений по дому...')
+        })
+      }
+    }
+  }, [flatSpecificData, isLoadingFlatSpecific, isLoadingBroaderAds])
+
+  useEffect(() => {
+    if (
+      broaderAdsFromFindAds &&
+      broaderAdsFromFindAds.length > 0 &&
+      !isLoadingBroaderAds
+    ) {
+      // House ads loaded, now loading nearby ads
+      if (isLoadingNearbyAds) {
+        import('sonner').then(({ toast }) => {
+          toast.info('Поиск объявлений на карте...')
+        })
+      }
+    }
+  }, [broaderAdsFromFindAds, isLoadingBroaderAds, isLoadingNearbyAds])
+
+  useEffect(() => {
+    if (
+      nearbyAdsFromFindAds &&
+      nearbyAdsFromFindAds.length > 0 &&
+      !isLoadingNearbyAds
+    ) {
+      // All searches completed
+      import('sonner').then(({ toast }) => {
+        toast.success('Все поиски завершены!')
+      })
+    }
+  }, [nearbyAdsFromFindAds, isLoadingNearbyAds])
+
   // Memoized refetch function to prevent unnecessary re-renders
   const handleRefetchNearbyAds = useCallback(async () => {
     await refetchNearbyAds()
@@ -579,7 +623,7 @@ export default function EditFlatFormRefactored({
             <NearbyAdsBlock
               flat={flat}
               nearbyAds={nearbyAdsFromFindAds}
-              nearbyFilters={nearbyApiFilters}
+              nearbyFilters={nearbyFilters || nearbyApiFilters}
               flatAds={[...flatAds, ...houseAds]}
               onSearchWithFilters={setNearbyFilters}
               isCollapsed={isCollapsed('nearbyAds')}

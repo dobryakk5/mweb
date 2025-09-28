@@ -30,19 +30,36 @@ export const useCreateFlat: () => UseMutationResult<
   return useMutation<AxiosResponse, AxiosError, CreateFlatData>({
     mutationKey: flatKeys.addFlat(),
     mutationFn: (values: CreateFlatData) => api.post('/user-flats', values),
-    onError(err) {
+    onError() {
       toast.error(
         'Добавление квартиры временно недоступно. Попробуйте позже. 🙁',
       )
     },
     onSuccess: ({ data }) => {
+      // Handle new response format with auto-search
+      const flatData = data.flat || data // fallback for old format
+
       queryClient.invalidateQueries({
-        queryKey: flatKeys.getUserFlats(data.tgUserId, {}),
+        queryKey: flatKeys.getUserFlats(flatData.tgUserId, {}),
       })
 
-      push(`/my-flats/${data.id}`)
+      // Show enhanced success message if auto-search completed
+      if (data.autoSearchCompleted && data.similarAds?.length > 0) {
+        const savedText =
+          data.savedCount > 0 ? `, сохранено ${data.savedCount}` : ''
+        toast.success(
+          `Квартира добавлена! Найдено ${data.similarAds.length} объявлений${savedText}. Начинаю поиск по дому...`,
+        )
+      } else if (data.autoSearchCompleted === false) {
+        toast.success('Квартира добавлена успешно!')
+        toast.warning(
+          'Поиск объявлений не удался, попробуйте обновить страницу.',
+        )
+      } else {
+        toast.success('Квартира добавлена успешно!')
+      }
 
-      toast.success('Квартира добавлена успешно!')
+      push(`/my-flats/${flatData.id}`)
     },
   })
 }

@@ -59,7 +59,7 @@ export default function NearbyAdsFilter({
               maxPrice: parseFloat(e.target.value) * 1000000,
             })
           }
-          className='w-12 h-8 text-xs'
+          className='!w-13 h-8 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
           placeholder='36.2'
         />
         <span className='text-xs text-gray-600'>млн</span>
@@ -75,7 +75,7 @@ export default function NearbyAdsFilter({
           onChange={(e) =>
             setFilters({ ...filters, rooms: parseInt(e.target.value) || 1 })
           }
-          className='w-8 h-8 text-xs'
+          className='!w-10 h-8 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
         />
       </div>
 
@@ -92,7 +92,7 @@ export default function NearbyAdsFilter({
             })
           }
           placeholder='50'
-          className='w-10 h-8 text-xs'
+          className='!w-12 h-8 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
         />
         <span className='text-xs text-gray-600'>м²</span>
       </div>
@@ -111,8 +111,8 @@ export default function NearbyAdsFilter({
                 : undefined,
             })
           }
-          placeholder='7'
-          className='w-8 h-8 text-xs'
+          placeholder='9'
+          className='!w-10 h-8 text-xs [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none'
         />
         <span className='text-xs text-gray-600'>м²</span>
       </div>

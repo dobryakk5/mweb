@@ -345,14 +345,27 @@ export const useMapCache = () => {
         // Фильтруем объявления на клиентской стороне
         const filteredAds = filterAds(cache!.ads, filters)
 
-        // Фильтруем и окрашиваем дома на основе активных объявлений в области
+        // ВАЖНО: Фильтруем объявления только в пределах ЗАПРАШИВАЕМОГО viewport
+        const adsInViewport = filteredAds.filter(
+          (ad) =>
+            ad.lat >= bounds.south &&
+            ad.lat <= bounds.north &&
+            ad.lng >= bounds.west &&
+            ad.lng <= bounds.east,
+        )
+
+        console.log(
+          `🗺️ VIEWPORT_FILTER: ${filteredAds.length} filtered ads -> ${adsInViewport.length} ads in viewport`,
+        )
+
+        // Фильтруем и окрашиваем дома на основе объявлений в viewport
         const filteredHouses = filterAndColorHouses(
           cache!.houses,
-          filteredAds,
+          adsInViewport,
           bounds,
         )
 
-        return { houses: filteredHouses, ads: filteredAds }
+        return { houses: filteredHouses, ads: adsInViewport }
       }
 
       // Загружаем новые данные
@@ -366,13 +379,27 @@ export const useMapCache = () => {
 
       // Фильтруем новые данные
       const filteredAds = filterAds(newCacheData.ads, filters)
+
+      // ВАЖНО: Фильтруем объявления только в пределах ЗАПРАШИВАЕМОГО viewport
+      const adsInViewport = filteredAds.filter(
+        (ad) =>
+          ad.lat >= bounds.south &&
+          ad.lat <= bounds.north &&
+          ad.lng >= bounds.west &&
+          ad.lng <= bounds.east,
+      )
+
+      console.log(
+        `🗺️ VIEWPORT_FILTER: ${filteredAds.length} filtered ads -> ${adsInViewport.length} ads in viewport`,
+      )
+
       const filteredHouses = filterAndColorHouses(
         newCacheData.houses,
-        filteredAds,
+        adsInViewport,
         bounds,
       )
 
-      return { houses: filteredHouses, ads: filteredAds }
+      return { houses: filteredHouses, ads: adsInViewport }
     },
     [cache, isCacheValid, fetchMapData],
   )
