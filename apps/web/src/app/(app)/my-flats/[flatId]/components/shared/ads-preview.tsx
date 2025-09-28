@@ -63,13 +63,6 @@ const AdItem = ({
   // Проверяем активность объявления (API может возвращать 0/1 или true/false)
   const isActive = ad.is_active === true || ad.is_active === 1
 
-  // Отладочное логирование активности
-  if (!isActive) {
-    console.log(
-      `🚫 PREVIEW INACTIVE: house_id=${ad.house_id}, floor=${ad.floor}, is_active=${ad.is_active} (${typeof ad.is_active}) -> isActive=${isActive}`,
-    )
-  }
-
   // Определяем источник для бейджа
   const getSourceBadge = (url: string) => {
     const baseClasses = isActive ? '' : 'opacity-60'

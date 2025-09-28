@@ -31,7 +31,7 @@ export type UpdateButtonProps = {
 
 // Collapsible block props
 export type CollapsibleBlockProps = {
-  title: string
+  title: string | React.ReactNode
   isCollapsed: boolean
   onToggle: () => void
   children: React.ReactNode

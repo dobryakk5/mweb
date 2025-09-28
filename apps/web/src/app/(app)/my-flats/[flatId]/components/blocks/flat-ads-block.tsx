@@ -145,16 +145,6 @@ export default function FlatAdsBlock({
 
   const headerActions = (
     <div className='flex gap-2'>
-      <MultiUpdateButtons
-        onUpdate={onFindSimilar}
-        isUpdating={isLoadingSimilar}
-        label='Искать объявления'
-      />
-      <MultiUpdateButtons
-        onUpdate={onUpdateAllOld}
-        isUpdating={isUpdatingAllOld}
-        label='Обновить статусы'
-      />
       <button
         type='button'
         className={buttonVariants({
@@ -165,6 +155,16 @@ export default function FlatAdsBlock({
       >
         {showAddForm ? 'Скрыть форму' : 'Добавить новую ссылку'}
       </button>
+      <MultiUpdateButtons
+        onUpdate={onFindSimilar}
+        isUpdating={isLoadingSimilar}
+        label='Искать объявления'
+      />
+      <MultiUpdateButtons
+        onUpdate={onUpdateAllOld}
+        isUpdating={isUpdatingAllOld}
+        label='Обновить статусы'
+      />
     </div>
   )
 

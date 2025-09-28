@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useMemo, useEffect, memo } from 'react'
+import { useState, useMemo, useEffect, memo, useCallback } from 'react'
 import CollapsibleBlock from '../shared/collapsible-block'
 import MapWithPreview from '../shared/map-with-preview'
 import NearbyAdsFilter from '../shared/nearby-ads-filter'
@@ -162,6 +162,12 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
   // State for map filters - используем параметры текущей квартиры согласно MAPS.md
   const [mapFilters, setMapFilters] = useState<FlatFilters | null>(null)
 
+  // Status toggles state for header
+  const [statusToggles, setStatusToggles] = useState({
+    showActive: true,
+    showInactive: true,
+  })
+
   // Инициализируем mapFilters когда defaultFilters готовы
   useEffect(() => {
     // Устанавливаем фильтры даже с дефолтными значениями, чтобы карта всегда загружалась
@@ -212,6 +218,67 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
     })
   }, [defaultFiltersFromFlatAds, nearbyFilters])
 
+  // Handle status toggle changes - только обновляем состояние переключателей
+  const handleStatusToggle = (
+    key: 'showActive' | 'showInactive',
+    value: boolean,
+  ) => {
+    const newToggles = { ...statusToggles, [key]: value }
+    setStatusToggles(newToggles)
+    // НЕ обновляем mapFilters - пусть карта получает статусы отдельно
+
+    if (process.env.NODE_ENV === 'development') {
+      console.log(`🔄 [STATUS_TOGGLE] ${key}=${value}, isLoading=${isLoading}`)
+    }
+  }
+
+  // Status toggles component for header
+  const statusToggleComponent = (
+    <div className='flex items-center gap-2'>
+      <label className='flex items-center gap-1 cursor-pointer'>
+        <input
+          type='checkbox'
+          checked={statusToggles.showActive}
+          onChange={(e) => handleStatusToggle('showActive', e.target.checked)}
+          className='sr-only'
+        />
+        <div
+          className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+            statusToggles.showActive ? 'bg-orange-500' : 'bg-gray-200'
+          }`}
+        >
+          <span
+            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+              statusToggles.showActive ? 'translate-x-3.5' : 'translate-x-0.5'
+            }`}
+          />
+        </div>
+        <span className='text-xs text-gray-600'>Активные</span>
+      </label>
+
+      <label className='flex items-center gap-1 cursor-pointer'>
+        <input
+          type='checkbox'
+          checked={statusToggles.showInactive}
+          onChange={(e) => handleStatusToggle('showInactive', e.target.checked)}
+          className='sr-only'
+        />
+        <div
+          className={`relative inline-flex h-4 w-7 items-center rounded-full transition-colors ${
+            statusToggles.showInactive ? 'bg-gray-500' : 'bg-gray-200'
+          }`}
+        >
+          <span
+            className={`inline-block h-3 w-3 transform rounded-full bg-white transition-transform ${
+              statusToggles.showInactive ? 'translate-x-3.5' : 'translate-x-0.5'
+            }`}
+          />
+        </div>
+        <span className='text-xs text-gray-600'>Неактивные</span>
+      </label>
+    </div>
+  )
+
   // Handle filter updates from NearbyAdsFilter (случай 3: пользовательский ввод)
   const handleFilterUpdate = (filters: {
     maxPrice: number
@@ -225,7 +292,7 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
       console.log(`🔥 [${timestamp}] USER INPUT - Filter update:`, filters)
     }
 
-    // Update map filters (excluding radius since map uses bounds)
+    // Update map filters (без статусов - они передаются отдельно)
     const newMapFilters = {
       rooms: filters.rooms,
       maxPrice: filters.maxPrice,
@@ -235,11 +302,33 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
 
     setMapFilters(newMapFilters)
 
-    // Call original search callback
+    // Call original search callback for server filters
     if (onSearchWithFilters) {
       onSearchWithFilters(filters)
     }
   }
+
+  // Мемоизируем external filters для карты
+  // Статусы включены но не должны вызывать серверные запросы (только клиентская фильтрация)
+  const memoizedExternalFilters = useMemo(() => {
+    if (!mapFilters) return null
+
+    return {
+      rooms: mapFilters.rooms,
+      maxPrice: mapFilters.maxPrice,
+      minArea: mapFilters.minArea,
+      minKitchenArea: mapFilters.minKitchenArea,
+      showActive: statusToggles.showActive,
+      showInactive: statusToggles.showInactive,
+    }
+  }, [
+    mapFilters?.rooms,
+    mapFilters?.maxPrice,
+    mapFilters?.minArea,
+    mapFilters?.minKitchenArea,
+    statusToggles.showActive,
+    statusToggles.showInactive,
+  ])
 
   const loadingContent = (
     <div className='flex justify-center items-center py-8'>
@@ -260,6 +349,9 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
         loadingContent
       ) : (
         <>
+          {/* Переключатели статуса объявлений */}
+          <div className='mb-4'>{statusToggleComponent}</div>
+
           {/* Фильтры поиска - теперь сверху и в одну строку */}
           {nearbyAds && nearbyAds.length > 0 && nearbyFilters && (
             <div className='mb-4'>
@@ -289,7 +381,7 @@ const NearbyAdsBlock = memo(function NearbyAdsBlock({
             <MapWithPreview
               flatId={flat.id.toString()}
               className='w-full'
-              externalFilters={mapFilters}
+              externalFilters={memoizedExternalFilters}
               onAddToComparison={onAddToComparison}
               onToggleComparison={onToggleComparison}
               comparisonAds={comparisonAds}

@@ -13,7 +13,7 @@ export default function CollapsibleBlock({
   onToggle,
   children,
   headerActions,
-  className
+  className,
 }: CollapsibleBlockProps) {
   return (
     <div className={cn('py-4 px-4 bg-gray-50 rounded-lg mb-4', className)}>
@@ -22,7 +22,11 @@ export default function CollapsibleBlock({
           className='flex items-center gap-2 cursor-pointer hover:text-blue-600'
           onClick={onToggle}
         >
-          <h3 className='text-lg font-medium'>{title}</h3>
+          {typeof title === 'string' ? (
+            <h3 className='text-lg font-medium'>{title}</h3>
+          ) : (
+            <div className='text-lg font-medium'>{title}</div>
+          )}
           {isCollapsed ? (
             <ChevronDownIcon className='w-5 h-5' />
           ) : (
@@ -30,9 +34,7 @@ export default function CollapsibleBlock({
           )}
         </div>
         {headerActions && (
-          <div className='flex items-center gap-2'>
-            {headerActions}
-          </div>
+          <div className='flex items-center gap-2'>{headerActions}</div>
         )}
       </div>
 

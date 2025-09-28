@@ -47,6 +47,8 @@ export interface MapFilters {
   maxPrice?: number
   minArea?: number
   minKitchenArea?: number
+  showActive?: boolean
+  showInactive?: boolean
 }
 
 // Время жизни кэша в миллисекундах (5 минут)

@@ -129,6 +129,8 @@ export default function MapWithPreview({
       maxPrice: currentFlat.price || 100000000, // TODO: Get price from ads or form
       minArea: currentFlat.area ? currentFlat.area * 0.95 : undefined,
       minKitchenArea: currentFlat.kitchen_area || undefined,
+      showActive: true,
+      showInactive: true,
     }
   }, [externalFilters, currentFlat])
 
@@ -186,6 +188,14 @@ export default function MapWithPreview({
     },
     [setSelectedHouseId],
   )
+
+  // Мемоизируем flatCoordinates чтобы избежать лишних ререндеров
+  const memoizedFlatCoordinates = useMemo(() => {
+    return (
+      currentFlat?.coordinates ||
+      (currentFlat?.house_id ? { houseId: currentFlat.house_id } : undefined)
+    )
+  }, [currentFlat?.coordinates, currentFlat?.house_id])
 
   // Handle clearing house selection - return to showing all ads in bounds
   const handleClearHouseSelection = useCallback(() => {
@@ -294,12 +304,7 @@ export default function MapWithPreview({
             onBoundsChange={handleMapBoundsChange}
             onHouseClick={handleHouseClick}
             mapAds={mapAds}
-            flatCoordinates={
-              currentFlat?.coordinates ||
-              (currentFlat?.house_id
-                ? { houseId: currentFlat.house_id }
-                : undefined)
-            }
+            flatCoordinates={memoizedFlatCoordinates}
           />
         </div>
       </div>

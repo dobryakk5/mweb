@@ -35,7 +35,13 @@ export default function NearbyAdsFilter({
     onSearch(filters)
   }
 
-  const hasChanges = JSON.stringify(filters) !== JSON.stringify(currentFilters)
+  // Проверяем изменения для всех полей фильтра
+  const hasChanges =
+    filters.maxPrice !== currentFilters.maxPrice ||
+    filters.rooms !== currentFilters.rooms ||
+    filters.minArea !== currentFilters.minArea ||
+    filters.minKitchenArea !== currentFilters.minKitchenArea ||
+    filters.radius !== currentFilters.radius
 
   return (
     <div className='flex items-center gap-3 flex-wrap'>
@@ -111,15 +117,15 @@ export default function NearbyAdsFilter({
         <span className='text-xs text-gray-600'>м²</span>
       </div>
 
-      {/* Кнопка "Искать еще" в стиле RefreshNearbyButton */}
+      {/* Кнопка "Искать" в том же стиле как "Искать объявления" */}
       <UpdateButton
         isLoading={isLoading}
         onClick={handleSearch}
         disabled={!hasChanges}
-        variant='outline'
+        variant='default'
         size='sm'
       >
-        {isLoading ? 'Поиск...' : 'Искать еще'}
+        {isLoading ? 'Поиск...' : 'Искать'}
       </UpdateButton>
     </div>
   )

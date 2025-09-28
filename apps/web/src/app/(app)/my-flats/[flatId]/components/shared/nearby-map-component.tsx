@@ -105,10 +105,6 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   filters,
   mapAds = [],
 }: NearbyMapComponentProps) {
-  console.log(
-    `🗺️ NearbyMapComponent render: mapAds=${mapAds?.length || 0}, nearbyAds=${nearbyAds?.length || 0}`,
-  )
-
   const [housePrices, setHousePrices] = useState<Record<number, number>>({})
   const [loading, setLoading] = useState(false)
   const [loadingPrices, setLoadingPrices] = useState(false)
@@ -536,9 +532,6 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
       const hasActiveAds = Boolean(
         house.has_active_ads || house.active_ads_count > 0,
       )
-      console.log(
-        `🏠 House ${house.house_id}: has_active_ads=${house.has_active_ads}, active_ads_count=${house.active_ads_count}, result=${hasActiveAds}`,
-      )
       const housePrice = housePrices[house.house_id]
       const isCurrentUserHouse = Boolean(
         currentFlatHouseId && house.house_id === currentFlatHouseId,
@@ -594,14 +587,6 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
       )
       const hasActiveAds = Boolean(
         group.some((h) => h.has_active_ads || h.active_ads_count > 0),
-      )
-      console.log(
-        `🏠 Group: hasActiveAds=${hasActiveAds}, houses:`,
-        group.map((h) => ({
-          id: h.house_id,
-          has_active: h.has_active_ads,
-          count: h.active_ads_count,
-        })),
       )
 
       // Определяем адрес группы в зависимости от того, одинаковые ли house_id
@@ -783,11 +768,6 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
         )
       })
 
-      console.log(
-        `🏠 Creating house ${houseId}: ${adsArray.length} ads, ${activeAds.length} active, sample is_active:`,
-        adsArray.slice(0, 2).map((a: any) => a.is_active),
-      )
-
       return {
         house_id: houseId,
         lat: firstAd.lat,
@@ -878,21 +858,11 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
   // Определяем центр карты - только реальные координаты, без fallback
   const getMapCenter = (): [number, number] | null => {
     // Приоритет: координаты из пропсов, затем координаты по адресу
-    console.log('🗺️ [MAP_CENTER] Debug info:', {
-      flatCoordinates,
-      addressCoordinates,
-      flatAddress,
-    })
-
     if (
       flatCoordinates &&
       'lat' in flatCoordinates &&
       'lng' in flatCoordinates
     ) {
-      console.log(
-        '✅ [MAP_CENTER] Using coordinates from props:',
-        flatCoordinates,
-      )
       return [flatCoordinates.lat, flatCoordinates.lng]
     }
     if (addressCoordinates) {
@@ -957,10 +927,9 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
 
         {/* Сгруппированные маркеры домов в видимой области */}
         {markers.map((marker, index) => {
-          const handleClick = () => {
+          const handleMarkerClick = () => {
             if (marker.isGroup && marker.house.houses) {
               // Для группы домов - можем показать попап с выбором или взять первый дом
-              console.log('Группа домов:', marker.house.houses)
               // Если группа содержит дом пользователя, предпочитаем его
               if (marker.isCurrentUserHouse && currentFlatHouseId) {
                 const userHouse = marker.house.houses.find(
@@ -985,7 +954,7 @@ const NearbyMapComponent = memo(function NearbyMapComponent({
               position={marker.position as [number, number]}
               icon={marker.icon}
               eventHandlers={{
-                click: handleClick,
+                click: handleMarkerClick,
               }}
             >
               {marker.isGroup && (

@@ -14,6 +14,9 @@ interface FlatFilters {
   maxPrice: number
   minArea?: number
   minKitchenArea?: number
+  showActive?: boolean
+  showInactive?: boolean
+  radius?: number
 }
 
 interface AdData {
@@ -75,20 +78,48 @@ export const useMapAdsFilter = ({
   // Debounce bounds changes
   const debouncedBounds = useDebounce(bounds, debounceMs)
 
-  // Фильтрация объявлений по выбранному дому
+  // Фильтрация объявлений по выбранному дому и статусу активности
   const ads = useMemo(() => {
-    if (!currentSelectedHouseId) {
-      console.log(`🔍 No house selected, showing all ${allAds.length} ads`)
-      return allAds
+    let filteredAds = allAds
+
+    // Фильтрация по дому
+    if (currentSelectedHouseId) {
+      filteredAds = filteredAds.filter(
+        (ad) => ad.house_id === currentSelectedHouseId,
+      )
     }
-    const filteredAds = allAds.filter(
-      (ad) => ad.house_id === currentSelectedHouseId,
-    )
-    console.log(
-      `🔍 House ${currentSelectedHouseId} selected, filtered ${filteredAds.length} ads from ${allAds.length} total`,
-    )
+
+    // Клиентская фильтрация по статусу активности
+    if (
+      flatFilters.showActive !== undefined ||
+      flatFilters.showInactive !== undefined
+    ) {
+      const showActive = flatFilters.showActive ?? true
+      const showInactive = flatFilters.showInactive ?? true
+
+      if (!showActive && !showInactive) {
+        // Если оба false - показываем все (fallback)
+      } else if (showActive && !showInactive) {
+        // Только активные
+        filteredAds = filteredAds.filter((ad) => ad.is_active)
+      } else if (!showActive && showInactive) {
+        // Только неактивные
+        filteredAds = filteredAds.filter((ad) => !ad.is_active)
+      }
+      // Если оба true - показываем все (не фильтруем)
+    }
+
     return filteredAds
-  }, [allAds, currentSelectedHouseId])
+  }, [
+    allAds,
+    currentSelectedHouseId,
+    flatFilters.showActive,
+    flatFilters.showInactive,
+  ])
+
+  // Состояние для контроля автопроверки CIAN
+  const [lastCianCheckTime, setLastCianCheckTime] = useState<number>(0)
+  const CIAN_CHECK_COOLDOWN = 60 * 1000 // 1 минута
 
   // Функция обновления статусов объявлений
   const updateAdsStatuses = useCallback(async () => {
@@ -133,9 +164,14 @@ export const useMapAdsFilter = ({
           }))
           setAllAds(adsData)
         }
+
+        // Обновляем время последней проверки при успешном ответе
+        setLastCianCheckTime(Date.now())
       }
     } catch (error) {
       console.error('Error updating ads statuses:', error)
+      // При ошибке тоже обновляем время, чтобы не спамить
+      setLastCianCheckTime(Date.now())
     } finally {
       setIsUpdatingStatuses(false)
     }
@@ -153,8 +189,14 @@ export const useMapAdsFilter = ({
       if (!enabled || !debouncedBounds) return
 
       try {
-        console.log('🔄 Loading data from cache with filters:', flatFilters)
-        const result = await getFilteredData(debouncedBounds, flatFilters)
+        // Извлекаем только серверные фильтры (без клиентских фильтров статуса)
+        const serverFilters = {
+          rooms: flatFilters.rooms,
+          maxPrice: flatFilters.maxPrice,
+          minArea: flatFilters.minArea,
+          minKitchenArea: flatFilters.minKitchenArea,
+        }
+        const result = await getFilteredData(debouncedBounds, serverFilters)
 
         if (result) {
           // Преобразуем данные в нужный формат
@@ -176,21 +218,20 @@ export const useMapAdsFilter = ({
 
           setAllAds(adsData)
           setError(null)
-          console.log(`✅ Loaded ${adsData.length} ads from cache`)
 
-          // Автоматически проверяем статусы Cian объявлений после загрузки
-          if (adsData.length > 0) {
-            const cianAds = adsData.filter((ad) => ad.url?.includes('cian.ru'))
-            if (cianAds.length > 0) {
-              console.log(
-                `🔍 Auto-checking ${cianAds.length} CIAN ads statuses...`,
-              )
-              // Запускаем проверку статусов в фоне без блокировки UI
-              setTimeout(() => {
-                updateAdsStatuses().catch(console.error)
-              }, 1000) // Небольшая задержка для лучшего UX
-            }
-          }
+          // ВРЕМЕННО ОТКЛЮЧЕНО: Автоматическая проверка статусов CIAN
+          // if (adsData.length > 0) {
+          //   const cianAds = adsData.filter((ad) => ad.url?.includes('cian.ru'))
+          //   if (cianAds.length > 0) {
+          //     const now = Date.now()
+          //     const timeSinceLastCheck = now - lastCianCheckTime
+          //     if (timeSinceLastCheck >= CIAN_CHECK_COOLDOWN) {
+          //       setTimeout(() => {
+          //         updateAdsStatuses().catch(console.error)
+          //       }, 1000)
+          //     }
+          //   }
+          // }
         }
       } catch (err) {
         console.error('Failed to load data from cache:', err)
@@ -201,10 +242,14 @@ export const useMapAdsFilter = ({
     loadData()
   }, [
     debouncedBounds,
-    flatFilters,
+    flatFilters.rooms,
+    flatFilters.maxPrice,
+    flatFilters.minArea,
+    flatFilters.minKitchenArea,
     enabled,
     getFilteredData,
     updateAdsStatuses,
+    lastCianCheckTime,
   ])
 
   const refetch = useCallback(() => {
@@ -214,9 +259,36 @@ export const useMapAdsFilter = ({
     }
   }, [invalidateCache, debouncedBounds])
 
+  // Клиентская фильтрация mapAds по статусу активности (без фильтрации по дому)
+  const mapAds = useMemo(() => {
+    let filteredMapAds = allAds
+
+    // Применяем только фильтрацию по статусу активности, но не по дому
+    if (
+      flatFilters.showActive !== undefined ||
+      flatFilters.showInactive !== undefined
+    ) {
+      const showActive = flatFilters.showActive ?? true
+      const showInactive = flatFilters.showInactive ?? true
+
+      if (!showActive && !showInactive) {
+        // Если оба false - показываем все (fallback)
+      } else if (showActive && !showInactive) {
+        // Только активные
+        filteredMapAds = filteredMapAds.filter((ad) => ad.is_active)
+      } else if (!showActive && showInactive) {
+        // Только неактивные
+        filteredMapAds = filteredMapAds.filter((ad) => !ad.is_active)
+      }
+      // Если оба true - показываем все (не фильтруем)
+    }
+
+    return filteredMapAds
+  }, [allAds, flatFilters.showActive, flatFilters.showInactive])
+
   return {
-    ads, // Filtered ads for preview (by selectedHouseId)
-    mapAds: allAds, // All ads for map markers (unfiltered)
+    ads, // Filtered ads for preview (by selectedHouseId and status)
+    mapAds, // All ads for map markers (filtered by status only)
     loading,
     error,
     bounds,
