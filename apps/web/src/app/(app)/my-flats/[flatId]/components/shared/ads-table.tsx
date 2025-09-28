@@ -500,9 +500,12 @@ export default function AdsTable({
 
       case 'area':
       case 'totalArea':
+        const totalArea = ad.totalArea || ad.area
+        return totalArea ? Number(totalArea).toFixed(1) : '\u00A0'
+
       case 'livingArea':
-        const area = ad.area || ad.totalArea || ad.livingArea || ad[key]
-        return area ? Number(area).toFixed(1) : '\u00A0'
+        const livingArea = ad.livingArea
+        return livingArea ? Number(livingArea).toFixed(1) : '\u00A0'
 
       case 'kitchenArea':
         const kitchenArea = ad.kitchenArea || ad.kitchen_area
