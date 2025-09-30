@@ -68,19 +68,16 @@ export default function MyFlatsPage(): JSX.Element {
 
   return (
     <Page>
-      <Page.Header>
-        <Page.Title>Квартиры</Page.Title>
-
+      <div className='flex justify-center pt-2 pb-4'>
         <Link
           className={buttonVariants({
-            className: 'ml-auto',
             variant: 'secondary',
           })}
           href='/my-flats/add'
         >
           Добавить квартиру
         </Link>
-      </Page.Header>
+      </div>
 
       <Page.Content>
         <ViewFlats tgUserId={user.tgUserId} />

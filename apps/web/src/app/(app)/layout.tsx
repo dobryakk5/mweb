@@ -1,7 +1,7 @@
 import type { Metadata } from 'next'
 import type { ReactNode, JSX } from 'react'
 
-import Layout from '@acme/ui/components/layout'
+import BurgerMenu from '@acme/ui/components/burger-menu'
 
 export const metadata: Metadata = {
   title: 'MRealty',
@@ -13,12 +13,9 @@ interface AppLayoutProps {
 
 export default function AppLayout({ children }: AppLayoutProps): JSX.Element {
   return (
-    <Layout>
-      <Layout.Header />
-
-      <Layout.Content>{children}</Layout.Content>
-
-      <Layout.Aside />
-    </Layout>
+    <div className='flex h-screen w-full'>
+      <BurgerMenu />
+      <main className='flex w-full'>{children}</main>
+    </div>
   )
 }

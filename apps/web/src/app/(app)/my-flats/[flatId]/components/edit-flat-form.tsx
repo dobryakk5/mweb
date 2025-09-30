@@ -543,9 +543,7 @@ export default function EditFlatFormRefactored({
             <Link href='/my-flats'>
               <ArrowLeftIcon className='h-5 w-5' />
             </Link>
-            <Page.Title>
-              {flat ? `Редактировать квартиру #${flat.id}` : 'Новая квартира'}
-            </Page.Title>
+            <Page.Title>{flat ? flat.address : 'Новая квартира'}</Page.Title>
           </div>
         </Page.Header>
 

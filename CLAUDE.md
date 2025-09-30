@@ -65,6 +65,63 @@ The system integrates with a Python API service (port 8008) for property parsing
 - Text-based property parsing
 - Health checks and retry logic
 
+### Notifications System
+The system includes an automated notifications feature that monitors property listings and sends updates to users via Telegram:
+
+#### Architecture
+- **Frontend**: `/notifications` page with three check buttons and configurable time period
+- **Backend**: Scheduler endpoints in `services/api/src/routes/scheduler.ts`
+- **Database**: Tracks ads in `users.ads` table with timestamps for change detection
+- **Integration**: Uses Python API service for Telegram message delivery
+
+#### Three Types of Checks
+1. **По квартирам (By Flats)**: Checks listings matching exact floor and room count
+2. **По домам (By Houses)**: Checks all listings in the same building (excluding user's flat)
+3. **В радиусе 500м (Within 500m)**: Checks listings in nearby buildings with filters:
+   - Price: cheaper than user's flat
+   - Rooms: equal or more than user's flat
+   - Area: ≥90% of user's flat area
+   - Kitchen: ≥90% of user's flat kitchen area
+
+#### API Endpoints
+- `POST /scheduler/check-flat-changes` - Check flats and houses for all user apartments
+  - Body: `{ tgUserId: number, checkType?: 'flats' | 'houses', days?: number }`
+  - Returns: `{ totalNewAds, totalStatusChanges, notificationsSent, flatsChecked }`
+
+- `POST /scheduler/check-nearby-changes` - Check nearby apartments (500m radius)
+  - Body: `{ tgUserId: number, days?: number }`
+  - Returns: `{ totalNewAds, totalStatusChanges, notificationsSent, flatsChecked }`
+
+- `POST /scheduler/check-single-flat/:flatId` - Check specific flat (legacy, for reference)
+  - Returns separate counts for flat and house ads
+
+#### Change Detection Logic
+The system detects two types of changes:
+1. **New Ads**: Listings not in `users.ads` table
+   - Matches by unique key: `${price}-${rooms}-${floor}`
+   - Filters by creation/update date within specified days
+   - Only active listings (`is_active = true`)
+
+2. **Status Changes**: Existing ads with changed `is_active` status
+   - Compares `users.ads.status` with current `flats_history.is_active`
+   - Checks if change occurred within specified days
+   - Validates both source timestamps and DB timestamps
+
+#### Time Period Configuration
+- Default: 1 day (last 24 hours)
+- Configurable: 1-30 days via UI input
+- Uses: `Date.now() - (days * 24 * 60 * 60 * 1000)`
+
+#### Database Functions Used
+- `find_ads(address, floor, rooms)` - Get listings for specific apartment
+- `find_nearby_apartments(address, rooms, max_price, min_area, min_kitchen_area, radius)` - Get nearby listings
+- `get_house_id_by_address(address)` - Resolve house ID from address
+
+#### Telegram Notifications
+Sent via Python API at `${PYTHON_API_URL}/api/send-message`:
+- **New Ad Format**: "🆕 Новое объявление" + address, rooms, price, URL
+- **Status Change Format**: "🔄 Изменение статуса" + old/new status, details
+
 ## Environment Setup
 
 ### Local Development
