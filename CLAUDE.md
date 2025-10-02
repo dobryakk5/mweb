@@ -52,6 +52,25 @@ The database uses PostgreSQL with a custom `users` schema and includes:
 - Ads/listings management
 - Session handling for Telegram users
 
+#### Key Database Functions
+The system uses PostgreSQL functions for efficient data retrieval:
+
+1. **`find_ads(address, floor, rooms)`** - Get listings for a specific apartment
+   - Used in "По этой квартире" (By This Flat) block
+   - Returns **all** listings without deduplication
+   - Shows multiple sources (Cian, Yandex) for the same price/floor/rooms combination
+
+2. **`find_house_ads(address, exclude_floor, exclude_rooms)`** - Get listings for a building
+   - Used in "По этому дому" (By This House) block
+   - Returns listings with **DISTINCT ON** to remove duplicates
+   - Excludes the user's own flat
+   - Priority: active ads → Cian → Yandex → most recently updated
+
+3. **`find_nearby_apartments(address, rooms, max_price, min_area, min_kitchen_area, radius)`** - Get nearby listings
+   - Used in "В радиусе 500м" (Within 500m) block
+   - Filters by price, rooms, area, and kitchen area
+   - Returns listings within specified radius (default 500m)
+
 ### Authentication Flow
 1. Access auth page: `http://localhost:13000/link?i=123` (where `i` is user ID)
 2. System creates mock user and stores in localStorage

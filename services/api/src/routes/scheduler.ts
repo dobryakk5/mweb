@@ -230,8 +230,7 @@ export default async function schedulerRoutes(fastify: FastifyInstance) {
             await tx.execute(sql`SET search_path TO users,public`)
             return await tx.execute(
               sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
-                  FROM public.find_ads(${flat.address}, null, null)
-                  WHERE NOT (floor = ${flat.floor} AND rooms = ${flat.rooms})`,
+                  FROM public.find_house_ads(${flat.address}, ${flat.floor}, ${flat.rooms})`,
             )
           })
 
@@ -403,13 +402,12 @@ export default async function schedulerRoutes(fastify: FastifyInstance) {
           ? flatAdsResult
           : (flatAdsResult as any).rows || []
 
-        // 3. Получаем актуальные объявления ПО ДОМУ через find_ads
+        // 3. Получаем актуальные объявления ПО ДОМУ через find_house_ads
         const houseAdsResult = await db.transaction(async (tx) => {
           await tx.execute(sql`SET search_path TO users,public`)
           return await tx.execute(
             sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
-              FROM public.find_ads(${flat.address}, null, null)
-              WHERE NOT (floor = ${flat.floor} AND rooms = ${flat.rooms})`,
+              FROM public.find_house_ads(${flat.address}, ${flat.floor}, ${flat.rooms})`,
           )
         })
 

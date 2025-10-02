@@ -1359,13 +1359,12 @@ export default async function adsRoutes(fastify: FastifyInstance) {
 
       const currentFlat = flats[0]
 
-      // Получаем объявления по дому из public.find_ads
+      // Получаем объявления по дому из public.find_house_ads
       const houseAdsResult = await db.transaction(async (tx) => {
         await tx.execute(sql`SET search_path TO users,public`)
         return await tx.execute(
           sql`SELECT price, rooms, person_type, created, updated, url, is_active, floor, area, kitchen_area
-              FROM public.find_ads(${currentFlat.address}, null, null)
-              WHERE NOT (floor = ${currentFlat.floor} AND rooms = ${currentFlat.rooms})`,
+              FROM public.find_house_ads(${currentFlat.address}, ${currentFlat.floor}, ${currentFlat.rooms})`,
         )
       })
 
