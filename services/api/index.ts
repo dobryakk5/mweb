@@ -1,6 +1,7 @@
 console.log('=== INDEX.TS COMMONJS ===')
 
-const startServer = require('./src/server.ts').default || require('./src/server.ts')
+const serverModule = require('./src/server')
+const startServer = serverModule.default ?? serverModule
 
 startServer().catch((error: any) => {
   console.error('Failed to start the server:', error)

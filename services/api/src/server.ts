@@ -4,24 +4,29 @@ import autoLoad from '@fastify/autoload'
 import cors from '@fastify/cors'
 import multipart from '@fastify/multipart'
 import { join } from 'node:path'
-import { fileURLToPath } from 'node:url'
-import { dirname } from 'node:path'
+import { existsSync } from 'node:fs'
 
-// ESM эквивалент __dirname
-const __filename = fileURLToPath(import.meta.url)
-const __dirname = dirname(__filename)
+const envPathCandidates = [
+  join(process.cwd(), '.env'),
+  join(__dirname, '../.env'),
+  join(__dirname, '../../.env'),
+]
 
-config({ path: join(__dirname, '../.env'), override: true })
+const envPath = envPathCandidates.find((candidate) => existsSync(candidate))
+
+if (envPath) {
+  config({ path: envPath, override: true })
+} else {
+  config()
+}
 
 export default async function startServer() {
   console.log('=== SERVER.TS STARTING ===')
 
   // Выводим версию API для отслеживания деплоев
   try {
-    const packageJson = await import('../package.json', {
-      assert: { type: 'json' },
-    })
-    console.log(`=== API VERSION: ${packageJson.default.version} ===`)
+    const packageJson = require('../package.json') as { version?: string }
+    console.log(`=== API VERSION: ${packageJson.version ?? 'unknown'} ===`)
   } catch (error) {
     console.log('=== API VERSION: unknown ===')
   }

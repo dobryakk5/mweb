@@ -73,6 +73,12 @@ export default function BurgerMenu() {
             >
               Уведомления
             </a>
+            <a
+              href='/districts'
+              className='block px-4 py-2 rounded-md hover:bg-muted transition-colors'
+            >
+              Статистика районов
+            </a>
           </nav>
 
           {/* Theme toggle at bottom */}

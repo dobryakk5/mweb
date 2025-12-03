@@ -90,32 +90,6 @@ export default function AddFlatForm({
               </Link>
 
               <Page.Title>Добавить квартиру</Page.Title>
-
-              {formState.isDirty ? (
-                <div className='ml-auto flex items-center gap-x-4'>
-                  <span className='text-muted-foreground text-xs'>
-                    Несохраненная квартира
-                  </span>
-
-                  <div className='flex gap-x-2'>
-                    <Button onClick={cancel} variant='outline'>
-                      Отмена
-                    </Button>
-
-                    <Button
-                      className='gap-x-2'
-                      disabled={!formState.isValid}
-                      type='submit'
-                    >
-                      <span>Добавить</span>
-
-                      {isPending ? (
-                        <Loader2Icon className='size-4 animate-spin' />
-                      ) : null}
-                    </Button>
-                  </div>
-                </div>
-              ) : null}
             </Page.Header>
 
             <Page.Content className='divide-y *:py-5 first:*:pt-0 last:*:pb-0'>
@@ -154,11 +128,15 @@ export default function AddFlatForm({
                               {isLoading ? (
                                 <Skeleton className='h-10' />
                               ) : (
-                                <Input 
-                                  type='number' 
+                                <Input
+                                  type='number'
                                   min={1}
                                   {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseInt(e.target.value) || 1,
+                                    )
+                                  }
                                 />
                               )}
                             </Form.Control>
@@ -179,11 +157,15 @@ export default function AddFlatForm({
                               {isLoading ? (
                                 <Skeleton className='h-10' />
                               ) : (
-                                <Input 
-                                  type='number' 
+                                <Input
+                                  type='number'
                                   min={1}
                                   {...field}
-                                  onChange={(e) => field.onChange(parseInt(e.target.value) || 1)}
+                                  onChange={(e) =>
+                                    field.onChange(
+                                      parseInt(e.target.value) || 1,
+                                    )
+                                  }
                                 />
                               )}
                             </Form.Control>
@@ -192,6 +174,36 @@ export default function AddFlatForm({
                           </Form.Item>
                         )}
                       />
+                    </div>
+
+                    <div className='mt-6 flex flex-col gap-4 border-t pt-6 sm:flex-row sm:items-center sm:justify-between'>
+                      <span className='text-muted-foreground text-xs'>
+                        {formState.isDirty
+                          ? 'Несохраненная квартира'
+                          : 'Заполните форму, чтобы добавить квартиру'}
+                      </span>
+
+                      <div className='flex gap-x-2'>
+                        <Button
+                          onClick={cancel}
+                          variant='outline'
+                          disabled={!formState.isDirty}
+                        >
+                          Отмена
+                        </Button>
+
+                        <Button
+                          className='gap-x-2'
+                          disabled={!formState.isDirty || !formState.isValid}
+                          type='submit'
+                        >
+                          <span>Добавить</span>
+
+                          {isPending ? (
+                            <Loader2Icon className='size-4 animate-spin' />
+                          ) : null}
+                        </Button>
+                      </div>
                     </div>
                   </Card.Content>
                 </Card>

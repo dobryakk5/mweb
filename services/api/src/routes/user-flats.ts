@@ -4,12 +4,29 @@ import { db, userFlats, ads, adHistory } from '@acme/db'
 import { eq, desc, and, ilike } from 'drizzle-orm'
 import { sql } from 'drizzle-orm'
 
-const getUserFlatsSchema = z.object({
-  tgUserId: z.string().transform(Number),
+const tgUserIdParamsSchema = z.object({
+  tgUserId: z.coerce.number().int().positive(),
+})
+
+const listUserFlatsQuerySchema = z.object({
+  search: z.string().optional(),
+  page: z.coerce.number().int().min(1).optional(),
+  sortBy: z
+    .enum([
+      'createdAt',
+      'createdAt_desc',
+      'address',
+      'address_desc',
+      'rooms',
+      'rooms_desc',
+      'floor',
+      'floor_desc',
+    ])
+    .optional(),
 })
 
 const getFlatByIdSchema = z.object({
-  id: z.string().transform(Number),
+  id: z.coerce.number().int().positive(),
 })
 
 const createUserFlatSchema = z.object({
@@ -171,66 +188,80 @@ export default async (fastify: FastifyInstance) => {
   // Получить все квартиры пользователя
   fastify.get('/user-flats/user/:tgUserId', async (request, reply) => {
     try {
-      const { tgUserId } = getUserFlatsSchema.parse(request.params)
-      const { sortBy, search } = request.query as {
-        sortBy?: string
-        search?: string
-      }
+      const { tgUserId } = tgUserIdParamsSchema.parse(request.params)
+      const { sortBy, search, page } = listUserFlatsQuerySchema.parse(
+        request.query ?? {},
+      )
 
-      let orderByClause
+      const sortMap = {
+        address: userFlats.address,
+        address_desc: desc(userFlats.address),
+        rooms: userFlats.rooms,
+        rooms_desc: desc(userFlats.rooms),
+        floor: userFlats.floor,
+        floor_desc: desc(userFlats.floor),
+        createdAt: userFlats.createdAt,
+        createdAt_desc: desc(userFlats.createdAt),
+      } as const
 
-      if (sortBy === 'address') {
-        orderByClause = userFlats.address
-      } else if (sortBy === 'address_desc') {
-        orderByClause = desc(userFlats.address)
-      } else if (sortBy === 'rooms') {
-        orderByClause = userFlats.rooms
-      } else if (sortBy === 'rooms_desc') {
-        orderByClause = desc(userFlats.rooms)
-      } else if (sortBy === 'floor') {
-        orderByClause = userFlats.floor
-      } else if (sortBy === 'floor_desc') {
-        orderByClause = desc(userFlats.floor)
-      } else {
-        // По умолчанию сортируем по дате создания
-        orderByClause = desc(userFlats.createdAt)
-      }
+      const orderByClause =
+        sortMap[sortBy ?? 'createdAt_desc'] ?? desc(userFlats.createdAt)
 
       let whereClause = eq(userFlats.tgUserId, tgUserId)
+      const normalizedSearch = search?.trim()
 
-      // Добавляем поиск по адресу, если указан
-      if (search && search.trim()) {
+      if (normalizedSearch) {
         whereClause = and(
-          eq(userFlats.tgUserId, tgUserId),
-          ilike(userFlats.address, `%${search.trim()}%`),
+          whereClause,
+          ilike(userFlats.address, `%${normalizedSearch}%`),
         )
       }
+
+      const limit = 15
+      const currentPage = page ?? 1
+      const offset = (currentPage - 1) * limit
 
       const flats = await db
         .select()
         .from(userFlats)
         .where(whereClause)
         .orderBy(orderByClause)
+        .limit(limit)
+        .offset(offset)
 
       return reply.send(flats)
     } catch (error) {
-      return reply.status(400).send({ error: 'Invalid request' })
+      if (error instanceof z.ZodError) {
+        request.log.warn(
+          { err: error },
+          '[user-flats] Invalid params for /user-flats/user/:tgUserId',
+        )
+        return reply.status(400).send({ error: 'Invalid request' })
+      }
+
+      request.log.error(
+        { err: error },
+        '[user-flats] Failed to fetch flats for user',
+      )
+      return reply.status(500).send({ error: 'Failed to fetch user flats' })
     }
   })
 
   // Получить количество квартир пользователя
   fastify.get('/user-flats/user/:tgUserId/count', async (request, reply) => {
     try {
-      const { tgUserId } = getUserFlatsSchema.parse(request.params)
-      const { search } = request.query as { search?: string }
+      const { tgUserId } = tgUserIdParamsSchema.parse(request.params)
+      const { search } = listUserFlatsQuerySchema
+        .pick({ search: true })
+        .parse(request.query ?? {})
 
       let whereClause = eq(userFlats.tgUserId, tgUserId)
+      const normalizedSearch = search?.trim()
 
-      // Добавляем поиск по адресу, если указан
-      if (search && search.trim()) {
+      if (normalizedSearch) {
         whereClause = and(
-          eq(userFlats.tgUserId, tgUserId),
-          ilike(userFlats.address, `%${search.trim()}%`),
+          whereClause,
+          ilike(userFlats.address, `%${normalizedSearch}%`),
         )
       }
 
@@ -239,9 +270,23 @@ export default async (fastify: FastifyInstance) => {
         .from(userFlats)
         .where(whereClause)
 
-      return reply.send({ count: Number(result[0]?.count || 0) })
+      return reply.send({ total: Number(result[0]?.count || 0) })
     } catch (error) {
-      return reply.status(400).send({ error: 'Invalid request' })
+      if (error instanceof z.ZodError) {
+        request.log.warn(
+          { err: error },
+          '[user-flats] Invalid params for count route',
+        )
+        return reply.status(400).send({ error: 'Invalid request' })
+      }
+
+      request.log.error(
+        { err: error },
+        '[user-flats] Failed to fetch user flats count',
+      )
+      return reply
+        .status(500)
+        .send({ error: 'Failed to fetch user flats count' })
     }
   })
 
