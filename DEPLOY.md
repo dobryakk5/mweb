@@ -18,11 +18,14 @@
 
 ```bash
 # Установка Node.js (если нет)
-curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
-sudo apt-get install -y nodejs
+volta install node@20.12.1 && volta install pnpm@10.9.0.
 
+# Или: curl -fsSL https://deb.nodesource.com/setup_20.x | sudo -E bash -
+#sudo apt-get install -y nodejs
 # Установка pnpm
-npm install -g pnpm
+#npm install -g pnpm
+
+
 
 # Установка PM2 для управления процессами
 npm install -g pm2
@@ -34,6 +37,8 @@ npm install -g pm2
 # Клонируем репозиторий
 git clone <your-repo-url>
 cd mweb
+
+volta install node@20.12.1 && volta install pnpm@10.9.0.
 
 # Устанавливаем зависимости
 pnpm install
