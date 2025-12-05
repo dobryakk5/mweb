@@ -15,7 +15,7 @@
     "typecheck": "turbo typecheck",
     "lint": "trunk check",
     "format": "trunk fmt",
-    "dev": "pnpm build --filter @acme/db && turbo dev",
+    "dev": "npm run build --workspace=@acme/db && turbo dev",
     "build": "turbo build",
     "start": "turbo start"
   },
@@ -23,14 +23,13 @@
     "turbo": "~2.5.1"
   },
   "devDependencies": {
-    "@acme/typescript-config": "workspace:~",
+    "@acme/typescript-config": "file:tools/typescript-config",
     "@biomejs/biome": "~1.9.4",
     "@trunkio/launcher": "~1.3.4"
   },
   "engines": {
     "node": "19.9.0"
   },
-  "packageManager": "pnpm@10.9.0",
   "volta": {
     "node": "19.9.0"
   }

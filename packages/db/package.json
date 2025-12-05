@@ -64,8 +64,8 @@
     "zod": "~3.24.3"
   },
   "devDependencies": {
-    "@acme/id": "workspace:~",
-    "@acme/typescript-config": "workspace:~",
+    "@acme/id": "file:../id",
+    "@acme/typescript-config": "file:../../tools/typescript-config",
     "@faker-js/faker": "~9.7.0",
     "bun": "~1.2.10",
     "drizzle-kit": "~0.31.0",

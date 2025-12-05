@@ -13,7 +13,7 @@
     "bump": "npm run version:patch && echo \"New version: $(node -p 'require(\"./package.json\").version')\""
   },
   "dependencies": {
-    "@acme/db": "workspace:~",
+    "@acme/db": "file:../../packages/db",
     "@fastify/autoload": "~6.3.0",
     "@fastify/cors": "~11.1.0",
     "@fastify/multipart": "~9.0.1",

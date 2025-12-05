@@ -10,7 +10,7 @@
     "type-check": "tsc --noEmit"
   },
   "dependencies": {
-    "@acme/db": "workspace:*",
+    "@acme/db": "file:../../packages/db",
     "dotenv": "~16.5.0",
     "node-cron": "^3.0.3",
     "tsx": "^4.19.2",

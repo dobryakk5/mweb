@@ -9,6 +9,6 @@
     "ulid": "~3.0.0"
   },
   "devDependencies": {
-    "@acme/typescript-config": "workspace:~"
+    "@acme/typescript-config": "file:../../tools/typescript-config"
   }
 }
